@@ -1,0 +1,189 @@
+# Alacritty Configuration (TOML)
+
+[window]
+opacity = 0.95
+decorations = "Full"
+dynamic_title = true
+
+[window.dimensions]
+columns = 120
+lines = 30
+
+[window.position]
+x = 50
+y = 50
+
+[window.padding]
+x = 10
+y = 10
+
+[window.class]
+instance = "Alacritty"
+general = "Alacritty"
+
+[font]
+size = 12.0
+
+[font.normal]
+family = "Cascadia Code PL"
+style = "Regular"
+
+[font.bold]
+family = "Cascadia Code PL"
+style = "Bold"
+
+[font.italic]
+family = "Cascadia Code PL"
+style = "Italic"
+
+[font.offset]
+x = 0
+y = 0
+
+[colors.primary]
+background = "#0d1117"
+foreground = "#c9d1d9"
+
+[cursor]
+style = "Block"
+unfocused_hollow = true
+
+[colors.cursor]
+text = "#0d1117"
+cursor = "#58a6ff"
+
+[colors.selection]
+text = "#0d1117"
+background = "#58a6ff"
+
+[colors.normal]
+black   = "#0d1117"
+red     = "#f85149"
+green   = "#238636"
+yellow  = "#d29922"
+blue    = "#58a6ff"
+magenta = "#bc8cff"
+cyan    = "#39d353"
+white   = "#8b949e"
+
+[colors.bright]
+black   = "#21262d"
+red     = "#ff7b72"
+green   = "#3fb950"
+yellow  = "#d29922"
+blue    = "#58a6ff"
+magenta = "#bc8cff"
+cyan    = "#39d353"
+white   = "#f0f6fc"
+
+[mouse]
+hide_when_typing = false
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[selection]
+save_to_clipboard = true
+
+[env]
+TERM = "xterm-256color"
+LC_ALL = "zh_CN.UTF-8"
+LANG = "zh_CN.UTF-8"
+
+[terminal.shell]
+program = "pwsh.exe"
+args = ["-NoLogo"]
+
+[debug]
+render_timer = false
+persistent_logging = false
+log_level = "Warn"
+renderer = "Glsl3"
+print_events = false
+
+# Key bindings
+[[keyboard.bindings]]
+key = "C"
+mods = "Control"
+action = "Copy"
+
+[[keyboard.bindings]]
+key = "V"
+mods = "Control"
+action = "Paste"
+
+[[keyboard.bindings]]
+key = "A"
+mods = "Control"
+action = "ReceiveChar" # SelectAll 已弃用/不存在，避免错误
+
+[[keyboard.bindings]]
+key = "T"
+mods = "Control"
+action = "SpawnNewInstance"
+
+[[keyboard.bindings]]
+key = "W"
+mods = "Control"
+action = "Quit"
+
+[[keyboard.bindings]]
+key = "F"
+mods = "Control"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key = "G"
+mods = "Control"
+action = "SearchNext"
+
+[[keyboard.bindings]]
+key = "G"
+mods = "Control|Shift"
+action = "SearchPrevious"
+
+[[keyboard.bindings]]
+key = "Escape"
+mods = "Control"
+action = "None" # 移除无效动作，避免错误
+
+[[keyboard.bindings]]
+key = "Equals"
+mods = "Control"
+action = "IncreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Minus"
+mods = "Control"
+action = "DecreaseFontSize"
+
+[[keyboard.bindings]]
+key = "Key0"
+mods = "Control"
+action = "ResetFontSize"
+
+[[keyboard.bindings]]
+key = "PageUp"
+mods = "Shift"
+action = "ScrollPageUp"
+
+[[keyboard.bindings]]
+key = "PageDown"
+mods = "Shift"
+action = "ScrollPageDown"
+
+[[keyboard.bindings]]
+key = "Home"
+mods = "Shift"
+action = "ScrollToTop"
+
+[[keyboard.bindings]]
+key = "End"
+mods = "Shift"
+action = "ScrollToBottom"
+
+# Mouse bindings
+[[mouse.bindings]]
+mouse = "Middle"
+action = "PasteSelection"

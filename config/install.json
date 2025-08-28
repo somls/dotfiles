@@ -1,0 +1,262 @@
+{
+  "version": "2.0.0",
+  "defaultMode": "copy",
+  "environment": {
+    "requireElevation": false,
+    "checkPrerequisites": true,
+    "createBackups": true,
+    "validateAfterInstall": true
+  },
+  "components": {
+    "core": {
+      "scoop": {
+        "enabled": true,
+        "priority": 1,
+        "description": "Scoop 包管理器配置",
+        "dependencies": [],
+        "paths": {
+          "source": "scoop",
+          "target": "$env:USERPROFILE\\scoop\\config"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "scoop --version"
+      },
+      "powershell": {
+        "enabled": true,
+        "priority": 2,
+        "description": "PowerShell 配置文件和模块",
+        "dependencies": ["scoop"],
+        "paths": {
+          "source": "powershell",
+          "target": "$env:USERPROFILE\\Documents\\PowerShell"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "$PROFILE"
+      },
+      "git": {
+        "enabled": true,
+        "priority": 3,
+        "description": "Git 全局配置",
+        "dependencies": [],
+        "paths": {
+          "source": "git",
+          "target": "$env:USERPROFILE"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "git config --global --list"
+      },
+      "starship": {
+        "enabled": true,
+        "priority": 4,
+        "description": "Starship 提示符配置",
+        "dependencies": ["powershell"],
+        "paths": {
+          "source": "starship/starship.toml",
+          "target": "$env:USERPROFILE\\.config\\starship.toml"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "starship --version"
+      }
+    },
+    "terminals": {
+      "windowsTerminal": {
+        "enabled": true,
+        "priority": 5,
+        "description": "Windows Terminal 配置",
+        "dependencies": [],
+        "paths": {
+          "source": "WindowsTerminal",
+          "target": "$env:LOCALAPPDATA\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "Get-AppxPackage Microsoft.WindowsTerminal"
+      },
+      "wezterm": {
+        "enabled": false,
+        "priority": 6,
+        "description": "WezTerm 终端配置",
+        "dependencies": [],
+        "paths": {
+          "source": "WezTerm",
+          "target": "$env:USERPROFILE\\.config\\wezterm"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "wezterm --version",
+        "optional": true
+      },
+      "alacritty": {
+        "enabled": false,
+        "priority": 7,
+        "description": "Alacritty 终端配置",
+        "dependencies": [],
+        "paths": {
+          "source": "Alacritty",
+          "target": "$env:APPDATA\\alacritty"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "alacritty --version",
+        "optional": true
+      }
+    },
+    "editors": {
+      "neovim": {
+        "enabled": false,
+        "priority": 8,
+        "description": "Neovim 编辑器配置",
+        "dependencies": [],
+        "paths": {
+          "source": "neovim",
+          "target": "$env:LOCALAPPDATA\\nvim"
+        },
+        "installMode": "copy",
+        "backupExisting": true,
+        "validateCommand": "nvim --version",
+        "optional": true
+      }
+    },
+    "utilities": {
+      "cmd": {
+        "enabled": true,
+        "priority": 9,
+        "description": "CMD 批处理脚本和工具",
+        "dependencies": [],
+        "paths": {
+          "source": "scripts\\cmd",
+          "target": "$env:USERPROFILE\\bin"
+        },
+        "installMode": "copy",
+        "backupExisting": false,
+        "createTargetDir": true
+      }
+    }
+  },
+  "settings": {
+    "backup": {
+      "enabled": true,
+      "directory": "$env:USERPROFILE\\.dotfiles-backup",
+      "keepVersions": 3,
+      "compressOld": true,
+      "timestampFormat": "yyyy-MM-dd_HH-mm-ss"
+    },
+    "logging": {
+      "enabled": true,
+      "level": "INFO",
+      "file": "install.log",
+      "maxSize": "10MB",
+      "rotateCount": 5
+    },
+    "validation": {
+      "enabled": true,
+      "strictMode": false,
+      "timeoutSeconds": 30,
+      "retryCount": 2
+    },
+    "rollback": {
+      "enabled": true,
+      "autoRollbackOnFailure": false,
+      "confirmBeforeRollback": true
+    },
+    "ui": {
+      "interactive": true,
+      "showProgress": true,
+      "useColors": true,
+      "confirmOverwrite": true,
+      "verboseOutput": false
+    }
+  },
+  "profiles": {
+    "minimal": {
+      "description": "最小安装 - 仅核心组件",
+      "components": ["scoop", "powershell", "git", "starship"]
+    },
+    "standard": {
+      "description": "标准安装 - 核心组件 + Windows Terminal",
+      "components": [
+        "scoop",
+        "powershell",
+        "git",
+        "starship",
+        "windowsTerminal",
+        "cmd"
+      ]
+    },
+    "full": {
+      "description": "完整安装 - 所有组件",
+      "components": [
+        "scoop",
+        "powershell",
+        "git",
+        "starship",
+        "windowsTerminal",
+        "wezterm",
+        "alacritty",
+        "neovim",
+        "cmd"
+      ]
+    },
+    "developer": {
+      "description": "开发者配置 - 包含编辑器和终端",
+      "components": [
+        "scoop",
+        "powershell",
+        "git",
+        "starship",
+        "windowsTerminal",
+        "neovim",
+        "cmd"
+      ],
+      "settings": {
+        "defaultMode": "symlink",
+        "validation": {
+          "strictMode": true
+        }
+      }
+    }
+  },
+  "presets": {
+    "windows10": {
+      "description": "Windows 10 优化配置",
+      "overrides": {
+        "windowsTerminal": {
+          "enabled": false
+        }
+      }
+    },
+    "windows11": {
+      "description": "Windows 11 优化配置",
+      "overrides": {
+        "windowsTerminal": {
+          "enabled": true,
+          "priority": 2
+        }
+      }
+    },
+    "corporate": {
+      "description": "企业环境配置",
+      "overrides": {
+        "environment": {
+          "requireElevation": false
+        },
+        "settings": {
+          "validation": {
+            "strictMode": false
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "lastModified": "2024-01-15T10:30:00Z",
+    "configVersion": "2.0.0",
+    "compatibleVersions": ["2.x"],
+    "author": "Dotfiles Manager",
+    "description": "Enhanced configuration for granular dotfiles installation control"
+  }
+}

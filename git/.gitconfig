@@ -1,0 +1,147 @@
+[core]
+	editor = code --wait
+	excludesfile = ~/.gitignore_global
+	pager = delta
+	autocrlf = false
+	filemode = false
+	ignorecase = true
+
+[credential]
+	helper = manager
+
+# [user]
+	# name = Your Name
+	# email = your.email@example.com
+	# 请在 .gitconfig.local 中设置您的个人信息
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = false
+
+[push]
+	default = simple
+	autoSetupRemote = true
+
+[fetch]
+	prune = true
+
+[merge]
+	conflictstyle = diff3
+	tool = vscode
+
+[mergetool "vscode"]
+	cmd = code --wait $MERGED
+
+[diff]
+	colorMoved = default
+	tool = vscode
+
+[difftool "vscode"]
+	cmd = code --wait --diff $LOCAL $REMOTE
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	light = false
+	line-numbers = true
+	side-by-side = false
+	syntax-theme = Dracula
+	features = decorations
+	file-style = bold yellow ul
+	file-decoration-style = none
+	hunk-header-decoration-style = cyan box ul
+
+[delta "decorations"]
+	commit-decoration-style = bold yellow box ul
+	file-style = bold yellow ul
+	file-decoration-style = none
+
+[alias]
+	# 状态和信息
+	st = status -sb
+	br = branch
+	co = checkout
+	ci = commit
+	unstage = reset HEAD --
+	last = log -1 HEAD
+	visual = !gitk
+
+	# 日志查看
+	lg = log --oneline --decorate --graph
+	lga = log --oneline --decorate --graph --all
+	ll = log --pretty=format:'%C(yellow)%h%Creset -%C(red)%d%Creset %s %C(bold blue)<%an>%Creset %C(green)(%cr)' --abbrev-commit
+	lol = log --graph --decorate --pretty=oneline --abbrev-commit
+	lola = log --graph --decorate --pretty=oneline --abbrev-commit --all
+
+	# 差异比较
+	dt = difftool
+	mt = mergetool
+
+	# 分支操作
+	purr = pull --rebase
+	puff = push --force-with-lease
+	cleanup = "!git branch --merged | grep -v '\\*\\|master\\|main' | xargs -n 1 git branch -d"
+
+	# 快速操作
+	save = !git add -A && git commit -m 'SAVEPOINT'
+	undo = reset HEAD~1 --mixed
+	amend = commit -a --amend
+	wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
+
+	# 工作区管理
+	ec = config --global -e
+	up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+	cob = checkout -b
+	cm = !git add -A && git commit -m
+	ac = !git add -A && git commit
+	save = !git add -A && git commit -m 'SAVEPOINT'
+
+[color]
+	ui = auto
+	branch = auto
+	diff = auto
+	status = auto
+
+[color "branch"]
+	current = yellow reverse
+	local = yellow
+	remote = green
+
+[color "diff"]
+	meta = yellow bold
+	frag = magenta bold
+	old = red bold
+	new = green bold
+
+[color "status"]
+	added = yellow
+	changed = green
+	untracked = cyan
+
+# 代理设置说明:
+# 如需使用代理，请设置环境变量或使用以下命令：
+# git config --global http.proxy http://127.0.0.1:10808
+# git config --global https.proxy http://127.0.0.1:10808
+# 或创建 .gitconfig.local 文件包含代理设置
+
+[include]
+	# 包含本地配置文件（如代理设置等）
+	path = ~/.gitconfig.local
+	# 可选：单独的用户信息文件（与 .gitconfig.local 类似）
+	path = ~/.gitconfig.user
+
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+
+# Windows 特定设置
+[core]
+	longpaths = true
+# 代理设置已移至 .gitconfig.local
+# 请根据需要在 .gitconfig.local 中配置代理

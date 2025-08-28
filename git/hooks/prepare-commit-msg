@@ -1,0 +1,113 @@
+#!/bin/sh
+#
+# Git prepare-commit-msg 钩子
+# 在提交消息编辑器启动前修改默认提交消息
+#
+# 安装方法:
+# 将此文件复制到项目的 .git/hooks/ 目录，并确保它是可执行的:
+# cp prepare-commit-msg .git/hooks/
+# chmod +x .git/hooks/prepare-commit-msg
+#
+# 或者使用符号链接:
+# ln -s ../../hooks/prepare-commit-msg .git/hooks/prepare-commit-msg
+
+# 获取参数
+COMMIT_MSG_FILE=$1
+COMMIT_SOURCE=$2
+COMMIT_SHA=$3
+
+# 检查是否在 Windows 环境下运行
+case "$(uname -s)" in
+    *CYGWIN*|*MINGW*|*MSYS*)
+        IS_WINDOWS=1
+        ;;
+    *)
+        IS_WINDOWS=0
+        ;;
+esac
+
+# 如果是合并提交或从模板创建的提交，不修改消息
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "template" ]; then
+    exit 0
+ fi
+
+# 如果是修改提交，不修改消息
+if [ "$COMMIT_SOURCE" = "commit" ]; then
+    exit 0
+fi
+
+# 如果是 squash 提交，不修改消息
+if [ "$COMMIT_SOURCE" = "squash" ]; then
+    exit 0
+fi
+
+# 如果是消息已经存在，不修改消息
+if [ -n "$COMMIT_SHA" ]; then
+    exit 0
+fi
+
+# 获取当前分支名称
+BRANCH_NAME=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ $? -ne 0 ]; then
+    # 不在分支上，可能在分离头指针状态
+    exit 0
+fi
+
+# 从分支名称提取前缀
+# 支持的格式: feature/ABC-123-description, bugfix/ABC-123-description 等
+PREFIX=$(echo "$BRANCH_NAME" | grep -o -E '^(feature|bugfix|hotfix|release|chore|docs|refactor|test)/[A-Z]+-[0-9]+' | sed 's/\//: /')
+
+# 如果没有找到匹配的前缀，尝试其他格式
+if [ -z "$PREFIX" ]; then
+    # 尝试匹配 feature-ABC-123-description 格式
+    PREFIX=$(echo "$BRANCH_NAME" | grep -o -E '^(feature|bugfix|hotfix|release|chore|docs|refactor|test)-[A-Z]+-[0-9]+' | sed 's/-/: /' | sed 's/-/ /')
+fi
+
+# 如果仍然没有找到匹配的前缀，尝试简单的分支类型
+if [ -z "$PREFIX" ]; then
+    # 尝试匹配 feature/description 格式
+    PREFIX=$(echo "$BRANCH_NAME" | grep -o -E '^(feature|bugfix|hotfix|release|chore|docs|refactor|test)/' | sed 's/\//: /')
+fi
+
+# 如果仍然没有找到匹配的前缀，尝试简单的分支类型（带连字符）
+if [ -z "$PREFIX" ]; then
+    # 尝试匹配 feature-description 格式
+    PREFIX=$(echo "$BRANCH_NAME" | grep -o -E '^(feature|bugfix|hotfix|release|chore|docs|refactor|test)-' | sed 's/-/: /')
+fi
+
+# 如果找到了前缀，将其添加到提交消息中
+if [ -n "$PREFIX" ]; then
+    # 读取原始提交消息
+    ORIG_MSG=$(cat "$COMMIT_MSG_FILE")
+    
+    # 检查消息是否已经包含前缀
+    if ! echo "$ORIG_MSG" | grep -q "^$PREFIX"; then
+        # 检查消息是否为空或只包含注释
+        if [ -z "$(grep -v '^#' "$COMMIT_MSG_FILE")" ]; then
+            # 消息为空，添加前缀作为新消息
+            echo "$PREFIX " > "$COMMIT_MSG_FILE"
+            echo "" >> "$COMMIT_MSG_FILE"
+            echo "$ORIG_MSG" >> "$COMMIT_MSG_FILE"
+        else
+            # 消息不为空，检查是否已经有类型前缀
+            if ! grep -q -E '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert):' "$COMMIT_MSG_FILE"; then
+                # 没有类型前缀，添加从分支名提取的前缀
+                echo "$PREFIX $ORIG_MSG" > "$COMMIT_MSG_FILE"
+            fi
+        fi
+    fi
+fi
+
+# 如果没有找到前缀，但是提交消息为空，添加提示
+if [ -z "$PREFIX" ] && [ -z "$(grep -v '^#' "$COMMIT_MSG_FILE")" ]; then
+    # 添加提示到提交消息
+    echo "# 请输入提交消息，建议使用以下格式:" > "$COMMIT_MSG_FILE.tmp"
+    echo "# <类型>: <简短描述>" >> "$COMMIT_MSG_FILE.tmp"
+    echo "#" >> "$COMMIT_MSG_FILE.tmp"
+    echo "# 类型可以是: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert" >> "$COMMIT_MSG_FILE.tmp"
+    echo "#" >> "$COMMIT_MSG_FILE.tmp"
+    cat "$COMMIT_MSG_FILE" >> "$COMMIT_MSG_FILE.tmp"
+    mv "$COMMIT_MSG_FILE.tmp" "$COMMIT_MSG_FILE"
+fi
+
+exit 0

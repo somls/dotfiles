@@ -1,0 +1,318 @@
+{
+  "version": "1.0.0",
+  "description": "Environment-specific configurations for dotfiles installation",
+  "environments": {
+    "development": {
+      "name": "开发环境",
+      "description": "开发人员工作环境，包含完整的开发工具配置",
+      "priority": 1,
+      "settings": {
+        "defaultMode": "symlink",
+        "createBackups": true,
+        "validateAfterInstall": true,
+        "strictMode": true
+      },
+      "components": {
+        "required": [
+          "scoop",
+          "powershell",
+          "git",
+          "starship",
+          "windowsTerminal"
+        ],
+        "optional": [
+          "neovim",
+          "wezterm",
+          "alacritty"
+        ],
+        "excluded": []
+      },
+      "overrides": {
+        "git": {
+          "installMode": "symlink",
+          "validateCommand": "git config --global --list"
+        },
+        "powershell": {
+          "installMode": "symlink",
+          "postInstall": "Update-Help -Force -ErrorAction SilentlyContinue"
+        }
+      },
+      "prerequisites": {
+        "powershellVersion": "7.0",
+        "gitInstalled": true,
+        "adminRights": false,
+        "developerMode": true
+      }
+    },
+    "production": {
+      "name": "生产环境",
+      "description": "生产服务器环境，仅包含必要的配置",
+      "priority": 2,
+      "settings": {
+        "defaultMode": "copy",
+        "createBackups": true,
+        "validateAfterInstall": true,
+        "strictMode": false
+      },
+      "components": {
+        "required": [
+          "powershell",
+          "git"
+        ],
+        "optional": [
+          "starship"
+        ],
+        "excluded": [
+          "windowsTerminal",
+          "wezterm",
+          "alacritty",
+          "neovim"
+        ]
+      },
+      "overrides": {
+        "powershell": {
+          "paths": {
+            "source": "powershell\\production",
+            "target": "$env:USERPROFILE\\Documents\\PowerShell"
+          }
+        }
+      },
+      "prerequisites": {
+        "powershellVersion": "5.1",
+        "gitInstalled": true,
+        "adminRights": true,
+        "developerMode": false
+      }
+    },
+    "minimal": {
+      "name": "最小环境",
+      "description": "最小化配置，仅包含核心功能",
+      "priority": 3,
+      "settings": {
+        "defaultMode": "copy",
+        "createBackups": false,
+        "validateAfterInstall": false,
+        "strictMode": false
+      },
+      "components": {
+        "required": [
+          "powershell"
+        ],
+        "optional": [
+          "git",
+          "starship"
+        ],
+        "excluded": [
+          "scoop",
+          "windowsTerminal",
+          "wezterm",
+          "alacritty",
+          "neovim"
+        ]
+      },
+      "overrides": {},
+      "prerequisites": {
+        "powershellVersion": "5.1",
+        "gitInstalled": false,
+        "adminRights": false,
+        "developerMode": false
+      }
+    },
+    "corporate": {
+      "name": "企业环境",
+      "description": "企业网络环境，考虑安全策略和网络限制",
+      "priority": 4,
+      "settings": {
+        "defaultMode": "copy",
+        "createBackups": true,
+        "validateAfterInstall": true,
+        "strictMode": false
+      },
+      "components": {
+        "required": [
+          "powershell",
+          "git",
+          "windowsTerminal"
+        ],
+        "optional": [
+          "starship"
+        ],
+        "excluded": [
+          "scoop",
+          "wezterm",
+          "alacritty",
+          "neovim"
+        ]
+      },
+      "overrides": {
+        "git": {
+          "preInstall": "# 配置企业代理设置",
+          "postInstall": "git config --global http.sslVerify false"
+        },
+        "powershell": {
+          "preInstall": "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+        }
+      },
+      "prerequisites": {
+        "powershellVersion": "5.1",
+        "gitInstalled": false,
+        "adminRights": false,
+        "developerMode": false
+      },
+      "networkSettings": {
+        "useProxy": true,
+        "proxyBypass": "*.internal.com,localhost,127.0.0.1",
+        "timeoutSeconds": 60,
+        "retryCount": 3
+      }
+    },
+    "gaming": {
+      "name": "游戏环境",
+      "description": "游戏玩家配置，注重性能和便利性",
+      "priority": 5,
+      "settings": {
+        "defaultMode": "copy",
+        "createBackups": true,
+        "validateAfterInstall": false,
+        "strictMode": false
+      },
+      "components": {
+        "required": [
+          "powershell",
+          "windowsTerminal",
+          "starship"
+        ],
+        "optional": [
+          "git",
+          "alacritty"
+        ],
+        "excluded": [
+          "scoop",
+          "wezterm",
+          "neovim"
+        ]
+      },
+      "overrides": {
+        "windowsTerminal": {
+          "paths": {
+            "source": "WindowsTerminal\\gaming",
+            "target": "$env:LOCALAPPDATA\\Packages\\Microsoft.WindowsTerminal_8wekyb3d8bbwe\\LocalState"
+          }
+        },
+        "starship": {
+          "paths": {
+            "source": "starship\\gaming.toml",
+            "target": "$env:USERPROFILE\\.config\\starship.toml"
+          }
+        }
+      },
+      "prerequisites": {
+        "powershellVersion": "7.0",
+        "gitInstalled": false,
+        "adminRights": false,
+        "developerMode": false
+      }
+    },
+    "server": {
+      "name": "服务器环境",
+      "description": "Windows服务器环境配置",
+      "priority": 6,
+      "settings": {
+        "defaultMode": "copy",
+        "createBackups": true,
+        "validateAfterInstall": true,
+        "strictMode": true
+      },
+      "components": {
+        "required": [
+          "powershell"
+        ],
+        "optional": [
+          "git"
+        ],
+        "excluded": [
+          "scoop",
+          "windowsTerminal",
+          "wezterm",
+          "alacritty",
+          "neovim",
+          "starship"
+        ]
+      },
+      "overrides": {
+        "powershell": {
+          "paths": {
+            "source": "powershell\\server",
+            "target": "$env:USERPROFILE\\Documents\\PowerShell"
+          },
+          "postInstall": "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted"
+        }
+      },
+      "prerequisites": {
+        "powershellVersion": "5.1",
+        "gitInstalled": false,
+        "adminRights": true,
+        "developerMode": false
+      },
+      "logging": {
+        "level": "INFO",
+        "enableAudit": true,
+        "retentionDays": 90
+      }
+    }
+  },
+  "detectionRules": {
+    "development": {
+      "conditions": [
+        { "type": "environment", "variable": "COMPUTERNAME", "pattern": ".*DEV.*", "weight": 30 },
+        { "type": "environment", "variable": "USERNAME", "pattern": ".*dev.*", "weight": 20 },
+        { "type": "process", "name": "code", "running": true, "weight": 25 },
+        { "type": "process", "name": "git", "running": true, "weight": 15 },
+        { "type": "registry", "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock", "value": "AllowDevelopmentWithoutDevLicense", "weight": 10 }
+      ],
+      "threshold": 50
+    },
+    "production": {
+      "conditions": [
+        { "type": "environment", "variable": "COMPUTERNAME", "pattern": ".*PROD.*", "weight": 40 },
+        { "type": "service", "name": "W3SVC", "running": true, "weight": 30 },
+        { "type": "service", "name": "MSSQLSERVER", "running": true, "weight": 20 },
+        { "type": "environment", "variable": "ASPNETCORE_ENVIRONMENT", "value": "Production", "weight": 10 }
+      ],
+      "threshold": 60
+    },
+    "corporate": {
+      "conditions": [
+        { "type": "domain", "joined": true, "weight": 40 },
+        { "type": "policy", "name": "ExecutionPolicy", "value": "RemoteSigned", "weight": 20 },
+        { "type": "environment", "variable": "USERDOMAIN", "pattern": ".*CORP.*", "weight": 20 },
+        { "type": "network", "proxy": true, "weight": 20 }
+      ],
+      "threshold": 50
+    },
+    "server": {
+      "conditions": [
+        { "type": "os", "edition": "Server", "weight": 50 },
+        { "type": "service", "name": "ServerManager", "running": true, "weight": 20 },
+        { "type": "feature", "name": "IIS-WebServer", "installed": true, "weight": 15 },
+        { "type": "feature", "name": "Hyper-V", "installed": true, "weight": 15 }
+      ],
+      "threshold": 50
+    }
+  },
+  "fallback": {
+    "environment": "minimal",
+    "reason": "No specific environment detected, using minimal configuration"
+  },
+  "validation": {
+    "required": ["name", "description", "components"],
+    "optional": ["overrides", "prerequisites", "settings"],
+    "componentTypes": ["required", "optional", "excluded"]
+  },
+  "metadata": {
+    "lastModified": "2024-01-15T10:30:00Z",
+    "version": "1.0.0",
+    "author": "Dotfiles Environment Manager",
+    "description": "Environment-specific configuration management for adaptive dotfiles installation"
+  }
+}

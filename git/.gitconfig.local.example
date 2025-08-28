@@ -1,0 +1,57 @@
+# .gitconfig.local.example
+# 本地 Git 配置文件示例 - 包含敏感或特定环境的设置
+# 复制此文件为 .gitconfig.local 并根据需要修改
+# 此文件会被主 .gitconfig 文件自动包含
+
+[http]
+	# HTTP 代理设置 - 根据实际情况修改
+	proxy = http://127.0.0.1:10808
+	# 或使用 SOCKS5 代理
+	# proxy = socks5://127.0.0.1:10808
+
+[https]
+	# HTTPS 代理设置 - 根据实际情况修改
+	proxy = http://127.0.0.1:10808
+	# 或使用 SOCKS5 代理
+	# proxy = socks5://127.0.0.1:10808
+
+# 特定网站的代理设置
+[http "https://github.com"]
+	proxy = socks5://127.0.0.1:10808
+
+[https "https://github.com"]
+	proxy = socks5://127.0.0.1:10808
+
+# 如果需要禁用某些网站的代理，可以设置为空
+# [http "https://gitlab.company.com"]
+# 	proxy =
+
+# 公司内网或特定环境设置
+# [user]
+# 	# 工作邮箱
+# 	email = work@company.com
+
+# [core]
+# 	# 公司证书路径
+# 	sslCAInfo = /path/to/company/cert.pem
+
+# 特定仓库的用户设置
+# [includeIf "gitdir:~/work/"]
+# 	path = ~/.gitconfig.work
+
+# SSL 设置（仅在必要时使用）
+# [http]
+# 	sslVerify = false  # 仅在开发环境使用，生产环境不推荐
+
+# 代理认证（如需要）
+# [http]
+# 	proxyAuthMethod = basic
+
+# 环境变量方式使用代理的说明：
+# export HTTP_PROXY=http://127.0.0.1:10808
+# export HTTPS_PROXY=http://127.0.0.1:10808
+# export ALL_PROXY=socks5://127.0.0.1:10808
+
+# 临时禁用代理的命令：
+# git config --global --unset http.proxy
+# git config --global --unset https.proxy

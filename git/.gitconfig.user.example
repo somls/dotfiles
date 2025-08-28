@@ -1,0 +1,21 @@
+# .gitconfig.user.example
+# 用户个人信息配置模板
+# 复制此文件为 .gitconfig.local 并填入您的个人信息
+
+[user]
+    name = Your Name
+    email = your.email@example.com
+
+# 可选：工作环境配置
+# [includeIf "gitdir:~/work/"]
+#     path = ~/.gitconfig.work
+
+# 可选：代理设置
+# [http]
+#     proxy = http://127.0.0.1:10808
+# [https]
+#     proxy = http://127.0.0.1:10808
+
+# 可选：特定网站代理
+# [http "https://github.com"]
+#     proxy = socks5://127.0.0.1:10808

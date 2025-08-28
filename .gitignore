@@ -1,0 +1,98 @@
+# Local git user configs (kept in-repo but not tracked)
+git/.gitconfig.local
+git/.gitconfig.user
+
+# Allow important git documentation
+!git/USAGE.md
+
+# Temporary files
+*.tmp
+*.log
+*.user
+*.password
+*.bak
+*~
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# PowerShell history
+pshistory.txt
+
+# Backup files
+*_backup/
+*-backup/
+*.backup
+
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE/Editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Test artifacts
+TestResults/
+*.coverage
+*.trx
+
+# Build outputs
+bin/
+obj/
+dist/
+build/
+
+
+# Project-specific local state (do not sync)
+.kiro/
+
+# Local credentials, histories, and reports (do not sync)
+
+powershell/.powershell/pshistory.txt
+health-report.json
+
+# User-specific configuration files (contain personal info)
+git/.gitconfig.local
+git/.gitconfig.user
+# scoop/config.json
+
+
+# Personal proxy and network settings
+**/proxy.conf
+**/*proxy*
+**/network.conf
+
+# Exception: Allow proxy documentation
+!PROXY_CONFIG_UPDATE.md
+
+# User-specific paths and drives
+**/*G:/*
+**/*C:/Users/*
+**/*malip*
+
+# Installation logs and temporary files
+install.log
+*.backup
+backup/
+*_backup/
+
+# Auto-sync script (was ignored previously)
+# auto-sync.ps1
+
+# Development documentation (local only)
+DEVELOPMENT.md
+
+# Scripts guide (local only, optional)
+SCRIPTS_GUIDE.md
+
+# Privacy audit report (local only)
+PRIVACY_AUDIT_REPORT.md
+
+# Git history cleaning script (local only)
+clean-git-history.ps1

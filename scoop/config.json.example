@@ -1,0 +1,46 @@
+{
+  // --- ✅ 核心功能 ---
+  "global": true,
+  "notify_upgrade": true,
+  "7zip": true,
+  "auto_update": true,
+  "allow_override": true,
+  "show_update_log": true,
+  // 启用 Scoop 核心功能，提升安装体验和自动化程度。
+
+  // --- ✅ Git 集成 ---
+  "git_config": {
+    "core.autocrlf": "input"
+  },
+  // 配置 Git 使用 LF 作为仓库内换行符，解决跨平台换行符问题，是协作开发的最佳实践。
+
+  // --- ✅ 性能与下载 ---
+  "max_parallel_downloads": 6, // Scoop 同时下载不同软件包的最大数量
+  "aria2-enabled": true, // 启用 aria2 多线程下载器
+  "aria2-warning-enabled": true, // aria2 失败时回退到默认下载器
+  "aria2-options": {
+    "split": 8, // 为单个文件创建的连接数
+    "max-connection-per-server": 8, // 每个服务器的最大连接数
+    "min-split-size": "1M", // 文件分片最小大小
+    "continue": true, // 启用断点续传
+    "max-concurrent-downloads": 5 // aria2 自身最大并发下载任务数
+    // "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" // 可选: 自定义用户代理
+  },
+
+  // --- ✅ 源 ---
+  "scoop_repo": "https://github.com/ScoopInstaller/Scoop",
+  // 指定 Scoop 官方代码库地址。
+
+  // --- ✅ 其他优化 ---
+  "debug": false,
+  "force_update": false,
+  "show_manifest": false,
+  "cat_style": "full",
+  "use_lessmsi": true, // 推荐启用，用于解压 .msi 包
+  "no_junction": false // 保持默认，使用硬链接/连接点节省磁盘空间
+
+  // --- 🛑 环境特定信息 (请通过环境变量设置，不要放在这里!) ---
+  // "dir": "D:\\Scoop", // ❌ 移除! 使用 SCOOP 环境变量指定 Scoop 的主安装目录 (包含 apps, buckets, shims 等)
+  // "cache_path": "D:\\scoop_cache", // ❌ 移除! 使用 SCOOP_CACHE 环境变量指定下载缓存目录
+  // "proxy": "http://127.0.0.1:10809" // ❌ 移除! 使用 HTTP_PROXY/HTTPS_PROXY 环境变量配置代理
+}

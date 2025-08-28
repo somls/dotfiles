@@ -1,0 +1,165 @@
+#!/bin/sh
+#
+# Git pre-commit 钩子
+# 在提交前运行检查，确保代码质量
+#
+# 安装方法:
+# 将此文件复制到项目的 .git/hooks/ 目录，并确保它是可执行的:
+# cp pre-commit .git/hooks/
+# chmod +x .git/hooks/pre-commit
+#
+# 或者使用符号链接:
+# ln -s ../../hooks/pre-commit .git/hooks/pre-commit
+
+# 颜色定义
+RED="\033[1;31m"
+GREEN="\033[1;32m"
+YELLOW="\033[1;33m"
+NC="\033[0m" # No Color
+
+# 检查是否在 Windows 环境下运行
+case "$(uname -s)" in
+    *CYGWIN*|*MINGW*|*MSYS*)
+        IS_WINDOWS=1
+        ;;
+    *)
+        IS_WINDOWS=0
+        ;;
+esac
+
+# 输出带颜色的消息
+echo_color() {
+    if [ $IS_WINDOWS -eq 1 ]; then
+        echo "$2"
+    else
+        echo -e "$1$2$NC"
+    fi
+}
+
+# 检查是否有未解决的合并冲突
+check_merge_conflicts() {
+    echo_color "$YELLOW" "检查合并冲突..."
+    
+    # 查找包含合并冲突标记的文件
+    if git diff --cached --name-only | xargs grep -l "^<<<<<<< HEAD" 2>/dev/null; then
+        echo_color "$RED" "错误: 发现未解决的合并冲突，请解决后再提交。"
+        return 1
+    fi
+    
+    echo_color "$GREEN" "没有发现合并冲突。"
+    return 0
+}
+
+# 检查是否有调试语句
+check_debug_statements() {
+    echo_color "$YELLOW" "检查调试语句..."
+    
+    # 定义要检查的模式
+    PATTERNS="console\.log\|debugger\|var_dump\|print_r\|dd(\|dump(\|TODO\|FIXME"
+    
+    # 获取暂存的文件
+    FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(js|ts|php|py|rb|java|c|cpp|h|hpp|cs)$')
+    
+    if [ -z "$FILES" ]; then
+        echo_color "$GREEN" "没有找到需要检查的文件。"
+        return 0
+    fi
+    
+    # 检查文件中的调试语句
+    for FILE in $FILES; do
+        if git show :"$FILE" | grep -E "$PATTERNS" > /dev/null; then
+            echo_color "$RED" "错误: 文件 '$FILE' 中包含调试语句。"
+            git show :"$FILE" | grep -n -E "$PATTERNS"
+            return 1
+        fi
+    done
+    
+    echo_color "$GREEN" "没有发现调试语句。"
+    return 0
+}
+
+# 检查文件大小
+check_large_files() {
+    echo_color "$YELLOW" "检查大文件..."
+    
+    # 设置最大文件大小 (1MB)
+    MAX_SIZE=1048576
+    
+    # 获取暂存的文件
+    FILES=$(git diff --cached --name-only --diff-filter=ACM)
+    
+    if [ -z "$FILES" ]; then
+        echo_color "$GREEN" "没有找到需要检查的文件。"
+        return 0
+    fi
+    
+    # 检查文件大小
+    for FILE in $FILES; do
+        if [ -f "$FILE" ]; then
+            # 获取文件大小
+            if [ $IS_WINDOWS -eq 1 ]; then
+                # Windows 环境使用 stat 命令
+                SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE" 2>/dev/null)
+            else
+                # Unix/Linux/Mac 环境
+                SIZE=$(stat -c%s "$FILE" 2>/dev/null || stat -f%z "$FILE" 2>/dev/null)
+            fi
+            
+            if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo_color "$RED" "错误: 文件 '$FILE' 大小为 $(($SIZE/1024)) KB，超过了最大限制 $(($MAX_SIZE/1024)) KB。"
+                return 1
+            fi
+        fi
+    done
+    
+    echo_color "$GREEN" "没有发现大文件。"
+    return 0
+}
+
+# 检查空白错误
+check_whitespace() {
+    echo_color "$YELLOW" "检查空白错误..."
+    
+    if git diff --check --cached; then
+        echo_color "$GREEN" "没有发现空白错误。"
+        return 0
+    else
+        echo_color "$RED" "错误: 发现空白错误，请修复后再提交。"
+        return 1
+    fi
+}
+
+# 运行所有检查
+run_all_checks() {
+    echo_color "$YELLOW" "运行 pre-commit 检查..."
+    
+    # 运行各项检查
+    check_merge_conflicts || return 1
+    check_debug_statements || return 1
+    check_large_files || return 1
+    check_whitespace || return 1
+    
+    echo_color "$GREEN" "所有检查通过！"
+    return 0
+}
+
+# 主函数
+main() {
+    # 如果没有暂存的更改，则跳过检查
+    if git diff --cached --quiet; then
+        echo_color "$YELLOW" "没有暂存的更改，跳过 pre-commit 检查。"
+        return 0
+    fi
+    
+    # 运行所有检查
+    if run_all_checks; then
+        return 0
+    else
+        echo_color "$RED" "pre-commit 检查失败，提交被中止。"
+        echo_color "$YELLOW" "如果需要跳过检查，可以使用 git commit --no-verify"
+        return 1
+    fi
+}
+
+# 执行主函数
+main

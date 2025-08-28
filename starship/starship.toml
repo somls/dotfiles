@@ -1,0 +1,155 @@
+# Starship Configuration - Windows Optimized
+# 简洁、高效、美观的 Windows 环境配置
+# Last Modified: 2025-08-25
+
+# 基础设置
+add_newline = true
+
+# 简洁的提示符格式 - 单行显示，提高效率
+format = """$os$username$hostname$directory$git_branch$git_status$nodejs$python$dotnet$java$package$cmd_duration$line_break$character"""
+
+# 右侧显示时间
+right_format = """$time"""
+
+# 提示符字符 - 简洁的箭头
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold yellow)"
+
+# 目录显示 - 优化 Windows 路径显示
+[directory]
+style = "bold cyan"
+read_only = " "
+truncation_length = 3
+truncate_to_repo = true
+home_symbol = "~"
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+# Git 配置 - 简化符号，提高可读性
+[git_branch]
+symbol = " "
+style = "bold purple"
+truncation_length = 15
+format = "[$symbol$branch]($style) "
+
+[git_status]
+style = "bold yellow"
+format = "[$all_status$ahead_behind]($style)"
+ahead = "↑${count}"
+behind = "↓${count}"
+diverged = "↕${ahead_count}↓${behind_count}"
+deleted = "✗${count}"
+modified = "~${count}"
+staged = "+${count}"
+untracked = "?${count}"
+stashed = "≡${count}"
+
+# 编程语言 - 只显示常用的
+[nodejs]
+symbol = " "
+style = "bold green"
+format = "[$symbol($version)]($style) "
+
+[python]
+symbol = " "
+style = "bold yellow"
+format = "[$symbol($version)]($style) "
+
+[dotnet]
+symbol = " "
+style = "bold blue"
+format = "[$symbol($version)]($style) "
+
+[java]
+symbol = " "
+style = "bold red"
+format = "[$symbol($version)]($style) "
+
+# 包管理器
+[package]
+symbol = "📦 "
+style = "bold yellow"
+format = "[$symbol$version]($style) "
+display_private = false
+
+# 命令执行时间 - 只显示较长的命令
+[cmd_duration]
+min_time = 3000
+style = "bold yellow"
+format = "[⏱ $duration]($style) "
+
+# 时间显示 - 简洁格式
+[time]
+disabled = false
+format = '[$time]($style)'
+time_format = "%H:%M"
+style = "dimmed white"
+
+# 操作系统 - Windows 图标
+[os]
+disabled = false
+style = "bold blue"
+format = "[$symbol]($style)"
+
+[os.symbols]
+Windows = " "
+
+# 用户名 - 只在需要时显示
+[username]
+show_always = false
+style_user = "bold yellow"
+style_root = "bold red"
+format = "[$user]($style)@"
+
+# 主机名 - 只在 SSH 时显示
+[hostname]
+ssh_only = true
+format = "[$hostname]($style) "
+style = "bold green"
+
+# 禁用不常用的模块以提高性能
+[rust]
+disabled = true
+
+[golang]
+disabled = true
+
+[php]
+disabled = true
+
+[kubernetes]
+disabled = true
+
+[aws]
+disabled = true
+
+[azure]
+disabled = true
+
+[gcloud]
+disabled = true
+
+[battery]
+disabled = true
+
+[memory_usage]
+disabled = true
+
+[shell]
+disabled = true
+
+[jobs]
+disabled = true
+
+[localip]
+disabled = true
+
+[conda]
+disabled = true
+
+[status]
+disabled = true
+
+[line_break]
+disabled = false
