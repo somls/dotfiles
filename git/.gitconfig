@@ -129,10 +129,8 @@
 # 或创建 .gitconfig.local 文件包含代理设置
 
 [include]
-	# 包含本地配置文件（如代理设置等）
+	# 包含本地配置文件（用户信息、代理设置等）
 	path = ~/.gitconfig.local
-	# 可选：单独的用户信息文件（与 .gitconfig.local 类似）
-	path = ~/.gitconfig.user
 
 [filter "lfs"]
 	clean = git-lfs clean -- %f

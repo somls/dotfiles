@@ -377,7 +377,7 @@ git pull origin main
 ### 快速解决
 - **执行策略错误**: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 - **权限不足**: 以管理员身份运行
-- **Git 用户未配置**: 复制 `git\.gitconfig.user.example` 为 `~\.gitconfig.local`
+- **Git 用户未配置**: 复制 `git\.gitconfig.local.example` 为 `~\.gitconfig.local`
 - **应用未检测到**: 运行 `.\detect-environment.ps1 -Detailed`
 - **配置未生效**: 运行 `.\health-check.ps1 -Fix`
 

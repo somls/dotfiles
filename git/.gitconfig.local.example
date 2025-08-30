@@ -1,7 +1,16 @@
 # .gitconfig.local.example
-# 本地 Git 配置文件示例 - 包含敏感或特定环境的设置
+# 本地 Git 配置文件示例 - 包含用户信息和敏感或特定环境的设置
 # 复制此文件为 .gitconfig.local 并根据需要修改
 # 此文件会被主 .gitconfig 文件自动包含
+
+[user]
+	# 用户个人信息 - 请修改为您的实际信息
+	name = Your Name
+	email = your.email@example.com
+
+# 可选：工作环境配置
+# [includeIf "gitdir:~/work/"]
+# 	path = ~/.gitconfig.work
 
 [http]
 	# HTTP 代理设置 - 根据实际情况修改

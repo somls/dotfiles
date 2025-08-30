@@ -1,7 +1,7 @@
 # Scoop 配置
 
 ## 概述
-Scoop 是 Windows 下的用户级包管理器。本目录包含 `config.json` 与 `packages.txt`。
+Scoop 是 Windows 下的用户级包管理器。本目录包含 `config.json.example` 配置模板与 `packages.txt` 软件清单。
 
 ## 安装
 ```powershell
@@ -10,8 +10,15 @@ irm get.scoop.sh | iex
 ```
 
 ## 配置
-- 全局配置示例：`scoop/config.json`
+- 全局配置示例：`scoop/config.json.example`（请复制为 `config.json` 并根据需要修改）
 - 软件清单：`scoop/packages.txt`（一行一个包）
+
+### 配置步骤
+1. 复制配置模板：
+```powershell
+Copy-Item .\scoop\config.json.example .\scoop\config.json
+```
+2. 根据需要修改 `config.json` 中的配置项
 
 ## 使用
 - 添加常用 bucket：

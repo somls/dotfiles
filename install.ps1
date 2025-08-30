@@ -1047,8 +1047,8 @@ $links = @{
     "powershell\Microsoft.PowerShell_profile.ps1" = @{ Target = "$($adaptivePaths['PowerShell'])\Microsoft.PowerShell_profile.ps1"; Type = "PowerShell" };
     "powershell\.powershell" = @{ Target = "$($adaptivePaths['PowerShell'])\.powershell"; Type = "PowerShell" };
 
-    # Scoop (强制复制模式，不支持符号链接)
-    "scoop\config.json" = @{ Target = "$($adaptivePaths['Scoop'])\config.json"; Type = "Scoop"; ForceCopy = $true };
+    # Scoop (用户需要从 config.json.example 复制并自定义)
+    # "scoop\config.json" = @{ Target = "$($adaptivePaths['Scoop'])\config.json"; Type = "Scoop"; ForceCopy = $true };
 
     # CMD (命令提示符别名)
     "scripts\cmd\aliases.cmd" = @{ Target = ".cmd\aliases.cmd"; Type = "CMD"; ForceCopy = $true };

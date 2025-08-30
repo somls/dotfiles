@@ -31,7 +31,7 @@ Please tell me who you are
 **解决方案：**
 ```powershell
 # 复制配置模板
-copy git\.gitconfig.user.example %USERPROFILE%\.gitconfig.local
+copy git\.gitconfig.local.example %USERPROFILE%\.gitconfig.local
 
 # 编辑个人信息
 notepad %USERPROFILE%\.gitconfig.local

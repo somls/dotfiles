@@ -135,7 +135,7 @@ git remote -v
    ```powershell
    # 确保敏感文件被忽略
    git check-ignore git/.gitconfig.local
-   git check-ignore git/.gitconfig.user
+   git check-ignore git/.gitconfig.local
    ```
 
 3. **检查分支保护**

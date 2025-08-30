@@ -65,7 +65,7 @@ param (
     [ValidateRange(50, 10000)]
     [int]$WatchDebounceMs = 300
     ,
-    # Move existing ~/.gitconfig.local and ~/.gitconfig.user into repo and then link back
+    # Move existing ~/.gitconfig.local into repo and then link back
     [Parameter(Mandatory = $false)]
     [switch]$MigrateLocal = $false
 )
@@ -208,14 +208,10 @@ $fileMapping[(Join-Path $gitDir 'gitignore_global')] = (Join-Path $userHome '.gi
 $fileMapping[(Join-Path $gitDir 'gitmessage')]       = (Join-Path $userHome '.gitmessage')
 $fileMapping[(Join-Path $gitDir 'gitconfig.d')]      = (Join-Path $userHome '.gitconfig.d')
 
-# 可选的本地/用户配置（保存在仓库中但通过 .gitignore 忽略）
+# 可选的本地配置（保存在仓库中但通过 .gitignore 忽略）
 $repoLocal = (Join-Path $gitDir '.gitconfig.local')
-$repoUser  = (Join-Path $gitDir '.gitconfig.user')
 if (Test-Path $repoLocal) {
     $fileMapping[$repoLocal] = (Join-Path $userHome '.gitconfig.local')
-}
-if (Test-Path $repoUser) {
-    $fileMapping[$repoUser]  = (Join-Path $userHome '.gitconfig.user')
 }
 
 # 检查管理员权限
@@ -472,19 +468,12 @@ function Main {
     if ($MigrateLocal) {
         try {
             $homeLocal = (Join-Path $userHome '.gitconfig.local')
-            $homeUser  = (Join-Path $userHome '.gitconfig.user')
             $repoLocal = (Join-Path $gitDir '.gitconfig.local')
-            $repoUser  = (Join-Path $gitDir '.gitconfig.user')
 
             if ((Test-Path $homeLocal) -and -not (Test-Path $repoLocal)) {
                 Copy-Item -Path $homeLocal -Destination $repoLocal -Force
                 Write-Host "已迁移 ~/.gitconfig.local 到 仓库: $repoLocal" -ForegroundColor $colorSuccess
                 $fileMapping[$repoLocal] = $homeLocal
-            }
-            if ((Test-Path $homeUser) -and -not (Test-Path $repoUser)) {
-                Copy-Item -Path $homeUser -Destination $repoUser -Force
-                Write-Host "已迁移 ~/.gitconfig.user 到 仓库: $repoUser" -ForegroundColor $colorSuccess
-                $fileMapping[$repoUser] = $homeUser
             }
         } catch {
             Write-Host "迁移本地 Git 配置失败: $_" -ForegroundColor $colorWarning

@@ -66,7 +66,7 @@ function Copy-ConfigTemplate {
 # 配置文件映射
 $ConfigMappings = @(
     @{
-        Template = "git\.gitconfig.user.example"
+        Template = "git\.gitconfig.local.example"
         Target = "$env:USERPROFILE\.gitconfig.local"
         Description = "Git 用户配置"
         Required = $true

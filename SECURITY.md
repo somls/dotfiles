@@ -11,7 +11,7 @@
 #### Git 配置
 ```bash
 # 复制模板文件
-cp git/.gitconfig.user.example ~/.gitconfig.local
+cp git/.gitconfig.local.example ~/.gitconfig.local
 
 # 编辑个人信息
 [user]
@@ -76,7 +76,7 @@ cp scoop/config.json.example scoop/config.json
 
 ### 🔴 **敏感文件** (需要个人化配置)
 - `git/.gitconfig.local` (用户信息)
-- `scoop/config.json` (个人偏好)
+- `scoop/config.json` (个人偏好，从 config.json.example 复制)
 
 ## 🚀 快速配置
 
@@ -87,7 +87,7 @@ cp scoop/config.json.example scoop/config.json
 .\setup-personal-configs.ps1
 
 # 或手动复制模板文件
-Copy-Item git\.gitconfig.user.example ~\.gitconfig.local
+Copy-Item git\.gitconfig.local.example ~\.gitconfig.local
 Copy-Item scoop\config.json.example scoop\config.json
 ```
 

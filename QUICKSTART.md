@@ -35,7 +35,7 @@ cd C:\dotfiles
 ### 3️⃣ 配置个人信息
 ```powershell
 # 复制Git配置模板
-copy git\.gitconfig.user.example %USERPROFILE%\.gitconfig.local
+copy git\.gitconfig.local.example %USERPROFILE%\.gitconfig.local
 
 # 编辑个人信息（用记事本或其他编辑器）
 notepad %USERPROFILE%\.gitconfig.local

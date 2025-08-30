@@ -96,7 +96,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 .\install.ps1 -Mode Copy
 
 # Git 配置问题
-Copy-Item "git\.gitconfig.user.example" "$env:USERPROFILE\.gitconfig.local"
+Copy-Item "git\.gitconfig.local.example" "$env:USERPROFILE\.gitconfig.local"
 
 # 配置验证
 .\health-check.ps1 -Detailed
