@@ -181,7 +181,7 @@ function Get-Divergence {
                 $success = ($LASTEXITCODE -eq 0)
             }
             if (-not $success) {
-                Write-Log ("git fetch 失败（重试 $i/$maxRetries）") -Level "WARN"
+                Write-Log "git fetch 失败（重试 $i/$maxRetries）" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs
                 $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
@@ -297,7 +297,7 @@ function Invoke-AutoSync {
             git pull --rebase --autostash 2>$null
             $pullOk = ($LASTEXITCODE -eq 0)
             if (-not $pullOk) {
-                Write-Log ("拉取失败（重试 $i/$maxRetries）") -Level "WARN"
+                Write-Log "拉取失败（重试 $i/$maxRetries）" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
@@ -323,7 +323,7 @@ function Invoke-AutoSync {
             if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
             $pushOk = ($LASTEXITCODE -eq 0)
             if (-not $pushOk) {
-                Write-Log ("推送失败（重试 $i/$maxRetries）") -Level "WARN"
+                Write-Log "推送失败（重试 $i/$maxRetries）" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
@@ -341,7 +341,7 @@ function Invoke-AutoSync {
             git pull --rebase --autostash 2>$null
             $pullOk = ($LASTEXITCODE -eq 0)
             if (-not $pullOk) {
-                Write-Log ("拉取失败（重试 $i/$maxRetries）") -Level "WARN"
+                Write-Log "拉取失败（重试 $i/$maxRetries）" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
@@ -370,7 +370,7 @@ function Invoke-AutoSync {
             if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
             $pushOk = ($LASTEXITCODE -eq 0)
             if (-not $pushOk) {
-                Write-Log ("推送失败（重试 $i/$maxRetries）") -Level "WARN"
+                Write-Log "推送失败（重试 $i/$maxRetries）" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
