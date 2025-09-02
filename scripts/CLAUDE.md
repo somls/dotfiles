@@ -1,250 +1,444 @@
-# Scripts Module
+# Script Tools Module
 
 ---
 
 **[🔙 Back to Root Overview](../CLAUDE.md)**
 
 ## Module Overview
-This module contains utility scripts for project maintenance, testing, validation, and automation. These scripts provide comprehensive tooling for managing the dotfiles repository, ensuring consistency, and automating common tasks.
+This module contains a comprehensive suite of PowerShell and batch scripts for project maintenance, testing, validation, and automation. These scripts provide essential tooling for managing the dotfiles repository, ensuring consistency, and automating common development tasks.
 
 ## Interfaces and Dependencies
 
 ### Module Dependencies
 ```mermaid
 graph TD
-    A[scripts] --> B[powershell]
-    A --> C[config]
-    A --> D[All Modules]
+    A[scripts] --> B[PowerShell]
+    A --> C[CMD]
+    A --> D[Project Modules]
     
-    B --> E[Run-AllTests.ps1]
-    C --> F[Validate-JsonConfigs.ps1]
-    D --> G[project-status.ps1]
+    B --> E[PowerShell Scripts]
+    C --> F[Batch Files]
+    D --> G[Configuration Files]
 ```
 
 ### Entry Points
-- **`Run-AllTests.ps1`**: Comprehensive test execution
-- **`Validate-JsonConfigs.ps1`**: Configuration validation
-- **`project-status.ps1`**: Project health assessment
-- **`cleanup-project.ps1`**: Repository maintenance
-- **`auto-sync.ps1`**: Git automation
+- **PowerShell Scripts**: Direct execution of `.ps1` files
+- **Batch Files**: CMD-compatible utilities in `cmd/` directory
+- **Main Entry Points**: `Run-AllTests.ps1`, `project-status.ps1`, `Validate-JsonConfigs.ps1`
 
 ### Configuration Structure
 ```
 scripts/
-├── Run-AllTests.ps1                # Main test runner
-├── Validate-JsonConfigs.ps1       # JSON configuration validator
-├── project-status.ps1              # Project health checker
-├── run-quick-check.ps1             # Quick status check
-├── cleanup-project.ps1             # Project cleaner
-├── auto-sync.ps1                   # Git automation
-├── README.md                       # Script documentation
-└── cmd/                           # CMD utilities
-    ├── aliases.cmd                 # CMD aliases
-    ├── editors.cmd                 # Editor shortcuts
-    ├── git.cmd                     # Git utilities
-    ├── network.cmd                 # Network tools
-    ├── system.cmd                  # System utilities
-    └── tools.cmd                   # Tool shortcuts
+├── *.ps1                    # PowerShell scripts
+├── cmd/                     # Batch utilities
+│   ├── *.cmd                # CMD-compatible scripts
+│   └── *.mac                # Macro files
+├── README.md                # Documentation
+└── CLAUDE.md               # This file
 ```
 
-## Key Files and Their Purposes
+## Core PowerShell Scripts
 
-### Core Scripts
+### Run-AllTests.ps1
+**Purpose**: Comprehensive test execution framework
 
-#### `Run-AllTests.ps1`
-- **Purpose**: Execute comprehensive test suite for entire project
-- **Features**:
-  - Parallel test execution for performance
-  - Coverage analysis and reporting
-  - Performance benchmarking
-  - Test categorization (unit, integration, acceptance)
-  - JUnit-style XML output for CI
-  - Detailed HTML reports with charts
+#### Features
+- Parallel test execution for performance optimization
+- Multiple test category support (Unit, Integration, Performance)
+- Code coverage analysis and reporting
+- Performance benchmarking capabilities
+- JUnit-style XML output for CI/CD integration
+- Detailed HTML reports with visualization
 
-#### `Validate-JsonConfigs.ps1`
-- **Purpose**: Validate all JSON configuration files against schemas
-- **Features**:
-  - Schema validation using `install.schema.json`
-  - Automatic repair of common issues
-  - Batch processing of all config files
-  - Validation report with error locations
-  - Support for custom validation rules
-
-#### `project-status.ps1`
-- **Purpose**: Comprehensive project health assessment
-- **Features**:
-  - Health score calculation (0-100)
-  - Parallel checking of all modules
-  - Detailed report with recommendations
-  - Performance metrics tracking
-  - Dependency validation
-  - Configuration drift detection
-
-#### `run-quick-check.ps1`
-- **Purpose**: Fast status verification for rapid feedback
-- **Features**:
-  - Intelligent caching for repeated runs
-  - Graded checking levels (critical, warning, info)
-  - Performance-optimized with minimal overhead
-  - Exit codes for automation
-  - Colored output for quick scanning
-
-### Maintenance Scripts
-
-#### `cleanup-project.ps1`
-- **Purpose**: Clean and optimize the repository
-- **Features**:
-  - Temporary file cleanup (.tmp, .log, cache)
-  - Backup management with retention policies
-  - Git repository optimization
-  - Duplicate file detection
-  - Disk space analysis and reporting
-
-#### `auto-sync.ps1`
-- **Purpose**: Automated Git synchronization with conflict handling
-- **Features**:
-  - Automatic commit detection and creation
-  - Conflict detection and resolution strategies
-  - Remote synchronization with retry logic
-  - Branch management with safeguards
-  - Commit message generation with AI assistance
-
-## CMD Utilities
-
-The `cmd/` directory contains batch files for CMD.exe compatibility:
-
-#### `aliases.cmd`
-- Common command shortcuts
-- Path management utilities
-- Quick access to frequently used commands
-
-#### `editors.cmd`
-- Editor launching shortcuts
-- Quick file opening commands
-- IDE-specific utilities
-
-#### `git.cmd`
-- Git command wrappers
-- Common Git workflows
-- Batch Git operations
-
-#### `network.cmd`
-- Network diagnostic tools
-- Proxy management utilities
-- Connection testing commands
-
-#### `system.cmd`
-- System information commands
-- Performance monitoring tools
-- Environment variable management
-
-#### `tools.cmd`
-- Development tool shortcuts
-- Build and test commands
-- Package management utilities
-
-## Testing and Validation
-
-### Test Categories
-1. **Unit Tests**: Individual script functionality
-2. **Integration Tests**: Module interaction validation
-3. **System Tests**: End-to-end workflow testing
-4. **Performance Tests**: Benchmarking and optimization
-
-### Test Execution Examples
+#### Usage Examples
 ```powershell
 # Run all tests
 .\Run-AllTests.ps1
 
 # Run specific test category
-.\Run-AllTests.ps1 -Category Integration
+.\Run-AllTests.ps1 -TestType Integration
 
-# Run with coverage report
+# Run with coverage analysis
 .\Run-AllTests.ps1 -Coverage -ReportFormat Html
 
-# Quick validation
-.\run-quick-check.ps1 -Level Critical
+# Parallel execution
+.\Run-AllTests.ps1 -Parallel -MaxJobs 4
+```
 
-# Validate only configurations
-.\Validate-JsonConfigs.ps1 -Repair
+#### Parameters
+- `-TestType`: Specify test category (Unit, Integration, Performance, All)
+- `-Parallel`: Enable parallel execution
+- `-Coverage`: Generate code coverage report
+- `-Benchmark`: Run performance benchmarks
+- `-GenerateReport`: Create detailed reports
+- `-Detailed`: Show verbose output
+
+### Validate-JsonConfigs.ps1
+**Purpose**: JSON configuration file validation and repair
+
+#### Features
+- Schema validation using JSON Schema draft standards
+- Automatic repair of common syntax and formatting issues
+- Batch processing of multiple configuration files
+- Detailed validation reports with error locations
+- Support for custom validation rules and constraints
+
+#### Usage Examples
+```powershell
+# Validate all JSON files
+.\Validate-JsonConfigs.ps1 -Recursive
+
+# Validate with schema
+.\Validate-JsonConfigs.ps1 -UseSchema -SchemaPath config\schema.json
+
+# Auto-repair issues
+.\Validate-JsonConfigs.ps1 -Fix -Detailed
+```
+
+#### Parameters
+- `-UseSchema`: Enable schema validation
+- `-Fix`: Automatically repair common issues
+- `-Recursive`: Process files recursively
+- `-SchemaPath`: Path to custom schema file
+- `-Detailed`: Show detailed validation output
+
+### project-status.ps1
+**Purpose**: Comprehensive project health assessment tool
+
+#### Features
+- Health score calculation with weighted metrics
+- Parallel checking of all project modules
+- Detailed reporting with actionable recommendations
+- Performance metrics tracking over time
+- Dependency validation and drift detection
+- Export capabilities in multiple formats
+
+#### Usage Examples
+```powershell
+# Full project check
+.\project-status.ps1
+
+# Check specific category
+.\project-status.ps1 -Category Scripts -Detailed
+
+# Auto-fix issues
+.\project-status.ps1 -FixIssues
+
+# Export JSON report
+.\project-status.ps1 -ExportJson -ExportPath report.json
+```
+
+#### Parameters
+- `-Category`: Check specific category (Scripts, Modules, Configs, Docs, Tests, All)
+- `-Parallel`: Enable parallel execution
+- `-FixIssues`: Automatically fix detected issues
+- `-ExportJson`: Export results as JSON
+- `-ExportPath`: Path for exported report
+
+### run-quick-check.ps1
+**Purpose**: Fast project status verification for rapid feedback
+
+#### Features
+- Intelligent caching for repeated runs (30-minute cache)
+- Graded checking levels (Critical, Standard, Full)
+- Performance-optimized with minimal overhead
+- Colored console output for quick scanning
+- Exit codes for automation integration
+
+#### Usage Examples
+```powershell
+# Quick check with caching
+.\run-quick-check.ps1 -UseCache
+
+# Full level check
+.\run-quick-check.ps1 -Level Full -Parallel
+
+# Critical files only
+.\run-quick-check.ps1 -Level Critical -Quiet
+```
+
+#### Parameters
+- `-Level`: Checking level (Critical, Standard, Full)
+- `-UseCache`: Enable result caching
+- `-Parallel`: Enable parallel execution
+- `-Fix`: Quick fix for common issues
+- `-Quiet`: Minimal output
+
+### cleanup-project.ps1
+**Purpose**: Project repository maintenance and cleanup
+
+#### Features
+- Temporary file and log cleanup
+- Backup management with retention policies
+- Git repository optimization
+- Duplicate file detection and removal
+- Disk space analysis and reporting
+
+#### Usage Examples
+```powershell
+# Preview cleanup
+.\cleanup-project.ps1 -DryRun
+
+# Standard cleanup
+.\cleanup-project.ps1
+
+# Full cleanup with logs
+.\cleanup-project.ps1 -IncludeLogs -Force
+```
+
+#### Parameters
+- `-DryRun`: Preview files to be deleted
+- `-IncludeLogs`: Include log files in cleanup
+- `-Force`: Force cleanup without confirmation
+- `-Retention`: Set backup retention period
+
+### auto-sync.ps1
+**Purpose**: Automated Git synchronization with conflict handling
+
+#### Features
+- Automatic commit detection and creation
+- Intelligent conflict detection and resolution
+- Remote synchronization with retry logic
+- Branch management with safety checks
+- Commit message generation assistance
+
+#### Usage Examples
+```powershell
+# Standard sync
+.\auto-sync.ps1
+
+# Custom commit message
+.\auto-sync.ps1 -Message "Update configuration files" -PushToRemote
+
+# Backup before sync
+.\auto-sync.ps1 -BackupFirst
+```
+
+#### Parameters
+- `-Message`: Custom commit message
+- `-PushToRemote`: Automatically push to remote
+- `-BackupFirst`: Create backup before syncing
+- `-Branch`: Specify target branch
+
+## CMD Utilities
+
+### cmd/aliases.cmd
+**Purpose**: Common command shortcuts and path management
+
+#### Features
+- Quick access to frequently used commands
+- Environment variable management
+- Path manipulation utilities
+- Cross-platform command aliases
+
+### cmd/editors.cmd
+**Purpose**: Editor launching shortcuts and file operations
+
+#### Features
+- Quick file opening in preferred editors
+- IDE-specific utilities and workflows
+- Batch file editing operations
+- Editor configuration shortcuts
+
+### cmd/git.cmd
+**Purpose**: Git command wrappers and common workflows
+
+#### Features
+- Simplified Git operations
+- Common workflow automation
+- Batch Git operations
+- Repository status checking
+
+### cmd/network.cmd
+**Purpose**: Network diagnostic tools and utilities
+
+#### Features
+- Connection testing and diagnostics
+- Proxy management utilities
+- Network configuration tools
+- Performance monitoring
+
+### cmd/system.cmd
+**Purpose**: System information and monitoring tools
+
+#### Features
+- System information commands
+- Performance monitoring utilities
+- Environment variable management
+- Hardware diagnostics
+
+### cmd/tools.cmd
+**Purpose**: Development tool shortcuts and utilities
+
+#### Features
+- Package management shortcuts
+- Build and test commands
+- Development environment tools
+- Utility command aggregators
+
+## Testing and Validation Framework
+
+### Test Categories
+1. **Unit Tests**: Individual script functionality verification
+2. **Integration Tests**: Module interaction validation
+3. **System Tests**: End-to-end workflow testing
+4. **Performance Tests**: Benchmarking and optimization validation
+
+### Test Execution Examples
+```powershell
+# Run all tests with coverage
+.\Run-AllTests.ps1 -Coverage -Parallel
+
+# Run integration tests only
+.\Run-AllTests.ps1 -TestType Integration -Detailed
+
+# Generate performance benchmark
+.\Run-AllTests.ps1 -TestType Performance -Benchmark
+
+# CI/CD compatible run
+.\Run-AllTests.ps1 -TestType All -OutputFormat JUnit
 ```
 
 ### Quality Metrics
 - Script execution time tracking
-- Error rate monitoring
-- Code coverage reporting
+- Error rate monitoring and reporting
+- Code coverage analysis (80%+ target)
 - Performance baseline comparisons
+- Health score calculation and trending
 
-## Automation Integration
+## Automation and CI/CD Integration
 
-### CI/CD Support
-- All scripts support CI/CD environments
+### CI/CD Pipeline Support
 - Non-interactive modes for automation
-- Exit codes for pipeline integration
+- Standardized exit codes for pipeline integration
 - JUnit XML output for test results
+- Environment variable configuration support
+- Parallel execution capabilities
 
-### Scheduled Tasks
-Scripts can be run as scheduled tasks:
+### Scheduled Task Integration
 ```powershell
 # Daily health check
-.\project-status.ps1 -Schedule -ReportFile status.log
+.\project-status.ps1 -Schedule -ReportFile daily-status.log
 
 # Weekly cleanup
-.\cleanup-project.ps1 -Retention 30 -Compress
+.\cleanup-project.ps1 -Retention 7 -Compress
+
+# Hourly quick check
+.\run-quick-check.ps1 -Level Critical -Quiet
 ```
 
-## Performance Features
+## Performance Optimization Features
 
 ### Parallel Processing
-- Multi-threaded test execution
-- Concurrent module checking
-- Parallel file operations
-- Async API calls where applicable
+- Multi-threaded test execution using PowerShell jobs
+- Concurrent module checking for faster results
+- Parallel file operations for bulk processing
+- Async API calls where applicable for external services
 
-### Caching System
-- Intelligent result caching
-- Cache invalidation on file changes
-- Cache size management
-- Performance improvement tracking
+### Intelligent Caching
+- Result caching for repeated script executions
+- Cache invalidation based on file modification times
+- Configurable cache retention policies
+- Performance improvement tracking and reporting
+
+### Resource Management
+- Memory usage optimization for large repositories
+- CPU utilization monitoring and control
+- Disk I/O optimization for file operations
+- Network bandwidth management for remote operations
 
 ## Security Considerations
-- Script validation before execution
-- Safe file operations with confirmation
-- No hardcoded secrets
-- Execution policy awareness
-- Privilege elevation when required
 
-## Outputs and Reporting
+### Script Validation
+- Digital signature verification for production use
+- Safe file operations with confirmation prompts
+- No hardcoded secrets or credentials
+- Execution policy awareness and handling
+
+### Safe Execution
+- Privilege elevation only when explicitly required
+- Input validation and sanitization
+- Error handling with detailed logging
+- Rollback capabilities for destructive operations
+
+## Output and Reporting
 
 ### Report Formats
-- Console output with colors
-- HTML reports with charts
-- JSON output for programmatic use
+- Colored console output for interactive use
+- HTML reports with charts and visualization
+- JSON output for programmatic consumption
 - Markdown summaries for documentation
 - CSV exports for data analysis
 
 ### Log Levels
-- ERROR: Critical failures requiring attention
-- WARNING: Potential issues that should be reviewed
-- INFO: General information and status updates
-- DEBUG: Detailed diagnostic information
-- TRACE: Fine-grained execution tracing
+- **ERROR**: Critical failures requiring immediate attention
+- **WARNING**: Potential issues that should be reviewed
+- **INFO**: General information and status updates
+- **DEBUG**: Detailed diagnostic information
+- **TRACE**: Fine-grained execution tracing
 
 ## Maintenance and Updates
 
 ### Script Conventions
-- PowerShell best practices
-- Error handling with try/catch
-- Comprehensive help documentation
-- Parameter validation
-- Pipeline support where appropriate
+- PowerShell best practices and standards compliance
+- Comprehensive error handling with try/catch blocks
+- Detailed help documentation for all functions
+- Parameter validation using PowerShell attributes
+- Pipeline support where appropriate for composability
 
 ### Version Control
-- Semantic versioning for scripts
-- Change logs for significant updates
-- Backward compatibility maintenance
-- Deprecation warnings for old features
+- Semantic versioning for script releases
+- Change logs for significant updates and modifications
+- Backward compatibility maintenance and testing
+- Deprecation warnings for obsolete features
+- Regular security and performance reviews
+
+### Update Management
+```powershell
+# Check for script updates
+.\scripts\project-status.ps1 -Category Scripts -CheckUpdates
+
+# Update all scripts from repository
+.\scripts\auto-sync.ps1 -PullLatest
+
+# Validate updated scripts
+.\scripts\Run-AllTests.ps1 -Category Unit
+```
+
+## Troubleshooting Common Issues
+
+### Execution Policy Errors
+```powershell
+# Set appropriate execution policy
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### Module Loading Failures
+```powershell
+# Force module reload
+Import-Module .\modules\DotfilesUtilities.psm1 -Force
+```
+
+### Parallel Execution Timeouts
+```powershell
+# Reduce parallel jobs or increase timeout
+.\Run-AllTests.ps1 -MaxParallelJobs 2 -TimeoutMinutes 120
+```
+
+### Cache Issues
+```powershell
+# Clear cached results
+Remove-Item .quick-check-cache.json -ErrorAction SilentlyContinue
+```
+
+### Debug Mode
+```powershell
+# Enable detailed output
+.\project-status.ps1 -Verbosity Diagnostic
+
+# Show complete error information
+.\Run-AllTests.ps1 -ContinueOnError -Verbose
+```
 
 ---
-
 **Navigation**: [🔙 Root](../CLAUDE.md) | [📋 Module Index](../CLAUDE.md#module-index)
