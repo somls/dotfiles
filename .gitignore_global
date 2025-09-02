@@ -55,3 +55,6 @@ bower_components/
 
 # Project-specific local state (do not sync)
 .kiro/
+.claude/
+.spec-workflow/
+CLAUDE.md
