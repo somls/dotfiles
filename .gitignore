@@ -85,6 +85,7 @@ backup/
 
 # Development documentation (local only)
 DEVELOPMENT.md
+CLAUDE.md
 
 # Scripts guide (local only, optional)
 SCRIPTS_GUIDE.md

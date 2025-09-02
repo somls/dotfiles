@@ -1,0 +1,128 @@
+{
+  "timestamp": "2025-09-02T16:49:39Z",
+  "modules": [
+    {
+      "path": ".",
+      "responsibility": "项目根目录，包含核心安装脚本和文档",
+      "entryPoints": ["install.ps1", "setup.ps1", "health-check.ps1"],
+      "interfaces": ["README.md", "QUICKSTART.md", "TROUBLESHOOTING.md"],
+      "testPaths": ["scripts/Run-AllTests.ps1", "scripts/project-status.ps1"],
+      "importantPaths": ["README.md", "install.ps1", "health-check.ps1", "setup.ps1"]
+    },
+    {
+      "path": "modules",
+      "responsibility": "PowerShell 工具模块，包含 UI 管理和验证功能",
+      "entryPoints": ["DotfilesUtilities.psm1"],
+      "interfaces": ["DotfilesUtilities.psm1"],
+      "testPaths": [],
+      "importantPaths": ["DotfilesUtilities.psm1"]
+    },
+    {
+      "path": "powershell",
+      "responsibility": "PowerShell 配置文件和模块",
+      "entryPoints": ["Microsoft.PowerShell_profile.ps1"],
+      "interfaces": [".powershell/aliases.ps1", ".powershell/functions.ps1"],
+      "testPaths": [],
+      "importantPaths": ["Microsoft.PowerShell_profile.ps1", ".powershell/"]
+    },
+    {
+      "path": "git",
+      "responsibility": "Git 全局配置和模板",
+      "entryPoints": ["gitconfig"],
+      "interfaces": ["gitignore_global", "gitmessage"],
+      "testPaths": [],
+      "importantPaths": ["gitconfig", "gitconfig.d/", "hooks/"]
+    },
+    {
+      "path": "config",
+      "responsibility": "项目配置管理，包含安装配置和环境配置",
+      "entryPoints": ["install.json"],
+      "interfaces": ["environments.json"],
+      "testPaths": [],
+      "importantPaths": ["install.json", "schemas/install.schema.json"]
+    },
+    {
+      "path": "WindowsTerminal",
+      "responsibility": "Windows Terminal 配置",
+      "entryPoints": ["settings.json"],
+      "interfaces": ["settings.json"],
+      "testPaths": [],
+      "importantPaths": ["settings.json"]
+    },
+    {
+      "path": "Alacritty",
+      "responsibility": "Alacritty 终端配置",
+      "entryPoints": ["alacritty.toml"],
+      "interfaces": ["alacritty.toml"],
+      "testPaths": [],
+      "importantPaths": ["alacritty.toml"]
+    },
+    {
+      "path": "WezTerm",
+      "responsibility": "WezTerm 终端配置",
+      "entryPoints": ["wezterm.lua"],
+      "interfaces": ["wezterm.lua"],
+      "testPaths": [],
+      "importantPaths": ["wezterm.lua"]
+    },
+    {
+      "path": "starship",
+      "responsibility": "Starship 提示符配置",
+      "entryPoints": ["starship.toml"],
+      "interfaces": ["starship.toml"],
+      "testPaths": [],
+      "importantPaths": ["starship.toml"]
+    },
+    {
+      "path": "scoop",
+      "responsibility": "Scoop 包管理器配置",
+      "entryPoints": ["config.json.example"],
+      "interfaces": ["config.json.example"],
+      "testPaths": [],
+      "importantPaths": ["config.json.example", "packages.txt"]
+    },
+    {
+      "path": "neovim",
+      "responsibility": "Neovim 编辑器配置",
+      "entryPoints": ["init.lua"],
+      "interfaces": ["lua/plugins.lua"],
+      "testPaths": [],
+      "importantPaths": ["init.lua", "lua/plugins.lua"]
+    },
+    {
+      "path": "scripts",
+      "responsibility": "核心管理脚本和工具",
+      "entryPoints": ["project-status.ps1", "Validate-JsonConfigs.ps1"],
+      "interfaces": ["Run-AllTests.ps1", "cleanup-project.ps1"],
+      "testPaths": ["Run-AllTests.ps1"],
+      "importantPaths": ["project-status.ps1", "Validate-JsonConfigs.ps1", "Run-AllTests.ps1"]
+    }
+  ],
+  "scanCoverage": {
+    "totalFiles": 85,
+    "scannedFiles": 85,
+    "coveragePercentage": 100,
+    "coverageByModule": {
+    ".": 100,
+    "modules": 100,
+    "powershell": 100,
+    "git": 100,
+    "config": 100,
+    "WindowsTerminal": 100,
+    "Alacritty": 100,
+    "WezTerm": 100,
+    "starship": 100,
+    "scoop": 100,
+    "neovim": 100,
+    "scripts": 100
+  }
+  },
+  "ignoreStats": {
+    "defaultRules": 0,
+    "gitignoreRules": 0,
+    "largeFiles": 0,
+    "binaryFiles": 0
+  },
+  "truncated": false,
+  "gaps": []
+}
