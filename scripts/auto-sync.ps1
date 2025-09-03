@@ -165,51 +165,89 @@ function Ensure-Upstream {
 function Get-Divergence {
     # 返回 @{ Ahead = <int>; Behind = <int> }
     try {
-        # 构建 fetch 参数，支持 -ForceFetch 与 -Verbose
-        $fetchArgs = @('--all','--prune')
+        # 首先尝试 fetch 获取最新的远程状态
+        Write-Log "正在获取远程最新状态..." -Level "INFO"
+        
+        # 构建 fetch 参数
+        $fetchArgs = @('--all', '--prune')
         if ($ForceFetch) { $fetchArgs += '--force' }
-        $captureOutput = ($VerbosePreference -ne 'SilentlyContinue')
-        if ($captureOutput) { $fetchArgs += '-v' }
-        $maxRetries = 3; $delayMs = 500; $success = $false
+        
+        # 执行 fetch 操作，带重试机制
+        $maxRetries = 3
+        $success = $false
         for ($i = 1; $i -le $maxRetries -and -not $success; $i++) {
-            if ($captureOutput) {
-                $fetchOutput = & git fetch @fetchArgs 2>&1
-                $success = ($LASTEXITCODE -eq 0)
-                if ($fetchOutput) { Write-Verbose ("fetch 输出:\n" + ($fetchOutput -join "`n")) }
-            } else {
-                & git fetch @fetchArgs 2>$null
+            try {
+                if ($VerbosePreference -ne 'SilentlyContinue') {
+                    $fetchOutput = & git fetch @fetchArgs 2>&1
+                    if ($fetchOutput) { Write-Verbose ("fetch 输出:`n" + ($fetchOutput -join "`n")) }
+                } else {
+                    & git fetch @fetchArgs 2>$null
+                }
                 $success = ($LASTEXITCODE -eq 0)
             }
-            if (-not $success) {
-                Write-Log "git fetch 失败（重试 $i/$maxRetries）" -Level "WARN"
-                Start-Sleep -Milliseconds $delayMs
-                $delayMs = [Math]::Min($delayMs * 2, 4000)
+            catch {
+                $success = $false
+            }
+            
+            if (-not $success -and $i -lt $maxRetries) {
+                Write-Log "git fetch 失败，重试 $($i+1)/$maxRetries..." -Level "WARN"
+                Start-Sleep -Seconds 1
             }
         }
-        if (-not $success) { Write-Log "git fetch 多次重试后仍失败，无法获取远程最新状态" -Level "ERROR" }
+        
+        if (-not $success) {
+            Write-Log "git fetch 失败，使用本地缓存的远程状态" -Level "WARN"
+        }
+        
+        # 检查是否有上游分支
         if (-not (Test-BranchHasUpstream)) {
-            Write-Log "未检测到上游分支，无法比较分歧" -Level "WARN"
-            return @{ Ahead = 0; Behind = 0 }
+            Write-Log "未检测到上游分支，尝试自动设置..." -Level "WARN"
+            $branch = Get-CurrentBranch
+            if ($branch) {
+                # 尝试设置上游分支
+                git push -u origin $branch 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Log "已设置上游分支: origin/$branch" -Level "INFO"
+                } else {
+                    Write-Log "无法设置上游分支，返回默认分歧状态" -Level "WARN"
+                    return @{ Ahead = 0; Behind = 0 }
+                }
+            } else {
+                return @{ Ahead = 0; Behind = 0 }
+            }
         }
-        if ($VerbosePreference -ne 'SilentlyContinue') {
-            $counts = git rev-list --left-right --count "HEAD...HEAD@{u}" 2>&1
-            Write-Verbose ("rev-list 输出: '" + ($counts -join ' ') + "'")
-        } else {
+        
+        # 获取分歧计数
+        try {
             $counts = git rev-list --left-right --count "HEAD...HEAD@{u}" 2>$null
+            if ($VerbosePreference -ne 'SilentlyContinue') {
+                Write-Verbose ("rev-list 输出: '$counts'")
+            }
         }
-        if (-not $counts) {
-            Write-Log "无法解析分歧计数（rev-list 返回空）" -Level "WARN"
+        catch {
+            $counts = $null
+        }
+        
+        if (-not $counts -or $counts.Trim() -eq '') {
+            Write-Log "无法获取分歧计数，可能分支完全同步" -Level "INFO"
             return @{ Ahead = 0; Behind = 0 }
         }
-        # 兼容任意空白（空格/制表）分隔
-        $parts = @($counts.Trim() -split '\s+') | Where-Object { $_ -ne '' }
+        
+        # 解析分歧计数
+        $parts = @($counts.Trim() -split '\s+') | Where-Object { $_ -ne '' -and $_ -match '^\d+$' }
         if ($parts.Count -lt 2) {
-            Write-Log "无法解析分歧计数（格式异常）" -Level "WARN"
+            Write-Log "分歧计数格式异常: '$counts'，假设同步状态" -Level "WARN"
             return @{ Ahead = 0; Behind = 0 }
         }
-        return @{ Ahead = [int]$parts[0]; Behind = [int]$parts[1] }
+        
+        $ahead = [int]$parts[0]
+        $behind = [int]$parts[1]
+        
+        Write-Log "分歧状态：本地领先 $ahead 个提交，远程领先 $behind 个提交" -Level "INFO"
+        return @{ Ahead = $ahead; Behind = $behind }
+        
     } catch {
-        Write-Log "获取分歧信息出错: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "获取分歧信息时发生异常: $($_.Exception.Message)" -Level "ERROR"
         return @{ Ahead = 0; Behind = 0 }
     }
 }
@@ -252,18 +290,52 @@ function Invoke-AutoSync {
     $div = Get-Divergence
     Write-Log "分支状态：本地领先 $($div.Ahead) 个提交，远程领先 $($div.Behind) 个提交" -Level "INFO"
 
-    # 边界情形处理：刚刚提交但分歧检测返回 0/0（例如缺少上游检测或某些环境差异）
-    if (-not $DryRunMode -and $didCommit -and $div.Ahead -eq 0 -and $div.Behind -eq 0) {
-        Write-Log "检测到刚完成本地提交，但分歧为 0/0，执行保障性推送..." -Level "WARN"
-        if (-not (Test-BranchHasUpstream)) {
-            Write-Log "未检测到上游分支，设置并推送: origin/$branch" -Level "WARN"
-            git push -u origin $branch 2>$null
-        } else {
-            git push 2>$null
+    # 边界情形处理：刚刚提交后需要重新检查分歧状态
+    if (-not $DryRunMode -and $didCommit) {
+        Write-Log "刚完成本地提交，重新检查分歧状态..." -Level "INFO"
+        # 重新获取分歧状态
+        $div = Get-Divergence
+        Write-Log "提交后分支状态：本地领先 $($div.Ahead) 个提交，远程领先 $($div.Behind) 个提交" -Level "INFO"
+        
+        # 如果本地有领先的提交，直接推送
+        if ($div.Ahead -gt 0) {
+            Write-Log "本地有新提交，正在推送..." -Level "INFO"
+            $pushArgs = @()
+            if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
+            
+            $maxRetries = 3
+            $pushOk = $false
+            for ($i = 1; $i -le $maxRetries -and -not $pushOk; $i++) {
+                if ($pushArgs.Count -gt 0) { 
+                    git push @pushArgs 2>$null 
+                } else { 
+                    git push 2>$null 
+                }
+                $pushOk = ($LASTEXITCODE -eq 0)
+                if (-not $pushOk -and $i -lt $maxRetries) {
+                    Write-Log "推送失败，重试 $($i+1)/$maxRetries..." -Level "WARN"
+                    Start-Sleep -Seconds 1
+                }
+            }
+            
+            if (-not $pushOk) {
+                Write-Log "推送失败" -Level "ERROR"
+                return $false
+            }
+            Write-Log "推送成功" -Level "INFO"
+            return $true
         }
-        if ($LASTEXITCODE -ne 0) { Write-Log "推送失败" -Level "ERROR"; return $false }
-        Write-Log "推送成功" -Level "INFO"
-        return $true
+        # 如果分歧为 0/0，可能是检测问题，尝试保障性推送
+        elseif ($div.Ahead -eq 0 -and $div.Behind -eq 0) {
+            Write-Log "分歧检测为 0/0，执行保障性推送..." -Level "WARN"
+            git push 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Log "保障性推送成功" -Level "INFO"
+            } else {
+                Write-Log "保障性推送无效果（可能已同步）" -Level "INFO"
+            }
+            return $true
+        }
     }
 
     if ($DryRunMode) {
@@ -502,7 +574,7 @@ function Invoke-GitCommit {
 
 function Main {
     try {
-        Write-Host "=== 简化自动提交与同步工具 ===" -ForegroundColor Cyan
+        Write-Host "=== 智能自动提交与同步工具 ===" -ForegroundColor Cyan
         Write-Host ""
         
         # 检查Git仓库
@@ -511,19 +583,36 @@ function Main {
             return $false
         }
         
-        # Auto 模式：不论是否有本地改动，都会先与远程比较并同步
-        if ($Auto) {
+        # 默认使用 Auto 模式进行智能同步，除非明确指定了其他参数
+        if ($Auto -or (-not $Push -and -not $Message -and -not $DryRun)) {
+            Write-Log "使用智能同步模式" -Level "INFO"
             return (Invoke-AutoSync -DryRunMode:$DryRun)
         }
 
-        # 获取变更
+        # 手动模式：获取变更
         $Changes = Get-GitChanges
         
         # 检查是否有变更
         $TotalChanges = $Changes.Added.Count + $Changes.Modified.Count + $Changes.Deleted.Count + $Changes.Untracked.Count
         if ($TotalChanges -eq 0) {
-            # 无本地变更时，若用户未指定 -Push，只做提示即可
-            Write-Log "没有检测到文件变更（如需强制与远程同步，使用 -Auto）" -Level "INFO"
+            Write-Log "没有检测到本地文件变更" -Level "INFO"
+            
+            # 即使没有本地变更，也检查是否有未推送的提交
+            $div = Get-Divergence
+            if ($div.Ahead -gt 0) {
+                Write-Log "检测到 $($div.Ahead) 个未推送的提交，正在推送..." -Level "INFO"
+                if (-not $DryRun) {
+                    git push 2>$null
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Log "推送成功" -Level "INFO"
+                    } else {
+                        Write-Log "推送失败" -Level "ERROR"
+                        return $false
+                    }
+                }
+            } else {
+                Write-Log "本地和远程已同步" -Level "INFO"
+            }
             return $true
         }
         
@@ -532,8 +621,11 @@ function Main {
         # 生成提交消息
         $CommitMessage = New-CommitMessage -Changes $Changes -CustomMessage $Message
         
+        # 在手动模式下，默认也推送到远程（除非明确指定不推送）
+        $ShouldPush = $Push -or (-not $PSBoundParameters.ContainsKey('Push'))
+        
         # 执行提交
-        $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$Push -DryRunMode:$DryRun
+        $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$ShouldPush -DryRunMode:$DryRun
         
         if ($Success) {
             Write-Host "✅ 操作完成" -ForegroundColor Green
