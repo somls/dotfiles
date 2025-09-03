@@ -1,6 +1,5 @@
 ﻿# ~/.powershell/extra.ps1
 # 智能代理管理 - 默认系统代理，支持快速切换本地代理
-# Last Modified: 2025-08-25
 
 # 代理配置 - 本地代理端口映射
 $global:ProxyPorts = @{

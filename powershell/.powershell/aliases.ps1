@@ -1,6 +1,5 @@
 ﻿# ~/.powershell/aliases.ps1
-# 核心别名 - 高效/简洁/实用
-# Last Modified: 2025-08-13
+# 核心别名
 
 <#
 说明：

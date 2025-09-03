@@ -1,5 +1,4 @@
 # ~/.powershell/theme.ps1
-# Last Modified: 2025-07-29
 # 精简版：基础的主题和提示符配置
 
 # --- Terminal Icons ---

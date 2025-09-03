@@ -1,6 +1,5 @@
 # ~/.powershell/tools.ps1
-# 第三方工具集成 - 高效/简洁/实用
-# Last Modified: 2025-08-13
+# 第三方工具集成
 
 # 快速模式检查
 if ($env:POWERSHELL_FAST_MODE -eq "1") { return }

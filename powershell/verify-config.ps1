@@ -2,7 +2,6 @@
 # PowerShell Configuration Test Script
 #
 # 用于验证PowerShell配置是否正确安装和工作
-# Last Modified: 2025-07-29
 # =============================================================================
 
 [CmdletBinding()]

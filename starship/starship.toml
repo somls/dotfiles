@@ -1,6 +1,4 @@
 # Starship Configuration - Windows Optimized
-# 简洁、高效、美观的 Windows 环境配置
-# Last Modified: 2025-08-25
 
 # 基础设置
 add_newline = true

@@ -1,6 +1,5 @@
 # ~/.powershell/functions.ps1
-# 核心实用函数 - 高效/简洁/实用
-# Last Modified: 2025-08-13
+# 核心实用函数 
 
 # Git 快速操作
 function ngc { 

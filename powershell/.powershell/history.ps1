@@ -1,6 +1,5 @@
 # ~/.powershell/history.ps1
 # PowerShell 历史记录配置
-# Last Modified: 2025-08-25
 
 # 历史记录设置
 $MaximumHistoryCount = 4096
