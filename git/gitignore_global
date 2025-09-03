@@ -270,4 +270,4 @@ hs_err_pid*
 .nyc_output
 coverage/
 .sonarqube/
-.scannerwork/
+.scannerwork/yncdotfiles'
