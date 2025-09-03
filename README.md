@@ -1,4 +1,4 @@
-# Windows 11 Dotfiles
+# Windows 10/11 Dotfiles
 
 <div align="center">
 

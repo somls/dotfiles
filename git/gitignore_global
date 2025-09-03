@@ -271,3 +271,6 @@ hs_err_pid*
 coverage/
 .sonarqube/
 .scannerwork/yncdotfiles'
+.claude/
+.spec-workflow/
+.codebuddy/
