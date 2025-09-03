@@ -68,8 +68,9 @@ if (-not $SkipDetection) {
 }
 
 # 询问要安装的组件
-Write-Host "📦 选择要安装的组件:" -ForegroundColor Cyan
-Write-Host "默认组件 (Scoop, CMD, PowerShell, Starship, Git, WindowsTerminal) 将自动安装" -ForegroundColor Gray
+Write-Host "📦 选择要配置的组件:" -ForegroundColor Cyan
+Write-Host "默认组件 (Scoop, CMD, PowerShell, Starship, Git, WindowsTerminal) 将自动配置" -ForegroundColor Gray
+Write-Host "注意：此脚本仅安装配置文件，不会安装软件本身" -ForegroundColor Yellow
 Write-Host ""
 
 $components = @{
@@ -87,7 +88,7 @@ foreach ($component in $components.Keys) {
     $recommendation = if ($isDetected) { " (检测到已安装，推荐)" } else { "" }
     $defaultChoice = if ($isDetected) { "Y/n" } else { "y/N" }
 
-    $response = Read-Host "安装 $component ($description)$recommendation? ($defaultChoice)"
+    $response = Read-Host "配置 $component ($description)$recommendation? ($defaultChoice)"
 
     $shouldInstall = if ($isDetected) {
         # 已检测到的应用，默认为是
@@ -102,9 +103,14 @@ foreach ($component in $components.Keys) {
     }
 }
 
+# 检测开发模式
+$devModeFile = Join-Path $env:USERPROFILE ".dotfiles.dev-mode"
+$isDevMode = Test-Path $devModeFile
+$installMode = if ($isDevMode) { "开发模式 (符号链接)" } else { "生产模式 (复制文件)" }
+
 Write-Host ""
 Write-Host "📋 安装摘要:" -ForegroundColor Yellow
-Write-Host "安装模式: 生产模式 (复制文件)" -ForegroundColor Gray
+Write-Host "安装模式: $installMode" -ForegroundColor Gray
 Write-Host "安装组件: $($selectedComponents -join ', ')" -ForegroundColor Gray
 Write-Host ""
 

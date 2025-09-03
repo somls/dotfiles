@@ -1,62 +1,22 @@
 # Git 主配置文件
-# 最后更新: 2023-07-30
+# 使用模块化设计，通过 include 引入各个功能模块
 
-# 包含模块化配置文件
 [include]
     # 核心设置
     path = ~/.gitconfig.d/core.gitconfig
-    # 用户信息
-    path = ~/.gitconfig.d/user.gitconfig
     # 命令别名
     path = ~/.gitconfig.d/aliases.gitconfig
+    # 颜色配置
+    path = ~/.gitconfig.d/color.gitconfig
     # 差异比较设置
     path = ~/.gitconfig.d/diff.gitconfig
     # Windows 特定设置
     path = ~/.gitconfig.d/windows.gitconfig
 
-# 全局忽略文件
-[core]
-    excludesfile = ~/.gitignore_global
-	autocrlf = false
-	editor = code --wait
-	pager = delta
-
-# 提交消息模板
-[commit]
-    template = ~/.gitmessage
-
-# 本地特定配置（不包含在版本控制中）
-# 这允许每台机器有自己的特定设置
 [include]
+    # 本地配置文件（用户信息、代理设置等）
     path = ~/.gitconfig.local
-[fetch]
-	prune = true
-[pull]
-	rebase = true
-[rebase]
-	autoStash = true
-[rerere]
-	enabled = true
-[gc]
-	auto = 256
 [http]
 	proxy = http://127.0.0.1:10808
 [https]
 	proxy = http://127.0.0.1:10808
-[credential "helperselector"]
-	selected = manager
-[init]
-	defaultBranch = main
-[alias]
-	st = status -sb
-	lg = log --oneline --decorate --graph
-	co = checkout
-	ci = commit
-[color "branch"]
-	current = yellow reverse
-[color "diff"]
-	meta = yellow bold
-[delta]
-	navigate = true
-	line-numbers = true
-	syntax-theme = Dracula

@@ -16,7 +16,7 @@
 
 .PARAMETER Type
     只安装指定类型的配置（如 PowerShell, Git 等）
-    如果不指定，将安装默认组件（Scoop, CMD, PowerShell, Starship, Git）并询问是否安装其他组件
+    如果不指定，将配置默认组件（Scoop, CMD, PowerShell, Starship, Git）并询问是否配置其他组件
 
 .PARAMETER Force
     强制覆盖现有文件和链接，即使目标已存在
@@ -41,7 +41,7 @@
 
 .EXAMPLE
     .\install.ps1
-    安装默认组件（Scoop, CMD, PowerShell, Starship, Git）并询问是否安装其他组件
+    配置默认组件（Scoop, CMD, PowerShell, Starship, Git）并询问是否配置其他组件
 
 .EXAMPLE
     .\install.ps1 -Type PowerShell,Git,Neovim -Force
@@ -141,12 +141,12 @@ try {
     Write-Warning "读取 config/install.json 失败: $($_.Exception.Message)"
 }
 
-# 如果未指定Type参数，使用默认组件并询问是否安装其他组件
+# 如果未指定Type参数，使用默认组件并询问是否配置其他组件
 if (-not $PSBoundParameters.ContainsKey('Type')) {
     $Type = $script:DefaultComponents
-    Write-Host "[INFO] 将安装默认组件: $($Type -join ', ')" -ForegroundColor Cyan
+    Write-Host "[INFO] 将配置默认组件: $($Type -join ', ')" -ForegroundColor Cyan
 
-    # 在非DryRun和非Interactive模式下，询问是否安装其他组件
+    # 在非DryRun和非Interactive模式下，询问是否配置其他组件
     if (-not $DryRun -and -not $Interactive) {
                     $allComponents = @('WezTerm', 'Alacritty', 'Neovim')
         $optionalComponents = $allComponents | Where-Object { $_ -notin $Type }
@@ -181,7 +181,7 @@ if (-not $PSBoundParameters.ContainsKey('Type')) {
                 'a' {
                     # 全选
                     $selectedComponents = $optionalComponents
-                    Write-Host "✅ 已选择安装所有可选组件: $($selectedComponents -join ', ')" -ForegroundColor Green
+                    Write-Host "✅ 已选择配置所有可选组件: $($selectedComponents -join ', ')" -ForegroundColor Green
                 }
                 'n' {
                     # 全不选
@@ -212,9 +212,9 @@ if (-not $PSBoundParameters.ContainsKey('Type')) {
 
             if ($selectedComponents.Count -gt 0) {
                 $Type += $selectedComponents
-                Write-Host "[INFO] 用户选择安装额外组件: $($selectedComponents -join ', ')" -ForegroundColor Cyan
+                Write-Host "[INFO] 用户选择配置额外组件: $($selectedComponents -join ', ')" -ForegroundColor Cyan
             } else {
-                Write-Host "[INFO] 用户未选择额外组件，仅安装默认组件" -ForegroundColor Cyan
+                Write-Host "[INFO] 用户未选择额外组件，仅配置默认组件" -ForegroundColor Cyan
             }
         }
     }
@@ -229,9 +229,8 @@ $ProgressPreference = 'SilentlyContinue'
 try {
     $ModulePath = Join-Path $PSScriptRoot "modules"
     if (Test-Path $ModulePath) {
-        Import-Module (Join-Path $ModulePath "ValidationManager.psm1") -Force -ErrorAction Stop
-        Import-Module (Join-Path $ModulePath "UserInterfaceManager.psm1") -Force -ErrorAction Stop
-        Write-Verbose "模块加载成功: ValidationManager, UserInterfaceManager"
+        Import-Module (Join-Path $ModulePath "DotfilesUtilities.psm1") -Force -ErrorAction Stop
+        Write-Verbose "模块加载成功: DotfilesUtilities"
         $script:UseEnhancedUI = $true
         # 如果增强UI所需类型不可用，则禁用增强UI
         if (-not ("ProgressManager" -as [type])) { $script:UseEnhancedUI = $false }
@@ -274,18 +273,18 @@ try {
         if ($devFlag -or ($devEnv -match '^(1|true|yes|on)$')) {
             $script:EffectiveMode = 'Symlink'
             $script:IsDevMode = $true
-            Write-Host "[INFO] 检测到开发模式，将使用符号链接安装" -ForegroundColor Cyan
+            Write-Host "[INFO] 检测到开发模式，将使用符号链接配置" -ForegroundColor Cyan
         } else {
             $script:EffectiveMode = 'Copy'
-            Write-Host "[INFO] 生产模式，将使用复制安装" -ForegroundColor Cyan
+            Write-Host "[INFO] 生产模式，将使用复制配置" -ForegroundColor Cyan
         }
     }
 
     $modeDesc = if ($script:IsDevMode) { "开发模式 (符号链接)" } else { "生产模式 (复制文件)" }
-    Write-Host "[INFO] 安装模式: $script:EffectiveMode - $modeDesc" -ForegroundColor Cyan
+    Write-Host "[INFO] 配置模式: $script:EffectiveMode - $modeDesc" -ForegroundColor Cyan
 }
 catch {
-    Write-Host "[WARN] 解析安装模式失败，回退到 Copy: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "[WARN] 解析配置模式失败，回退到 Copy: $($_.Exception.Message)" -ForegroundColor Yellow
     $script:EffectiveMode = 'Copy'
     $script:IsDevMode = $false
 }
@@ -1042,6 +1041,7 @@ $links = @{
     "git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git" };
     "git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git" };
     "git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git" };
+
 
     # PowerShell
     "powershell\Microsoft.PowerShell_profile.ps1" = @{ Target = "$($adaptivePaths['PowerShell'])\Microsoft.PowerShell_profile.ps1"; Type = "PowerShell" };
