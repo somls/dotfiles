@@ -42,7 +42,7 @@ Describe "DotfilesUtilities Module" {
         }
 
         It "应该能够创建验证结果对象" {
-            $result = Get-DotfilesValidationResult -Component "TestComponent" -Path $PSScriptRoot
+            $result = Get-DotfilesValidationResult -Component "TestComponent" -Path $PSScriptRoot -Type "Directory"
             $result.Component | Should Be "TestComponent"
             $result.IsValid | Should Be $true
         }

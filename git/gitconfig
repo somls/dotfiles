@@ -17,7 +17,9 @@
 # 全局忽略文件
 [core]
     excludesfile = ~/.gitignore_global
-	autocrlf = input
+	autocrlf = false
+	editor = code --wait
+	pager = delta
 
 # 提交消息模板
 [commit]
@@ -43,3 +45,18 @@
 	proxy = http://127.0.0.1:10808
 [credential "helperselector"]
 	selected = manager
+[init]
+	defaultBranch = main
+[alias]
+	st = status -sb
+	lg = log --oneline --decorate --graph
+	co = checkout
+	ci = commit
+[color "branch"]
+	current = yellow reverse
+[color "diff"]
+	meta = yellow bold
+[delta]
+	navigate = true
+	line-numbers = true
+	syntax-theme = Dracula
