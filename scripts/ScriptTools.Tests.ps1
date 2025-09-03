@@ -20,20 +20,30 @@ Describe "Installation Scripts" {
     }
 
     Context "配置脚本测试" {
-        It "应该存在 PowerShell 安装脚本" {
-            $scriptPath = "$PSScriptRoot/../powershell/install.ps1"
+        It "应该存在 PowerShell 验证脚本" {
+            $scriptPath = "$PSScriptRoot/../powershell/verify-config.ps1"
             Test-Path $scriptPath | Should Be $true
         }
 
-        It "应该存在 PowerShell 链接脚本" {
-            $scriptPath = "$PSScriptRoot/../powershell/link-profile.ps1"
+        It "应该存在 PowerShell 配置测试" {
+            $scriptPath = "$PSScriptRoot/PowerShellConfig.Tests.ps1"
+            Test-Path $scriptPath | Should Be $true
+        }
+
+        It "应该存在 Git 配置测试" {
+            $scriptPath = "$PSScriptRoot/GitConfig.Tests.ps1"
+            Test-Path $scriptPath | Should Be $true
+        }
+
+        It "应该存在 DotfilesUtilities 模块测试" {
+            $scriptPath = "$PSScriptRoot/DotfilesUtilities.Tests.ps1"
             Test-Path $scriptPath | Should Be $true
         }
     }
 
     Context "CMD 脚本测试" {
         It "应该存在 CMD 别名脚本" {
-            $scriptPath = "$PSScriptRoot/../scripts/cmd/doskey.cmd"
+            $scriptPath = "$PSScriptRoot/../scripts/cmd/aliases.cmd"
             Test-Path $scriptPath | Should Be $true
         }
     }
@@ -51,13 +61,13 @@ Describe "Installation Scripts" {
     }
 
     Context "工具脚本测试" {
-        It "应该存在 reset-history.cmd 脚本" {
-            $scriptPath = "$PSScriptRoot/../reset-history.cmd"
-            Test-Path $scriptPath | Should Be $true
-        }
-
         It "应该存在 detect-environment.ps1 脚本" {
             $scriptPath = "$PSScriptRoot/../detect-environment.ps1"
+            Test-Path $scriptPath | Should Be $true
+        }
+        
+        It "应该存在 setup-personal-configs.ps1 脚本" {
+            $scriptPath = "$PSScriptRoot/../setup-personal-configs.ps1"
             Test-Path $scriptPath | Should Be $true
         }
     }

@@ -1,4 +1,5 @@
 # Local git user configs (kept in-repo but not tracked)
+git/gitconfig.local
 git/.gitconfig.local
 
 # Allow important git documentation
@@ -57,7 +58,7 @@ powershell/.powershell/pshistory.txt
 health-report.json
 
 # User-specific configuration files (contain personal info)
-git/.gitconfig.local
+git/gitconfig.local
 # scoop/config.json (用户从 config.json.example 复制)
 
 

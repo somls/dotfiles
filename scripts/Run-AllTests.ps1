@@ -101,7 +101,7 @@ function Initialize-TestEnvironment {
         }
 
         # 尝试加载验证模块
-        $validationModulePath = Join-Path $script:ProjectRoot "modules\ValidationManager.psm1"
+        $validationModulePath = Join-Path $script:ProjectRoot "modules\DotfilesUtilities.psm1"
         if (Test-Path $validationModulePath) {
             Import-Module $validationModulePath -Force -ErrorAction SilentlyContinue
         }
@@ -189,11 +189,8 @@ function Find-TestFiles {
         }
     }
 
-    # 搜索测试目录
+    # 搜索测试目录 - 现在所有测试都在 scripts 目录中
     $testDirs = @(
-        (Join-Path $script:ProjectRoot "tests"),
-        (Join-Path $script:ProjectRoot "test"),
-        (Join-Path $script:ProjectRoot "scripts\tests"),
         (Join-Path $script:ProjectRoot "scripts")
     )
 
