@@ -73,6 +73,7 @@ git/.gitconfig.local
 **/*G:/*
 **/*C:/Users/*
 **/*malip*
+yncdotfiles'
 
 # Installation logs and temporary files
 install.log
