@@ -51,10 +51,7 @@ function Create-DirectoryStructure {
         New-Item -Path $ConfigDir -ItemType Directory -Force | Out-Null
     }
 
-    if (-not (Test-Path $GitconfigDDir)) {
-        Write-Host "创建 Git 配置模块目录: $GitconfigDDir" -ForegroundColor Cyan
-        New-Item -Path $GitconfigDDir -ItemType Directory -Force | Out-Null
-    }
+    # 注意：不再创建 .gitconfig.d 目录，因为我们要整体链接该目录
 }
 
 # 安装 git 配置文件
@@ -87,16 +84,12 @@ function Install-GitConfigurations {
     }
 }
 
-# 安装模块化配置文件
+# 安装模块化配置目录
 function Install-GitconfigModules {
     $SourceModuleDir = Join-Path -Path $SourceDir -ChildPath "gitconfig.d"
     if (Test-Path $SourceModuleDir) {
-        $Modules = Get-ChildItem -Path $SourceModuleDir -Filter "*.gitconfig"
-        foreach ($Module in $Modules) {
-            $Source = $Module.FullName
-            $Target = Join-Path -Path $GitconfigDDir -ChildPath $Module.Name
-            Install-DotFile -Source $Source -Target $Target -Symlink $Symlink -Force $Force -BackupDir $BackupDir -WhatIf:$WhatIf
-        }
+        # 整体链接 .gitconfig.d 目录，而不是逐个文件链接
+        Install-DotFile -Source $SourceModuleDir -Target $GitconfigDDir -Symlink $Symlink -Force $Force -BackupDir $BackupDir -WhatIf:$WhatIf
     }
 }
 

@@ -3,24 +3,24 @@
 
 [include]
     # 核心设置
-    path = ./gitconfig.d/core.gitconfig
+    path = ~/.gitconfig.d/core.gitconfig
     # 命令别名
-    path = ./gitconfig.d/aliases.gitconfig
+    path = ~/.gitconfig.d/aliases.gitconfig
     # 颜色配置
-    path = ./gitconfig.d/color.gitconfig
+    path = ~/.gitconfig.d/color.gitconfig
     # 差异比较设置
-    path = ./gitconfig.d/diff.gitconfig
+    path = ~/.gitconfig.d/diff.gitconfig
     # Windows 特定设置
-    path = ./gitconfig.d/windows.gitconfig
+    path = ~/.gitconfig.d/windows.gitconfig
 
 [include]
     # 本地配置文件（用户信息、代理设置等）
     # 包含个人信息和环境特定设置
-    path = ./.gitconfig.local
+    path = ~/.gitconfig.local
 
 # 默认的提交消息模板
 [commit]
-    template = ./.gitmessage
+    template = ~/.gitmessage
 
 # 默认分支名称
 [init]

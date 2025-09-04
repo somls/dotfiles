@@ -135,6 +135,71 @@ function Test-GitConfig {
 
     Write-Status "Git已安装: $($gitCmd.Source)" 'Success' 'Git'
 
+    # 检查Git配置文件的符号链接状态
+    $gitConfigs = @{
+        '.gitconfig' = @{
+            Path = Join-Path $env:USERPROFILE '.gitconfig'
+            Source = Join-Path $root 'git\gitconfig'
+            Description = 'Git主配置文件'
+        }
+        '.gitconfig.d' = @{
+            Path = Join-Path $env:USERPROFILE '.gitconfig.d'
+            Source = Join-Path $root 'git\gitconfig.d'
+            Description = 'Git配置模块目录'
+        }
+        '.gitignore_global' = @{
+            Path = Join-Path $env:USERPROFILE '.gitignore_global'
+            Source = Join-Path $root 'git\gitignore_global'
+            Description = 'Git全局忽略文件'
+        }
+        '.gitmessage' = @{
+            Path = Join-Path $env:USERPROFILE '.gitmessage'
+            Source = Join-Path $root 'git\gitmessage'
+            Description = 'Git提交消息模板'
+        }
+        '.gitconfig.local' = @{
+            Path = Join-Path $env:USERPROFILE '.gitconfig.local'
+            Source = Join-Path $root 'git\.gitconfig.local'
+            Description = 'Git本地配置文件'
+        }
+    }
+
+    $allLinksGood = $true
+    foreach ($configName in $gitConfigs.Keys) {
+        $config = $gitConfigs[$configName]
+        $userPath = $config.Path
+        $sourcePath = $config.Source
+        $desc = $config.Description
+
+        if (Test-Path $userPath) {
+            $item = Get-Item $userPath
+            if ($item.LinkType -eq 'SymbolicLink') {
+                if ($item.Target -eq $sourcePath) {
+                    Write-Status "$desc 符号链接正确" 'Success' 'Git'
+                } else {
+                    Write-Status "$desc 符号链接目标错误: $($item.Target)" 'Warning' 'Git'
+                    $results.Issues += "Git配置符号链接目标错误: $configName"
+                    $results.Recommendations += "重新运行 .\install.ps1 -Type Git -Force 修复Git配置"
+                    $allLinksGood = $false
+                }
+            } else {
+                Write-Status "$desc 不是符号链接" 'Warning' 'Git'
+                $results.Issues += "Git配置文件不是符号链接: $configName"
+                $results.Recommendations += "运行 .\install.ps1 -Type Git -Force 创建符号链接"
+                $allLinksGood = $false
+            }
+        } else {
+            Write-Status "$desc 不存在" 'Warning' 'Git'
+            $results.Issues += "缺失Git配置文件: $configName"
+            $results.Recommendations += "运行 .\install.ps1 -Type Git 安装Git配置"
+            $allLinksGood = $false
+        }
+    }
+
+    if ($allLinksGood) {
+        Write-Status "所有Git配置文件符号链接状态正常" 'Success' 'Git'
+    }
+
     # 检查用户配置（兼容包含本地文件 ~/.gitconfig.local 的场景）
     $userName = git config --global --get user.name 2>$null
     $userEmail = git config --global --get user.email 2>$null
@@ -168,7 +233,18 @@ function Test-GitConfig {
         Write-Status "Git用户信息已配置: $userName <$userEmail>" 'Success' 'Git'
     }
 
-    return $true
+    # 检查Git别名功能是否正常工作
+    $aliasTest = git config --get alias.st 2>$null
+    if ($aliasTest -eq 'status') {
+        Write-Status "Git别名功能正常" 'Success' 'Git'
+    } else {
+        Write-Status "Git别名功能异常" 'Warning' 'Git'
+        $results.Issues += "Git别名配置未正确加载"
+        $results.Recommendations += "检查 .gitconfig 和 .gitconfig.d 目录的符号链接状态"
+        $allLinksGood = $false
+    }
+
+    return $allLinksGood
 }
 
 # 检查Neovim配置
@@ -333,23 +409,93 @@ function Test-SymbolicLinks {
 
     Write-Status "检查符号链接状态..." 'Info'
 
-    $brokenLinks = @()
+    # 检查仓库内的损坏符号链接
+    $brokenRepoLinks = @()
     Get-ChildItem -Path $root -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
         if ($_.LinkType -eq 'SymbolicLink') {
             if (-not (Test-Path $_.Target)) {
-                $brokenLinks += $_
+                $brokenRepoLinks += $_
             }
         }
     }
 
-    if ($brokenLinks.Count -gt 0) {
-        Write-Status "发现 $($brokenLinks.Count) 个损坏的符号链接" 'Warning'
-        if ($Detailed) {
-            foreach ($link in $brokenLinks) {
-                Write-Host "  • $($link.FullName) -> $($link.Target)" -ForegroundColor DarkGray
+    # 检查用户目录中的配置符号链接状态
+    $userConfigLinks = @{
+        'PowerShell Profile' = @{
+            Path = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+            Source = Join-Path $root 'powershell\Microsoft.PowerShell_profile.ps1'
+        }
+        'Git Config' = @{
+            Path = "$env:USERPROFILE\.gitconfig"
+            Source = Join-Path $root 'git\gitconfig'
+        }
+        'Git Config Directory' = @{
+            Path = "$env:USERPROFILE\.gitconfig.d"
+            Source = Join-Path $root 'git\gitconfig.d'
+        }
+        'Git Ignore Global' = @{
+            Path = "$env:USERPROFILE\.gitignore_global"
+            Source = Join-Path $root 'git\gitignore_global'
+        }
+        'Git Message Template' = @{
+            Path = "$env:USERPROFILE\.gitmessage"
+            Source = Join-Path $root 'git\gitmessage'
+        }
+        'Git Local Config' = @{
+            Path = "$env:USERPROFILE\.gitconfig.local"
+            Source = Join-Path $root 'git\.gitconfig.local'
+        }
+    }
+
+    $brokenUserLinks = @()
+    foreach ($configName in $userConfigLinks.Keys) {
+        $config = $userConfigLinks[$configName]
+        $userPath = $config.Path
+        $sourcePath = $config.Source
+
+        if (Test-Path $userPath) {
+            $item = Get-Item $userPath
+            if ($item.LinkType -eq 'SymbolicLink') {
+                if (-not (Test-Path $item.Target)) {
+                    $brokenUserLinks += @{
+                        Name = $configName
+                        Path = $userPath
+                        Target = $item.Target
+                        ExpectedTarget = $sourcePath
+                    }
+                } elseif ($item.Target -ne $sourcePath) {
+                    Write-Status "$configName 符号链接目标不正确" 'Warning'
+                    if ($Detailed) {
+                        Write-Host "  当前: $($item.Target)" -ForegroundColor DarkGray
+                        Write-Host "  期望: $sourcePath" -ForegroundColor DarkGray
+                    }
+                }
             }
         }
+    }
+
+    $totalIssues = $brokenRepoLinks.Count + $brokenUserLinks.Count
+    if ($totalIssues -gt 0) {
+        Write-Status "发现 $totalIssues 个符号链接问题" 'Warning'
+
+        if ($brokenRepoLinks.Count -gt 0 -and $Detailed) {
+            Write-Host "  仓库内损坏的符号链接:" -ForegroundColor DarkYellow
+            foreach ($link in $brokenRepoLinks) {
+                Write-Host "    • $($link.FullName) -> $($link.Target)" -ForegroundColor DarkGray
+            }
+        }
+
+        if ($brokenUserLinks.Count -gt 0 -and $Detailed) {
+            Write-Host "  用户配置损坏的符号链接:" -ForegroundColor DarkYellow
+            foreach ($link in $brokenUserLinks) {
+                Write-Host "    • $($link.Name): $($link.Path) -> $($link.Target)" -ForegroundColor DarkGray
+            }
+        }
+
         $results.Issues += "存在损坏的符号链接"
+        if ($brokenUserLinks.Count -gt 0) {
+            $results.Recommendations += "运行 .\install.ps1 -Force 重新创建用户配置符号链接"
+        }
         return $false
     } else {
         Write-Status "符号链接状态正常" 'Success'

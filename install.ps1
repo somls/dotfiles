@@ -1035,12 +1035,13 @@ $adaptivePaths = Get-AdaptiveConfigPaths
 # --- 定义要链接的配置文件 ---
 # 使用自适应路径配置
 $links = @{
-    # Git
+    # Git - 强制使用符号链接以保持仓库配置同步
     # Align with git/scripts/install-git-config.ps1 coverage
-    "git\gitconfig"        = @{ Target = ".gitconfig";        Type = "Git" };
-    "git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git" };
-    "git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git" };
-    "git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git" };
+    "git\gitconfig"        = @{ Target = ".gitconfig";        Type = "Git"; ForceSymlink = $true };
+    "git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git"; ForceSymlink = $true };
+    "git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git"; ForceSymlink = $true };
+    "git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git"; ForceSymlink = $true };
+    "git\.gitconfig.local" = @{ Target = ".gitconfig.local";  Type = "Git"; ForceSymlink = $true };
 
 
     # PowerShell
