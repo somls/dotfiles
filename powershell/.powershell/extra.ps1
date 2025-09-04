@@ -15,7 +15,7 @@ function Get-SystemProxy {
         $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         $proxyEnable = Get-ItemProperty -Path $regPath -Name "ProxyEnable" -ErrorAction SilentlyContinue
         $proxyServer = Get-ItemProperty -Path $regPath -Name "ProxyServer" -ErrorAction SilentlyContinue
-        
+
         if ($proxyEnable.ProxyEnable -eq 1 -and $proxyServer.ProxyServer) {
             return $proxyServer.ProxyServer
         }
@@ -37,17 +37,14 @@ function px-system {
         } else {
             $proxyUrl = "http://$systemProxy"
         }
-        
+
         $env:HTTP_PROXY = $proxyUrl
         $env:HTTPS_PROXY = $proxyUrl
         $env:ALL_PROXY = $systemProxy
-        
-        # Git代理
-        if (Get-Command git -ErrorAction SilentlyContinue) {
-            git config --global http.proxy $proxyUrl 2>$null
-            git config --global https.proxy $proxyUrl 2>$null
-        }
-        
+
+        # Git代理通过环境变量设置，避免修改全局配置文件
+        # Git会自动使用 HTTP_PROXY 和 HTTPS_PROXY 环境变量
+
         Write-Host "🌐 系统代理已启用: $proxyUrl" -ForegroundColor Green
         return $true
     } else {
@@ -59,38 +56,34 @@ function px-system {
 # 启用本地代理
 function px-local {
     param([int]$Port)
-    
+
     $proxyUrl = "http://127.0.0.1:$Port"
     $env:HTTP_PROXY = $proxyUrl
     $env:HTTPS_PROXY = $proxyUrl
     $env:ALL_PROXY = "127.0.0.1:$Port"
-    
-    # Git代理
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        git config --global http.proxy $proxyUrl 2>$null
-        git config --global https.proxy $proxyUrl 2>$null
-    }
-    
+
+    # Git代理通过环境变量设置，避免修改全局配置文件
+    # Git会自动使用 HTTP_PROXY 和 HTTPS_PROXY 环境变量
+
     Write-Host "🚀 本地代理已启用: $proxyUrl" -ForegroundColor Green
 }
 
 # 快速禁用代理
 function px-off {
     Remove-Item Env:HTTP_PROXY,Env:HTTPS_PROXY,Env:ALL_PROXY -ErrorAction SilentlyContinue
-    
-    # 清除Git代理
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        git config --global --unset http.proxy 2>$null
-        git config --global --unset https.proxy 2>$null
-    }
-    
+
+    # 清除环境变量即可，不需要修改Git配置文件
+    # 如果之前有全局配置，可手动清理：
+    # git config --global --unset http.proxy
+    # git config --global --unset https.proxy
+
     Write-Host "⏹️  代理已禁用" -ForegroundColor Yellow
 }
 
 # 主代理切换函数
 function px {
     param([string]$Target = "status")
-    
+
     switch ($Target.ToLower()) {
         "clash" { px-local -Port $global:ProxyPorts.clash }
         "v2ray" { px-local -Port $global:ProxyPorts.v2ray }
@@ -106,7 +99,7 @@ function px {
             } else {
                 Write-Host "  ❌ 已禁用" -ForegroundColor Red
             }
-            
+
             # 显示系统代理状态
             $systemProxy = Get-SystemProxy
             if ($systemProxy) {
@@ -114,7 +107,7 @@ function px {
             } else {
                 Write-Host "  🌐 系统代理: 未设置" -ForegroundColor Gray
             }
-            
+
             Write-Host ""
             Write-Host "📋 可用选项:" -ForegroundColor Gray
             Write-Host "  system        - 使用系统代理设置" -ForegroundColor Gray
@@ -140,7 +133,7 @@ function px {
 # 测试代理连接
 function px-test {
     param([string]$Url = "https://www.google.com")
-    
+
     Write-Host "🔍 测试代理连接..." -ForegroundColor Cyan
     try {
         $response = Invoke-WebRequest -Uri $Url -TimeoutSec 10 -UseBasicParsing
@@ -155,17 +148,17 @@ function px-test {
 # 智能代理切换 (优先系统代理，然后检测本地代理)
 function px-auto {
     Write-Host "🔍 智能代理检测..." -ForegroundColor Cyan
-    
+
     # 1. 首先尝试系统代理
     Write-Host "1️⃣  检查系统代理..." -ForegroundColor Gray
     if (px-system) {
         return
     }
-    
+
     # 2. 检测本地代理端口可用性
     Write-Host "2️⃣  检测本地代理端口..." -ForegroundColor Gray
     $availableProxies = @()
-    
+
     foreach ($proxy in $global:ProxyPorts.GetEnumerator()) {
         try {
             $tcpClient = New-Object System.Net.Sockets.TcpClient
@@ -182,7 +175,7 @@ function px-auto {
             Write-Host "  ❌ $($proxy.Key) ($($proxy.Value)) 连接失败" -ForegroundColor Red
         }
     }
-    
+
     # 3. 使用第一个可用的本地代理
     if ($availableProxies.Count -gt 0) {
         $selectedProxy = $availableProxies[0]
@@ -206,16 +199,13 @@ function Initialize-ProxySettings {
         } else {
             $proxyUrl = "http://$systemProxy"
         }
-        
+
         $env:HTTP_PROXY = $proxyUrl
         $env:HTTPS_PROXY = $proxyUrl
         $env:ALL_PROXY = $systemProxy
-        
-        # Git代理 (静默设置)
-        if (Get-Command git -ErrorAction SilentlyContinue) {
-            git config --global http.proxy $proxyUrl 2>$null
-            git config --global https.proxy $proxyUrl 2>$null
-        }
+
+        # Git代理通过环境变量设置，避免修改全局配置文件
+        # Git会自动使用 HTTP_PROXY 和 HTTPS_PROXY 环境变量
     }
 }
 
@@ -223,4 +213,3 @@ function Initialize-ProxySettings {
 if (-not $env:POWERSHELL_FAST_MODE) {
     Initialize-ProxySettings
 }
-
