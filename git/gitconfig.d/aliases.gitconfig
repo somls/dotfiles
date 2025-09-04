@@ -1,0 +1,88 @@
+# Git 命令别名配置
+# 包含常用的Git操作的简便别名
+
+[alias]
+    # 基本命令简写
+    st = status
+    co = checkout
+    ci = commit
+    br = branch
+    df = diff
+    dfs = diff --staged
+    cp = cherry-pick
+    unstage = reset HEAD --
+
+    # 日志相关
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+    hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+    last = log -1 HEAD
+    latest = !git pull && git lg -10
+
+    # 分支相关
+    ba = branch -a
+    bd = branch -d
+    bdf = branch -D
+
+    # 清理相关
+    cleanbr = !git branch --merged | grep -v \\* | xargs -n 1 git branch -d
+    cleanup = !git clean -df && git stash clear
+
+    # 工作流相关
+    save = !git add -A && git commit -m 'SAVEPOINT'
+    wip = !git add -u && git commit -m "WIP"
+    undo = reset HEAD~1 --mixed
+    amend = commit -a --amend
+    wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
+
+    # 合并相关
+    mff = merge --ff-only
+    mnff = merge --no-ff
+
+    # 远程操作
+    pom = push origin main
+    poh = push origin HEAD
+    pshf = push --force-with-lease
+    pll = pull
+    fetch-all = fetch --all
+
+    # 信息查看
+    who = shortlog -s --
+    tags = tag -l
+    branches = branch -a
+    remotes = remote -v
+    contributors = shortlog --summary --numbered
+
+    # 文件相关
+    find = !git ls-files | grep -i
+    grep = grep -Ii
+
+    # 高级操作
+    squash = !git rebase -i HEAD~2
+    stashall = stash --include-untracked
+    pop = stash pop
+
+    # 撤销相关
+    discard = checkout --
+    unstage = reset HEAD --
+    uncommit = reset --soft HEAD^
+    nevermind = !git reset --hard HEAD && git clean -fd
+
+    # 时光机 - 查看和恢复历史版本
+    timemachine = !git log --oneline --decorate $(git rev-parse --abbrev-ref HEAD) && echo "------------------------------------------" && git reflog
+    undo-commit = reset --soft HEAD^
+
+    # 配置查看
+    config-list = config --list
+    aliases = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1 = \\2/'
+
+    # 工作区统计
+    stats = !git diff --stat && git diff --cached --stat
+
+    # 初始化项目
+    init-repo = !git init && git add . && git commit -m "Initial commit"
+
+    # 本地HTTP服务器 (需要安装相关工具)
+    serve = !git daemon --reuseaddr --verbose --base-path=. --export-all ./.git
+
+    # 归档
+    archive-zip = !git archive --format=zip HEAD > archive-$(git log -1 --format=%h).zip

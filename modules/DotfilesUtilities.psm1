@@ -407,6 +407,153 @@ function Get-DotfilesEnvironment {
     }
 }
 
+function Install-DotFile {
+    <#
+    .SYNOPSIS
+        安装单个配置文件，支持复制和符号链接两种模式。
+    .DESCRIPTION
+        将源文件安装到目标位置，可以是复制或创建符号链接。
+        如果目标文件已存在，将根据 Force 参数决定是否覆盖。
+        在覆盖前，会创建原文件的备份。
+    .PARAMETER Source
+        源文件的完整路径
+    .PARAMETER Target
+        目标文件的完整路径
+    .PARAMETER Symlink
+        如果设置为 $true，创建符号链接而不是复制文件
+    .PARAMETER Force
+        如果设置为 $true，覆盖已存在的目标文件
+    .PARAMETER BackupDir
+        备份目录路径，如果目标文件已存在，会在此目录创建备份
+    .PARAMETER WhatIf
+        如果设置为 $true，只显示将要执行的操作但不实际执行
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Target,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$Symlink = $false,
+
+        [Parameter(Mandatory = $false)]
+        [bool]$Force = $false,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BackupDir = "",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$WhatIf
+    )
+
+    # 验证源文件存在
+    if (-not (Test-Path -Path $Source)) {
+        Write-DotfilesMessage -Message "错误: 源文件不存在: $Source" -Type Error
+        return $false
+    }
+
+    # 确保目标目录存在
+    $targetDir = Split-Path -Parent $Target
+    if (-not (Test-Path -Path $targetDir)) {
+        if ($WhatIf) {
+            Write-DotfilesMessage -Message "将创建目录: $targetDir" -Type Info
+        } else {
+            Write-DotfilesMessage -Message "创建目录: $targetDir" -Type Info
+            New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+        }
+    }
+
+    # 如果目标文件已存在
+    if (Test-Path -Path $Target) {
+        # 如果不强制覆盖，则跳过
+        if (-not $Force) {
+            Write-DotfilesMessage -Message "跳过: 目标已存在且未指定强制覆盖: $Target" -Type Warning
+            return $false
+        }
+
+        # 创建备份
+        if (-not $WhatIf) {
+            if ([string]::IsNullOrEmpty($BackupDir)) {
+                $BackupDir = Split-Path -Parent $Target
+            }
+
+            if (-not (Test-Path $BackupDir)) {
+                New-Item -Path $BackupDir -ItemType Directory -Force | Out-Null
+            }
+
+            $fileName = Split-Path -Leaf $Target
+            $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+            $backupPath = Join-Path -Path $BackupDir -ChildPath "$fileName.backup.$timestamp"
+
+            Write-DotfilesMessage -Message "备份: $Target -> $backupPath" -Type Info
+            Copy-Item -Path $Target -Destination $backupPath -Force
+        } else {
+            Write-DotfilesMessage -Message "将备份: $Target" -Type Info
+        }
+
+        # 移除现有目标
+        if ($WhatIf) {
+            Write-DotfilesMessage -Message "将删除: $Target" -Type Info
+        } else {
+            if (Test-Path -Path $Target -PathType Container) {
+                Remove-Item -Path $Target -Recurse -Force
+            } else {
+                Remove-Item -Path $Target -Force
+            }
+        }
+    }
+
+    # 安装文件
+    if ($Symlink) {
+        if ($WhatIf) {
+            Write-DotfilesMessage -Message "将创建符号链接: $Source -> $Target" -Type Info
+        } else {
+            try {
+                if (Test-Path -Path $Source -PathType Container) {
+                    # 为目录创建符号链接
+                    $command = "New-Item -Path `"$Target`" -ItemType SymbolicLink -Value `"$Source`" -Force"
+                    Write-DotfilesMessage -Message "创建目录链接: $Source -> $Target" -Type Info
+                    Invoke-Expression $command
+                } else {
+                    # 为文件创建符号链接
+                    $command = "New-Item -Path `"$Target`" -ItemType SymbolicLink -Value `"$Source`" -Force"
+                    Write-DotfilesMessage -Message "创建文件链接: $Source -> $Target" -Type Info
+                    Invoke-Expression $command
+                }
+                return $true
+            } catch {
+                Write-DotfilesMessage -Message "创建符号链接失败: $($_.Exception.Message)" -Type Error
+                return $false
+            }
+        }
+    } else {
+        if ($WhatIf) {
+            Write-DotfilesMessage -Message "将复制: $Source -> $Target" -Type Info
+        } else {
+            try {
+                if (Test-Path -Path $Source -PathType Container) {
+                    # 递归复制目录
+                    Copy-Item -Path $Source -Destination $Target -Recurse -Force
+                    Write-DotfilesMessage -Message "复制目录: $Source -> $Target" -Type Info
+                } else {
+                    # 复制文件
+                    Copy-Item -Path $Source -Destination $Target -Force
+                    Write-DotfilesMessage -Message "复制文件: $Source -> $Target" -Type Info
+                }
+                return $true
+            } catch {
+                Write-DotfilesMessage -Message "复制失败: $($_.Exception.Message)" -Type Error
+                return $false
+            }
+        }
+    }
+
+    return $true
+}
+
 # ==================== 导出成员 ====================
 
 # 导出公共函数
@@ -420,7 +567,8 @@ Export-ModuleMember -Function @(
     'Test-DotfilesPowerShell',
     'Get-DotfilesValidationResult',
     'Backup-DotfilesFile',
-    'Get-DotfilesEnvironment'
+    'Get-DotfilesEnvironment',
+    'Install-DotFile'
 )
 
 # 导出类

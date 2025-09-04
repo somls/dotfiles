@@ -1,0 +1,88 @@
+# Git 颜色配置文件
+# 为不同的Git操作和输出提供一致的颜色主题
+
+[color]
+    # 启用颜色输出
+    ui = auto
+    interactive = auto
+    pager = true
+
+# 状态输出着色
+[color "status"]
+    # 已添加但未提交的文件
+    added = green
+    # 已修改但未暂存的文件
+    changed = red
+    # 未跟踪的文件
+    untracked = cyan
+    # 分支名称
+    branch = magenta
+    # 未合并文件
+    unmerged = red bold
+
+# 分支输出着色
+[color "branch"]
+    # 当前分支
+    current = green bold
+    # 本地分支
+    local = yellow
+    # 远程分支
+    remote = red
+    # 上游分支
+    upstream = magenta
+
+# 差异输出着色
+[color "diff"]
+    # 元数据（如"diff --git"行）
+    meta = yellow
+    # 文件路径
+    frag = magenta
+    # 旧内容行标记（以"-"开头）
+    old = red
+    # 新内容行标记（以"+"开头）
+    new = green
+    # 差异行号（使用-N/+N表示）
+    whitespace = red reverse
+    # 提交消息
+    commit = yellow bold
+
+# 交互式添加着色
+[color "interactive"]
+    # 用于提示
+    prompt = blue
+    # 用于帮助文本
+    header = white
+    # 用于错误信息
+    error = red
+    # 用于帮助标题
+    help = green
+
+# 补丁着色
+[color "grep"]
+    # 匹配行
+    match = yellow bold
+    # 文件名
+    filename = blue
+    # 行号
+    linenumber = green
+    # 上下文行（非匹配）
+    context = normal
+    # 分隔符
+    separator = cyan
+    # 选中项
+    selected = yellow
+
+# 装饰（如引用名称）着色
+[color "decorate"]
+    # 分支
+    branch = green bold
+    # 远程分支
+    remoteBranch = red
+    # 标签
+    tag = yellow
+    # 装饰引用前缀
+    stash = blue
+    # HEAD 指针
+    HEAD = cyan
+    # 图形Log的线条颜色
+    graph-line = blue

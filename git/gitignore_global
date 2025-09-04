@@ -239,6 +239,23 @@ hs_err_pid*
 *.pfx
 *.cer
 *.crt
+.gitconfig.local
+.gitconfig.work
+.gitconfig.private
+.aws/credentials
+.kube/config
+.ssh/id_*
+.netrc
+.npmrc
+.yarnrc
+auth.json
+.secret
+*secrets.yml
+*secrets.yaml
+*secrets.json
+*secrets.properties
+*.jks
+*credentials*
 
 # 压缩文件
 *.7z
@@ -246,6 +263,12 @@ hs_err_pid*
 *.tgz
 *.zip
 *.rar
+
+# Git相关备份文件
+*.orig
+*.rej
+git-rebase-todo
+.git-rebase-todo
 
 # 媒体文件
 *.mp3
@@ -270,7 +293,27 @@ hs_err_pid*
 .nyc_output
 coverage/
 .sonarqube/
-.scannerwork/yncdotfiles'
+.scannerwork/
 .claude/
 .spec-workflow/
 .codebuddy/
+
+# 本地配置文件和特定环境备份
+*.local
+*.local.*
+.vscode/settings.local.json
+.idea/workspace.xml
+.history/
+*.history
+.env.*
+config.local.*
+*-local.*
+*_local.*
+
+# 临时工作文件
+TODO.personal
+NOTES.personal
+*.scratch.*
+*.draft.*
+*.private.*
+personal/

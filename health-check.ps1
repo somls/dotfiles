@@ -69,7 +69,7 @@ function Test-CoreFiles {
 
     $coreFiles = @{
         'PowerShell Profile' = 'powershell\Microsoft.PowerShell_profile.ps1'
-        'Git Config' = 'git\.gitconfig'
+        'Git Config' = 'git\gitconfig'
 
         'Windows Terminal' = 'WindowsTerminal\settings.json'
     'Alacritty' = 'Alacritty\alacritty.toml'

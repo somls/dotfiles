@@ -1,0 +1,102 @@
+# Git 差异比较配置文件
+# 定义各种文件类型的差异比较和合并设置
+
+[diff]
+    # 使用更好的差异算法
+    algorithm = histogram
+
+    # 显示移动的文本块
+    renames = copies
+
+    # 显示函数名称
+    context = 3
+
+    # 缩进启发式算法
+    indentHeuristic = true
+
+    # 差异比较工具
+    tool = vscode
+
+    # 使用外部工具进行二进制文件比较
+    binary = true
+
+    # 颜色单词而不是整行
+    colorMoved = default
+
+    # 显示CR在行尾的差异
+    wsErrorHighlight = all
+
+[difftool]
+    # 避免每次都询问是否启动差异工具
+    prompt = false
+
+    # 保持后台运行
+    trustExitCode = true
+
+[difftool "vscode"]
+    cmd = code --wait --diff \"$LOCAL\" \"$REMOTE\"
+
+[difftool "meld"]
+    cmd = meld \"$LOCAL\" \"$REMOTE\"
+
+[difftool "kdiff3"]
+    cmd = kdiff3 \"$LOCAL\" \"$REMOTE\"
+
+[merge]
+    # 合并冲突标记样式
+    conflictstyle = diff3
+
+    # 显示公共祖先
+    log = true
+
+    # 合并工具
+    tool = vscode
+
+    # 启用统计
+    stat = true
+
+    # 快进合并策略
+    ff = false
+
+[mergetool]
+    # 避免每次都询问是否启动合并工具
+    prompt = false
+
+    # 不保留备份文件
+    keepBackup = false
+
+    # 保持后台运行
+    trustExitCode = true
+
+    # 写入合并结果后自动清理
+    writeToTemp = true
+
+[mergetool "vscode"]
+    cmd = code --wait \"$MERGED\"
+
+[mergetool "meld"]
+    cmd = meld \"$LOCAL\" \"$BASE\" \"$REMOTE\" --output \"$MERGED\"
+
+[mergetool "kdiff3"]
+    cmd = kdiff3 \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"
+
+# 特定文件类型差异设置
+[diff "bin"]
+    # 使用十六进制差异
+    textconv = hexdump -v -C
+
+[diff "image"]
+    # 使用外部工具比较图像
+    command = compare \"$2\" \"$5\" png:- | montage -geometry +4+4 \"$2\" - \"$5\" png:- | display -title \"$1\"
+
+[diff "word"]
+    # Word文档差异比较
+    textconv = catdoc
+
+[diff "excel"]
+    # Excel文档差异比较
+    textconv = xls2csv
+
+[diff "pdf"]
+    # PDF文档差异比较
+    textconv = pdftotext

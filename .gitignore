@@ -1,6 +1,8 @@
 # Local git user configs (kept in-repo but not tracked)
 git/gitconfig.local
 git/.gitconfig.local
+git/.gitconfig.work
+git/.gitconfig.private
 
 # Allow important git documentation
 !git/USAGE.md
@@ -59,6 +61,7 @@ health-report.json
 
 # User-specific configuration files (contain personal info)
 git/gitconfig.local
+git/.gitconfig.*
 # scoop/config.json (用户从 config.json.example 复制)
 
 
@@ -88,6 +91,7 @@ backup/
 # Development documentation (local only)
 DEVELOPMENT.md
 CLAUDE.md
+**/PERSONAL_NOTES.md
 
 # Scripts guide (local only, optional)
 SCRIPTS_GUIDE.md
@@ -97,3 +101,9 @@ PRIVACY_AUDIT_REPORT.md
 
 # Git history cleaning script (local only)
 clean-git-history.ps1
+
+# Git sensitive configuration and security files
+**/.git-credentials
+**/.gitconfig.d/sensitive.gitconfig
+**/.gitconfig.d/*_local.gitconfig
+**/.gitconfig.d/*_private.gitconfig

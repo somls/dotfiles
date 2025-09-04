@@ -1,0 +1,78 @@
+# 核心Git配置文件
+# 该文件包含基本的Git工作环境设置
+
+[core]
+    # 全局忽略文件路径
+    excludesfile = ~/.gitignore_global
+
+    # 行尾处理 (Windows上保持一致性)
+    autocrlf = input
+
+    # 默认编辑器
+    editor = code --wait
+
+    # 文件名大小写敏感
+    ignorecase = false
+
+    # 长路径支持 (Windows)
+    longpaths = true
+
+# 提交相关设置
+[commit]
+    # 提交消息模板
+    template = ~/.gitmessage
+
+    # 显示差异统计
+    verbose = true
+
+# 拉取设置
+[pull]
+    # 默认拉取策略
+    rebase = true
+    ff = only
+
+# 推送设置
+[push]
+    # 默认推送设置
+    default = simple
+
+    # 自动设置远程跟踪分支
+    autoSetupRemote = true
+
+# 合并设置
+[merge]
+    # 合并冲突标记样式
+    conflictstyle = diff3
+
+    # 合并工具
+    tool = vscode
+
+[mergetool "vscode"]
+    cmd = code --wait $MERGED
+
+# 差异比较设置
+[diff]
+    # 使用更好的差异算法
+    algorithm = histogram
+
+    # 工具设置
+    tool = vscode
+
+[difftool "vscode"]
+    cmd = code --wait --diff $LOCAL $REMOTE
+
+# 换行符检查
+[core]
+    # 警告但允许提交具有CRLF行结束的文件
+    safecrlf = warn
+
+# 默认分支名称
+[init]
+    defaultBranch = main
+
+# 大文件处理
+[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true

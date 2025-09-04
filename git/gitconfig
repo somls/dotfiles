@@ -1,22 +1,37 @@
-# Git 主配置文件
-# 使用模块化设计，通过 include 引入各个功能模块
+# Git 主配置文件 - 模块化结构
+# 路径使用相对路径，确保在不同环境中一致工作
 
 [include]
     # 核心设置
-    path = ~/.gitconfig.d/core.gitconfig
+    path = ./gitconfig.d/core.gitconfig
     # 命令别名
-    path = ~/.gitconfig.d/aliases.gitconfig
+    path = ./gitconfig.d/aliases.gitconfig
     # 颜色配置
-    path = ~/.gitconfig.d/color.gitconfig
+    path = ./gitconfig.d/color.gitconfig
     # 差异比较设置
-    path = ~/.gitconfig.d/diff.gitconfig
+    path = ./gitconfig.d/diff.gitconfig
     # Windows 特定设置
-    path = ~/.gitconfig.d/windows.gitconfig
+    path = ./gitconfig.d/windows.gitconfig
 
 [include]
     # 本地配置文件（用户信息、代理设置等）
+    # 不包含在版本控制中，包含个人信息和环境特定设置
     path = ~/.gitconfig.local
+
+# 默认的提交消息模板
+[commit]
+    template = ~/.gitmessage
+
+# 默认分支名称
+[init]
+    defaultBranch = main
+
+# 这些公共代理设置会被 .gitconfig.local 中的设置覆盖
+# [http]
+#     proxy = http://127.0.0.1:7890
+# [https]
+#     proxy = http://127.0.0.1:7890
 [http]
-	proxy = http://127.0.0.1:10808
+	proxy = http://127.0.0.1:7890
 [https]
-	proxy = http://127.0.0.1:10808
+	proxy = http://127.0.0.1:7890

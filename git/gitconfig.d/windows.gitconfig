@@ -1,0 +1,89 @@
+# Windows 特定的 Git 配置
+# 此配置文件包含针对 Windows 平台的优化和设置
+
+# Windows 路径设置
+[core]
+    # 避免 Windows 路径问题
+    longpaths = true
+
+    # Windows 下的行尾处理 (在 Windows 上保持一致)
+    autocrlf = input
+
+    # 避免权限问题
+    filemode = false
+
+    # Windows 缓存设置以提高性能
+    fscache = true
+
+    # 在 Windows 上使用 vscode 作为默认编辑器
+    editor = code --wait
+
+    # 在 Windows 上使用 PowerShell 作为默认 shell
+    # shell = pwsh
+
+# Windows 凭据管理
+[credential]
+    # 使用 Windows 凭据管理器存储凭据
+    helper = manager-core
+
+    # 凭据缓存时间 (以小时计)
+    cachetime = 3600
+
+# Windows 特定性能优化
+[pack]
+    # 在 Windows 上增加打包内存限制
+    windowMemory = 100m
+
+    # 线程数调整
+    threads = 3
+
+# Windows 文件系统兼容性
+[feature]
+    # 启用符号链接支持
+    symlinks = true
+
+    # 提高 NTFS 文件系统的兼容性
+    manyFiles = true
+
+# Windows 命令别名
+[alias]
+    # 在 Windows 上打开 Explorer
+    explore = "!explorer ."
+
+    # Windows 特定的清理命令
+    cleanwin = "!git clean -xdf"
+
+    # 使用 PowerShell 运行某些命令
+    psrun = "!pwsh -NoProfile -Command"
+
+    # 在 Windows 资源管理器中打开当前仓库
+    explorer = !explorer .
+
+# Windows Defender 排除设置
+# 注意: 这些是注释，需要手动配置 Windows Defender
+# 添加排除项: %USERPROFILE%\.git\objects
+# 添加排除项: C:\Users\<username>\AppData\Local\Temp\git-lfs
+
+# Windows 文件/目录比较工具
+[difftool "winmerge"]
+    cmd = \"C:/Program Files/WinMerge/WinMergeU.exe\" -e -u -dl \"Base\" -dr \"Mine\" \"$LOCAL\" \"$REMOTE\"
+
+# Windows 特有的合并工具
+[mergetool "winmerge"]
+    cmd = \"C:/Program Files/WinMerge/WinMergeU.exe\" -e -u -fm -dl \"Mine\" -dr \"Theirs\" \"$LOCAL\" \"$REMOTE\" \"$MERGED\"
+    trustExitCode = true
+
+# Windows 权限处理
+[core]
+    # 忽略文件模式更改
+    fileMode = false
+
+# Windows 临时文件位置设置
+[core]
+    # 设置 Windows 临时目录
+    tempdir = C:/Windows/Temp
+
+# 中文路径和文件名支持
+[i18n]
+    commitEncoding = utf-8
+    logOutputEncoding = utf-8
