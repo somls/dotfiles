@@ -1,11 +1,77 @@
-# install_apps.ps1
-# 应用安装脚本 - 使用 Scoop 安装推荐软件包
+<#
+.SYNOPSIS
+    应用安装脚本 - 使用 Scoop 安装推荐软件包，支持交互式路径选择
+
+.DESCRIPTION
+    这个脚本提供了自动化的软件包安装功能，包括：
+    - 自动检测并安装 Scoop 包管理器
+    - 交互式选择 Scoop 安装路径
+    - 分类管理软件包（Essential, Development, Editors）
+    - 智能检测已安装软件，避免重复安装
+    - 批量更新已安装软件包
+    - 预览模式支持
+
+.PARAMETER Category
+    指定要安装的软件包类别，可选值：
+    - Essential: 基础工具（git, pwsh, starship, 7zip, curl）
+    - Development: 开发工具（nodejs, python, gh, delta, ripgrep, bat, fd）
+    - Editors: 编辑器（neovim, windows-terminal）
+    默认安装 Essential 类别
+
+.PARAMETER DryRun
+    预览模式，显示将要执行的操作但不实际安装
+
+.PARAMETER Update
+    更新已安装的软件包
+
+.PARAMETER ScoopDir
+    指定 Scoop 的安装目录，跳过交互式选择
+
+.PARAMETER Interactive
+    启用交互式安装模式（默认启用）
+    设置为 $false 可跳过所有交互提示
+
+.EXAMPLE
+    .\install_apps.ps1
+    使用默认设置安装基础软件包，交互式选择 Scoop 路径
+
+.EXAMPLE
+    .\install_apps.ps1 -Category Essential,Development
+    安装基础和开发工具两个类别的软件包
+
+.EXAMPLE
+    .\install_apps.ps1 -ScoopDir "D:\Tools\Scoop"
+    指定 Scoop 安装到 D:\Tools\Scoop 目录
+
+.EXAMPLE
+    .\install_apps.ps1 -DryRun
+    预览模式，查看将要安装的软件包
+
+.EXAMPLE
+    .\install_apps.ps1 -Update
+    更新已安装的软件包
+
+.EXAMPLE
+    .\install_apps.ps1 -Interactive:$false
+    非交互模式，使用默认设置
+
+.NOTES
+    - 需要 PowerShell 5.1+ 版本
+    - 首次安装 Scoop 时会自动设置执行策略
+    - 自定义安装路径需要手动设置永久环境变量以保持设置
+    - 建议在安装完成后重启终端
+
+.LINK
+    https://scoop.sh/
+#>
 
 [CmdletBinding()]
 param(
     [switch]$DryRun,       # 预览模式，不实际安装
     [string[]]$Category = @('Essential'),   # 安装指定类别
-    [switch]$Update        # 更新已安装的包
+    [switch]$Update,       # 更新已安装的包
+    [string]$ScoopDir,     # 自定义 Scoop 安装目录
+    [switch]$Interactive = $true  # 交互式安装（默认启用）
 )
 
 # 推荐软件包配置
@@ -42,20 +108,136 @@ function Write-Status {
     }
     $icon = switch ($Type) {
         'Success' { '✅' }
-        'Warning' { '⚠️ ' }
+        'Warning' { '⚠️' }
         'Error' { '❌' }
-        default { 'ℹ️ ' }
+        default { 'ℹ️' }
     }
     Write-Host "$icon $Message" -ForegroundColor $color
+}
+
+function Get-ScoopInstallPath {
+    <#
+    .SYNOPSIS
+        交互式获取 Scoop 安装路径
+    #>
+    param(
+        [string]$DefaultPath = "$env:USERPROFILE\scoop",
+        [switch]$NonInteractive
+    )
+
+    if ($NonInteractive -or -not $Interactive) {
+        return $DefaultPath
+    }
+
+    Write-Host "`n🛠️ Scoop 安装路径设置" -ForegroundColor Cyan
+    Write-Host "=" * 40 -ForegroundColor Cyan
+
+    $defaultDisplay = $DefaultPath -replace [regex]::Escape($env:USERPROFILE), "~"
+    Write-Host "默认安装路径: " -NoNewline -ForegroundColor Gray
+    Write-Host $defaultDisplay -ForegroundColor Yellow
+
+    Write-Host "`n选择安装方式:" -ForegroundColor White
+    Write-Host "1. 使用默认路径 ($defaultDisplay)" -ForegroundColor Green
+    Write-Host "2. 自定义安装路径" -ForegroundColor Cyan
+    Write-Host "3. 取消安装" -ForegroundColor Red
+
+    while ($true) {
+        $choice = Read-Host "`n请选择 [1-3]"
+
+        switch ($choice) {
+            '1' {
+                Write-Status "选择默认路径: $defaultDisplay" 'Success'
+                return $DefaultPath
+            }
+            '2' {
+                Write-Host "`n请输入 Scoop 安装路径:" -ForegroundColor Cyan
+                Write-Host "示例: D:\Tools\Scoop, C:\scoop" -ForegroundColor Gray
+
+                while ($true) {
+                    $customPath = Read-Host "安装路径"
+
+                    if ([string]::IsNullOrWhiteSpace($customPath)) {
+                        Write-Status "路径不能为空，请重新输入" 'Warning'
+                        continue
+                    }
+
+                    # 扩展环境变量
+                    $expandedPath = [Environment]::ExpandEnvironmentVariables($customPath)
+
+                    # 验证路径格式
+                    try {
+                        $testPath = [System.IO.Path]::GetFullPath($expandedPath)
+
+                        # 检查父目录是否存在
+                        $parentDir = Split-Path $testPath -Parent
+                        if (-not (Test-Path $parentDir)) {
+                            $createParent = Read-Host "父目录 '$parentDir' 不存在，是否创建? (y/N)"
+                            if ($createParent -match '^[yY]') {
+                                New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                                Write-Status "已创建父目录: $parentDir" 'Success'
+                            } else {
+                                Write-Status "请选择其他路径" 'Warning'
+                                continue
+                            }
+                        }
+
+                        Write-Status "选择自定义路径: $testPath" 'Success'
+                        return $testPath
+
+                    } catch {
+                        Write-Status "无效的路径格式，请重新输入" 'Error'
+                        continue
+                    }
+                }
+            }
+            '3' {
+                Write-Status "用户取消安装" 'Warning'
+                exit 0
+            }
+            default {
+                Write-Status "请输入 1, 2 或 3" 'Warning'
+            }
+        }
+    }
 }
 
 # 检查 Scoop 是否安装
 if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {
     Write-Status "Scoop 未安装，正在安装..." 'Warning'
+
+    # 获取安装路径
+    $installPath = if ($ScoopDir) {
+        Write-Status "使用指定的 Scoop 安装路径: $ScoopDir" 'Info'
+        $ScoopDir
+    } else {
+        Get-ScoopInstallPath -NonInteractive:(-not $Interactive)
+    }
+
+    # 设置 Scoop 安装目录环境变量
+    if ($installPath -ne "$env:USERPROFILE\scoop") {
+        $env:SCOOP = $installPath
+        Write-Status "设置 SCOOP 环境变量: $installPath" 'Info'
+    }
+
     try {
-        Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-        Invoke-RestMethod get.scoop.sh | Invoke-Expression
-        Write-Status "Scoop 安装成功" 'Success'
+        if ($DryRun) {
+            Write-Status "预览: 将安装 Scoop 到 $installPath" 'Info'
+            $cacheDir = if ($env:SCOOP_CACHE) { $env:SCOOP_CACHE } else { Join-Path $installPath "cache" }
+            Write-Status "预览: 缓存目录为 $cacheDir" 'Info'
+        } else {
+            Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+            Invoke-RestMethod get.scoop.sh | Invoke-Expression
+
+            Write-Status "Scoop 安装成功" 'Success'
+            Write-Status "安装位置: $installPath" 'Success'
+
+            # 提示用户关于环境变量持久化
+            if ($env:SCOOP -and $env:SCOOP -ne "$env:USERPROFILE\scoop") {
+                Write-Host "`n💡 重要提示:" -ForegroundColor Yellow
+                Write-Host "为了在重启后保持自定义路径，请设置永久环境变量:" -ForegroundColor Gray
+                Write-Host "  [Environment]::SetEnvironmentVariable('SCOOP', '$env:SCOOP', 'User')" -ForegroundColor DarkGray
+            }
+        }
     } catch {
         Write-Status "Scoop 安装失败: $($_.Exception.Message)" 'Error'
         Write-Host "请手动安装 Scoop: https://scoop.sh/" -ForegroundColor Yellow
@@ -99,7 +281,7 @@ $toUpdate = @()
 foreach ($package in $packagesToInstall) {
     if ($installedPackages -contains $package) {
         $toUpdate += $package
-        Write-Host "  ⏭️  $package (已安装)" -ForegroundColor Gray
+        Write-Host "  ⏭️ $package (已安装)" -ForegroundColor Gray
     } else {
         $toInstall += $package
         Write-Host "  📦 $package (将安装)" -ForegroundColor Green
@@ -109,7 +291,7 @@ foreach ($package in $packagesToInstall) {
 # 确认安装
 if ($toInstall.Count -gt 0) {
     Write-Host "`n即将安装 $($toInstall.Count) 个新软件包" -ForegroundColor Yellow
-    if (-not $DryRun) {
+    if (-not $DryRun -and $Interactive) {
         $response = Read-Host "继续安装？(Y/n)"
         if ($response -match '^[nN]') {
             Write-Status "用户取消安装" 'Info'
@@ -160,6 +342,13 @@ if ($toInstall.Count -gt 0) {
             Write-Host "• 重启终端以应用新工具" -ForegroundColor Gray
             Write-Host "• 运行 .\install.ps1 配置应用设置" -ForegroundColor Gray
             Write-Host "• 运行 .\health-check.ps1 验证配置" -ForegroundColor Gray
+
+            # 如果使用了自定义路径，提醒用户设置永久环境变量
+            if ($env:SCOOP -and $env:SCOOP -ne "$env:USERPROFILE\scoop") {
+                Write-Host "`n🔧 自定义路径提醒:" -ForegroundColor Cyan
+                Write-Host "• 如需永久保存路径设置，请运行:" -ForegroundColor Gray
+                Write-Host "  [Environment]::SetEnvironmentVariable('SCOOP', '$env:SCOOP', 'User')" -ForegroundColor DarkGray
+            }
         }
     }
 } else {
