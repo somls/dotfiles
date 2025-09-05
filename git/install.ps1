@@ -71,16 +71,26 @@ function Install-GitConfigurations {
     $Target = Join-Path -Path $UserHome -ChildPath ".gitmessage"
     Install-DotFile -Source $Source -Target $Target -Symlink $Symlink -Force $Force -BackupDir $BackupDir -WhatIf:$WhatIf
 
-    # 4. 安装 .gitconfig.local 示例文件（如果不存在）
-    $Source = Join-Path -Path $SourceDir -ChildPath "gitconfig.local.example"
+    # 4. 安装 .gitconfig.local 文件
+    $Source = Join-Path -Path $SourceDir -ChildPath "gitconfig.local"
     $Target = Join-Path -Path $UserHome -ChildPath ".gitconfig.local"
+
+    # 如果目标文件不存在，先从示例文件创建
     if (-not (Test-Path $Target)) {
-        Write-Host "安装 .gitconfig.local 示例文件: $Target" -ForegroundColor Green
-        if (-not $WhatIf) {
-            Copy-Item -Path $Source -Destination $Target -Force
+        $ExampleSource = Join-Path -Path $SourceDir -ChildPath "gitconfig.local.example"
+        if (Test-Path $ExampleSource) {
+            Write-Host "从示例文件创建 .gitconfig.local: $Target" -ForegroundColor Yellow
+            if (-not $WhatIf) {
+                Copy-Item -Path $ExampleSource -Destination $Source -Force
+            }
         }
+    }
+
+    # 安装 gitconfig.local 文件（链接或复制）
+    if (Test-Path $Source) {
+        Install-DotFile -Source $Source -Target $Target -Symlink $Symlink -Force $Force -BackupDir $BackupDir -WhatIf:$WhatIf
     } else {
-        Write-Host ".gitconfig.local 已存在，保留用户设置" -ForegroundColor Yellow
+        Write-Warning "源文件不存在: $Source"
     }
 }
 

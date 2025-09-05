@@ -24,12 +24,12 @@ function Copy-ConfigTemplate {
         [string]$TargetPath,
         [string]$Description
     )
-    
+
     if (-not (Test-Path $SourceTemplate)) {
         Write-Status "模板文件不存在: $SourceTemplate" 'Error'
         return $false
     }
-    
+
     $targetDir = Split-Path $TargetPath -Parent
     if ($targetDir -and -not (Test-Path $targetDir)) {
         if ($DryRun) {
@@ -38,7 +38,7 @@ function Copy-ConfigTemplate {
             New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
         }
     }
-    
+
     if (Test-Path $TargetPath) {
         if (-not $Force) {
             Write-Status "配置文件已存在，跳过: $TargetPath" 'Warning'
@@ -47,7 +47,7 @@ function Copy-ConfigTemplate {
             Write-Status "强制覆盖现有文件: $TargetPath" 'Warning'
         }
     }
-    
+
     if ($DryRun) {
         Write-Status "将复制: $SourceTemplate -> $TargetPath ($Description)" 'Info'
     } else {
@@ -66,7 +66,7 @@ function Copy-ConfigTemplate {
 # 配置文件映射
 $ConfigMappings = @(
     @{
-        Template = "git\.gitconfig.local.example"
+        Template = "git\gitconfig.local.example"
         Target = "$env:USERPROFILE\.gitconfig.local"
         Description = "Git 用户配置"
         Required = $true
@@ -95,9 +95,9 @@ $results = @{
 
 foreach ($config in $ConfigMappings) {
     Write-Host "`n📁 处理: $($config.Description)" -ForegroundColor Yellow
-    
+
     $success = Copy-ConfigTemplate -SourceTemplate $config.Template -TargetPath $config.Target -Description $config.Description
-    
+
     if ($success) {
         if ((Test-Path $config.Target) -or $DryRun) {
             $results.Success += $config.Description

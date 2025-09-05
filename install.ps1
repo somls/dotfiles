@@ -1041,7 +1041,7 @@ $links = @{
     "git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git"; ForceSymlink = $true };
     "git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git"; ForceSymlink = $true };
     "git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git"; ForceSymlink = $true };
-    "git\.gitconfig.local" = @{ Target = ".gitconfig.local";  Type = "Git"; ForceSymlink = $true };
+    "git\gitconfig.local" = @{ Target = ".gitconfig.local";  Type = "Git"; ForceSymlink = $true };
 
 
     # PowerShell

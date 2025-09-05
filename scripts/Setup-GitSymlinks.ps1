@@ -74,8 +74,8 @@ $GitConfigMappings = @{
 
     # Commit message template
     "$env:USERPROFILE\.gitmessage" = @{
-        Source = Join-Path $GitConfigRoot ".gitmessage"
-        Backup = Join-Path $GitConfigRoot ".gitmessage.backup"
+        Source = Join-Path $GitConfigRoot "gitmessage"
+        Backup = Join-Path $GitConfigRoot "gitmessage.backup"
     }
 }
 

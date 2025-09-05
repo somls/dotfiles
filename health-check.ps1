@@ -159,7 +159,7 @@ function Test-GitConfig {
         }
         '.gitconfig.local' = @{
             Path = Join-Path $env:USERPROFILE '.gitconfig.local'
-            Source = Join-Path $root 'git\.gitconfig.local'
+            Source = Join-Path $root 'git\gitconfig.local'
             Description = 'Git本地配置文件'
         }
     }
@@ -443,7 +443,8 @@ function Test-SymbolicLinks {
         }
         'Git Local Config' = @{
             Path = "$env:USERPROFILE\.gitconfig.local"
-            Source = Join-Path $root 'git\.gitconfig.local'
+            Source = Join-Path $root 'git\gitconfig.local'
+            Description = 'Git 本地配置文件'
         }
     }
 
