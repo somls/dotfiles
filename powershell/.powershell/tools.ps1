@@ -64,6 +64,17 @@ function Show-ToolsStatus {
         "FZF" = (Get-Command fzf -ErrorAction SilentlyContinue) -ne $null
         "Bat" = (Get-Command bat -ErrorAction SilentlyContinue) -ne $null
         "Ripgrep" = (Get-Command rg -ErrorAction SilentlyContinue) -ne $null
+        "Fd" = (Get-Command fd -ErrorAction SilentlyContinue) -ne $null
+        "JQ" = (Get-Command jq -ErrorAction SilentlyContinue) -ne $null
+        "Wget" = (Get-Command wget -ErrorAction SilentlyContinue) -ne $null
+        "Btop" = (Get-Command btop -ErrorAction SilentlyContinue) -ne $null
+        "Dust" = (Get-Command dust -ErrorAction SilentlyContinue) -ne $null
+        "Procs" = (Get-Command procs -ErrorAction SilentlyContinue) -ne $null
+        "SD" = (Get-Command sd -ErrorAction SilentlyContinue) -ne $null
+        "Tokei" = (Get-Command tokei -ErrorAction SilentlyContinue) -ne $null
+        "Hyperfine" = (Get-Command hyperfine -ErrorAction SilentlyContinue) -ne $null
+        "JID" = (Get-Command jid -ErrorAction SilentlyContinue) -ne $null
+        "GitHub CLI" = (Get-Command gh -ErrorAction SilentlyContinue) -ne $null
     }
 
     foreach ($tool in $tools.Keys) {

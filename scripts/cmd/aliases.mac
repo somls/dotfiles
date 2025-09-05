@@ -11,8 +11,12 @@ e=explorer $*
 c=code $*
 
 grep=rg $*
-cat=type $*
+cat=bat $*
 findstr=findstr $*
+du=dust $*
+ps=procs $*
+top=btop $*
+json=jq $*
 
 gst=git status $*
 gl=git log --oneline --graph --decorate $*

@@ -19,8 +19,12 @@ DOSKEY c=code $*
 
 :: Utilities
 DOSKEY grep=rg $*
-DOSKEY cat=type $*
+DOSKEY cat=bat $*
 DOSKEY findstr=findstr $*
+DOSKEY du=dust $*
+DOSKEY ps=procs $*
+DOSKEY top=btop $*
+DOSKEY json=jq $*
 
 :: Git shortcuts
 DOSKEY gst=git status $*

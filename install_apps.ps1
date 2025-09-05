@@ -6,15 +6,16 @@
     这个脚本提供了自动化的软件包安装功能，包括：
     - 自动检测并安装 Scoop 包管理器
     - 交互式选择 Scoop 安装路径
-    - 分类管理软件包（Essential, Development, Editors）
+    - 分类管理软件包（Essential, Development, SystemTools, Editors）
     - 智能检测已安装软件，避免重复安装
     - 批量更新已安装软件包
     - 预览模式支持
 
 .PARAMETER Category
     指定要安装的软件包类别，可选值：
-    - Essential: 基础工具（git, pwsh, starship, 7zip, curl）
-    - Development: 开发工具（nodejs, python, gh, delta, ripgrep, bat, fd）
+    - Essential: 基础工具（git, pwsh, starship, 7zip, curl, sudo, wget, jq）
+    - Development: 开发工具（nodejs, python, gh, delta, ripgrep, bat, fd, fzf, zoxide, sd, tokei, hyperfine, jid）
+    - SystemTools: 系统工具（btop, dust, procs）
     - Editors: 编辑器（neovim, windows-terminal）
     默认安装 Essential 类别
 
@@ -36,8 +37,8 @@
     使用默认设置安装基础软件包，交互式选择 Scoop 路径
 
 .EXAMPLE
-    .\install_apps.ps1 -Category Essential,Development
-    安装基础和开发工具两个类别的软件包
+    .\install_apps.ps1 -Category Essential,Development,SystemTools
+    安装基础、开发和系统工具三个类别的软件包
 
 .EXAMPLE
     .\install_apps.ps1 -ScoopDir "D:\Tools\Scoop"
@@ -81,7 +82,10 @@ $PackageCategories = @{
         'pwsh',
         'starship',
         '7zip',
-        'curl'
+        'curl',
+        'sudo',
+        'wget',
+        'jq'
     )
     Development = @(
         'nodejs',
@@ -90,7 +94,18 @@ $PackageCategories = @{
         'delta',
         'ripgrep',
         'bat',
-        'fd'
+        'fd',
+        'fzf',
+        'zoxide',
+        'sd',
+        'tokei',
+        'hyperfine',
+        'jid'
+    )
+    SystemTools = @(
+        'btop',
+        'dust',
+        'procs'
     )
     Editors = @(
         'neovim',

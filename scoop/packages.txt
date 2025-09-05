@@ -1,37 +1,8 @@
 # List of desired packages to satisfy health-check.ps1
 # Install via: scoop install <each>
 # Buckets needed: main, extras, versions, nerd-fonts
-# 基础工具
-# scoop install git
-# scoop install curl
-# scoop install wget
-# scoop install 7zip
-# scoop install sudo # 在 PowerShell 中以管理员身份运行命令的便捷工具
 
-# 编辑器/IDE
-# scoop bucket add extras
-# scoop install vscode
-# scoop install neovim
-
-# 终端 (参考您之前的问题)
-# scoop install wezterm
-
-# 编程语言/环境
-# scoop install python
-# scoop install nodejs
-# scoop install openjdk8 # 来自 versions 桶
-
-# 其他实用工具
-# scoop install fd # 快速文件查找
-# scoop install fzf # 模糊查找
-# scoop install ripgrep # 快速搜索文件内容
-# scoop install jq # JSON 处理
-# scoop install starship # 跨 shell 的提示符
-
-# 以管理员身份打开 PowerShell
-# scoop install git --global
-# scoop install python --global
-
+# 核心开发工具
 git
 ripgrep
 zoxide
@@ -42,5 +13,19 @@ jq
 neovim
 starship
 vscode
+sudo
+wget
 
+# 系统监控和诊断工具
+btop
+dust
+procs
 
+# 文件处理和开发工具
+sd
+tokei
+hyperfine
+jid
+
+# Git和协作工具
+gh

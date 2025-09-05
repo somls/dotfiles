@@ -57,6 +57,8 @@
 
 ### 📚 文档
 - **`QUICK_REFERENCE.md`**: 快速参考卡
+- **`TOOLS_GUIDE.md`**: 🛠️ 工具使用详细指南
+- **`TOOLS_CHEATSHEET.md`**: 🚀 工具快速参考卡
 - **`QUICKSTART.md`**: 5分钟快速开始指南
 - **`TROUBLESHOOTING.md`**: 故障排除文档
 - **`SECURITY.md`**: 安全配置指南和个人信息保护

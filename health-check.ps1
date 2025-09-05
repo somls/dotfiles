@@ -377,10 +377,24 @@ function Test-Applications {
     $apps = @{
         'PowerShell 7' = @('pwsh')
         'Git' = @('git')
-
         'Windows Terminal' = @('wt')
         'Starship' = @('starship')
         'Neovim' = @('nvim')
+        'Ripgrep' = @('rg')
+        'FZF' = @('fzf')
+        'Bat' = @('bat')
+        'Fd' = @('fd')
+        'Zoxide' = @('zoxide')
+        'JQ' = @('jq')
+        'Wget' = @('wget')
+        'Btop' = @('btop')
+        'Dust' = @('dust')
+        'Procs' = @('procs')
+        'SD' = @('sd')
+        'Tokei' = @('tokei')
+        'Hyperfine' = @('hyperfine')
+        'JID' = @('jid')
+        'GitHub CLI' = @('gh')
     }
 
     foreach ($appName in $apps.Keys) {

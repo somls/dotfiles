@@ -189,6 +189,16 @@ $tools = @{
     "Ripgrep" = "rg"
     "Fd" = "fd"
     "Zoxide" = "zoxide"
+    "JQ" = "jq"
+    "Wget" = "wget"
+    "Btop" = "btop"
+    "Dust" = "dust"
+    "Procs" = "procs"
+    "SD" = "sd"
+    "Tokei" = "tokei"
+    "Hyperfine" = "hyperfine"
+    "JID" = "jid"
+    "GitHub CLI" = "gh"
 }
 
 foreach ($toolName in $tools.Keys) {

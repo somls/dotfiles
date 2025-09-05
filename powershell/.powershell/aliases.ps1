@@ -68,3 +68,22 @@ if (Get-Command rg -ErrorAction SilentlyContinue) {
         Set-Alias -Name grep -Value rg -Option AllScope
     }
 }
+
+# 新工具别名
+if (Get-Command dust -ErrorAction SilentlyContinue) {
+    if (-not (Get-Alias -Name du -ErrorAction SilentlyContinue)) {
+        Set-Alias -Name du -Value dust -Option AllScope
+    }
+}
+
+if (Get-Command procs -ErrorAction SilentlyContinue) {
+    if (-not (Get-Alias -Name ps -ErrorAction SilentlyContinue)) {
+        Set-Alias -Name ps -Value procs -Option AllScope
+    }
+}
+
+if (Get-Command btop -ErrorAction SilentlyContinue) {
+    if (-not (Get-Alias -Name top -ErrorAction SilentlyContinue)) {
+        Set-Alias -Name top -Value btop -Option AllScope
+    }
+}
