@@ -1,45 +1,40 @@
-# Local git user configs (kept in-repo but not tracked)
-git/gitconfig.local
-git/.gitconfig.local
-git/.gitconfig.work
-git/.gitconfig.private
+###############################
+# Dotfiles Project .gitignore #
+###############################
 
-# Allow important git documentation
-!git/USAGE.md
+###################
+# Temporary Files #
+###################
 
-# Temporary files
+# Temp and backup files
 *.tmp
-*.log
-*.user
-*.password
 *.bak
 *~
-
-# Environment files
-.env
-.env.local
-.env.production
-
-# PowerShell history
-pshistory.txt
-
-# Backup files
-*_backup/
-*-backup/
-*.backup
-
-# System files
+*.swp
+*.swo
 Thumbs.db
 .DS_Store
 desktop.ini
 
-# IDE/Editor files
-.vscode/settings.json
-.idea/
-*.swp
-*.swo
+# Logs and reports
+*.log
+install.log
+health-report.json
+project-status.json
+error.log
+debug.log
 
-# Test artifacts
+# Cache files
+.cache/
+**/*.cache
+.quick-check-cache.json
+quick-check-results.json
+
+#####################
+# Test & Build Data #
+#####################
+
+# Test results
 TestResults/
 TestResults.xml
 *.coverage
@@ -51,60 +46,72 @@ obj/
 dist/
 build/
 
+##############################
+# Personal & Sensitive Files #
+##############################
 
-# Project-specific local state (do not sync)
-.kiro/
+# Environment files
+.env
+.env.local
+.env.production
 
-# Local credentials, histories, and reports (do not sync)
-
-powershell/.powershell/pshistory.txt
-health-report.json
-
-# User-specific configuration files (contain personal info)
+# Git user configs
 git/gitconfig.local
-git/.gitconfig.*
-# scoop/config.json (用户从 config.json.example 复制)
+git/.gitconfig.local
+git/.gitconfig.work
+git/.gitconfig.private
+**/.git-credentials
+**/.gitconfig.d/sensitive.gitconfig
+**/.gitconfig.d/*_local.gitconfig
+**/.gitconfig.d/*_private.gitconfig
 
+# PowerShell history
+pshistory.txt
+powershell/.powershell/pshistory.txt
 
-# Personal proxy and network settings
+# User-specific configuration
+scoop/config.json
+personal-settings.json
+
+# Network and proxy settings
 **/proxy.conf
 **/*proxy*
 **/network.conf
+!PROXY_CONFIG_UPDATE.md  # Exception for documentation
 
-# Exception: Allow proxy documentation
-!PROXY_CONFIG_UPDATE.md
-
-# User-specific paths and drives
+# User-specific paths
 **/*G:/*
 **/*C:/Users/*
 **/*malip*
 yncdotfiles'
 
-# Installation logs and temporary files
-install.log
-*.backup
-backup/
-*_backup/
+############################
+# Development-only content #
+############################
 
-# Auto-sync script (was ignored previously)
-# auto-sync.ps1
-
-# Development documentation (local only)
+# Development documentation
 DEVELOPMENT.md
 CLAUDE.md
+**/CLAUDE.md
 **/PERSONAL_NOTES.md
-
-# Scripts guide (local only, optional)
+TODO.md
+CODING_STANDARDS.md
 SCRIPTS_GUIDE.md
-
-# Privacy audit report (local only)
 PRIVACY_AUDIT_REPORT.md
 
-# Git history cleaning script (local only)
+# Development scripts
 clean-git-history.ps1
+dev-setup.ps1
 
-# Git sensitive configuration and security files
-**/.git-credentials
-**/.gitconfig.d/sensitive.gitconfig
-**/.gitconfig.d/*_local.gitconfig
-**/.gitconfig.d/*_private.gitconfig
+##########################
+# Backup and local state #
+##########################
+
+# Backup directories
+backup/
+*_backup/
+*-backup/
+.dotfiles-backup-old
+
+# Project-specific local state
+.kiro/
