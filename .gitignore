@@ -41,6 +41,7 @@ desktop.ini
 
 # Test artifacts
 TestResults/
+TestResults.xml
 *.coverage
 *.trx
 
