@@ -122,6 +122,8 @@ function Main {
             Write-Host "`n💡 提示：您可以使用以下命令设置个人信息：" -ForegroundColor Cyan
             Write-Host "   git config --global user.name 'Your Name'"
             Write-Host "   git config --global user.email 'your.email@example.com'"
+
+
         }
     }
     catch {
