@@ -43,8 +43,6 @@ D:\sync\dotfiles\
 |------|------|------|
 | `Run-AllTests.ps1` | 🧪 综合测试运行器 | 并行执行、覆盖率分析、性能基准 |
 | `Validate-JsonConfigs.ps1` | ✔️ 配置文件验证器 | 架构验证、自动修复、批量处理 |
-| `project-status.ps1` | 📊 项目状态检查 | 健康度评分、并行检查、详细报告 |
-| `run-quick-check.ps1` | ⚡ 快速状态检查 | 智能缓存、分级检查、性能优化 |
 | `cleanup-project.ps1` | 🧹 项目清理工具 | 临时文件清理、安全备份清理 |
 | `auto-sync.ps1` | 🔄 智能Git同步 | 自动提交、冲突检测、远程同步 |
 
@@ -53,10 +51,6 @@ D:\sync\dotfiles\
 ### 🧪 测试和验证脚本
 - **Run-AllTests.ps1**: 支持单元测试、集成测试、性能测试，具备并行执行和代码覆盖率功能
 - **Validate-JsonConfigs.ps1**: JSON配置验证，支持架构校验和自动格式修复
-
-### 📊 状态监控脚本  
-- **project-status.ps1**: 全面的项目健康检查，支持并行检查和缓存结果
-- **run-quick-check.ps1**: 快速检查核心文件状态，智能缓存机制
 
 ### 🛠️ 维护工具
 - **cleanup-project.ps1**: 清理临时文件和备份，保持项目整洁
@@ -165,23 +159,21 @@ D:\sync\dotfiles\
 ```powershell
 1. .\setup.ps1                    # 环境检测和设置向导
 2. .\install.ps1                  # 根据检测结果安装配置
-3. .\scripts\run-quick-check.ps1  # 验证安装结果
+3. .\health-check.ps1             # 验证安装结果
 ```
 
 ### 🔄 日常维护流程
 ```powershell
-1. .\scripts\run-quick-check.ps1 -UseCache     # 快速状态检查
-2. .\scripts\project-status.ps1 -Parallel     # 详细健康检查
-3. .\scripts\Validate-JsonConfigs.ps1         # 配置文件验证
-4. .\scripts\auto-sync.ps1                    # 同步更新
+1. .\health-check.ps1                  # 快速状态检查
+2. .\scripts\Validate-JsonConfigs.ps1 # 配置文件验证
+3. .\scripts\auto-sync.ps1            # 同步更新
 ```
 
 ### 🧪 开发测试流程
 ```powershell
 1. .\scripts\Run-AllTests.ps1 -TestType Unit -Parallel    # 单元测试
 2. .\scripts\Run-AllTests.ps1 -TestType Integration       # 集成测试
-3. .\scripts\project-status.ps1 -ExportJson              # 状态报告
-4. .\scripts\cleanup-project.ps1                         # 清理临时文件
+3. .\scripts\cleanup-project.ps1                         # 清理临时文件
 ```
 
 ## 📊 精简优化成果
@@ -207,8 +199,7 @@ D:\sync\dotfiles\
 
 ### 根据使用场景选择
 - **首次安装**: `setup.ps1` → `install.ps1`
-- **日常检查**: `scripts\run-quick-check.ps1 -UseCache`
-- **详细诊断**: `scripts\project-status.ps1 -Detailed`
+- **日常检查**: `health-check.ps1`
 - **配置验证**: `scripts\Validate-JsonConfigs.ps1 -UseSchema`
 - **完整测试**: `scripts\Run-AllTests.ps1 -Parallel`
 

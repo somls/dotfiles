@@ -37,64 +37,24 @@
 
 ```powershell
 # 验证所有JSON文件
-.\scripts\Validate-JsonConfigs.ps1 -Recursive
+# 默认递归搜索所有JSON文件
+.\scripts\Validate-JsonConfigs.ps1
 
 # 使用架构验证
 .\scripts\Validate-JsonConfigs.ps1 -UseSchema -SchemaPath config\schemas\install.schema.json
 
 # 自动修复格式问题
 .\scripts\Validate-JsonConfigs.ps1 -Fix -Detailed
+
+# 仅检查指定目录（不递归）
+.\scripts\Validate-JsonConfigs.ps1 config\
 ```
 
 ### 📊 状态检查脚本
 
-#### `project-status.ps1`
-**功能**: 项目健康状态检查器
-- **用途**: 检查脚本语法、模块状态、配置文件、文档完整性
-- **特性**: 并行检查、缓存结果、自动修复、详细报告
-- **参数**:
-  - `-Category`: 检查特定类别 (Scripts/Modules/Configs/Docs/Tests/All)
-  - `-Parallel`: 启用并行检查
-  - `-FixIssues`: 自动修复问题
-  - `-ExportJson`: 导出JSON报告
 
-```powershell
-# 完整项目检查
-.\scripts\project-status.ps1
 
-# 检查特定类别
-.\scripts\project-status.ps1 -Category Scripts -Detailed
 
-# 自动修复问题
-.\scripts\project-status.ps1 -FixIssues
-
-# 并行检查并导出报告
-.\scripts\project-status.ps1 -Parallel -ExportJson
-```
-
-#### `run-quick-check.ps1`
-**功能**: 快速项目状态检查
-- **用途**: 快速验证核心文件和配置状态
-- **特性**: 智能缓存、并行执行、多级检查、性能优化
-- **参数**:
-  - `-Level`: 检查级别 (Critical/Standard/Full)
-  - `-UseCache`: 启用结果缓存
-  - `-Parallel`: 并行执行
-  - `-Fix`: 快速修复问题
-
-```powershell
-# 快速检查（标准级别）
-.\scripts\run-quick-check.ps1
-
-# 使用缓存的快速检查
-.\scripts\run-quick-check.ps1 -UseCache
-
-# 完整检查
-.\scripts\run-quick-check.ps1 -Level Full -Parallel
-
-# 关键文件检查
-.\scripts\run-quick-check.ps1 -Level Critical -Quiet
-```
 
 ### 🔧 辅助工具
 
@@ -143,35 +103,34 @@
 
 ## 📋 使用指南
 
-### 日常检查流程
+### 🚀 推荐工作流程
+
+#### 日常健康检查
 ```powershell
-# 1. 快速健康检查
-.\scripts\run-quick-check.ps1 -UseCache
+# 1. 快速状态检查
+.\health-check.ps1
 
-# 2. 如有问题，详细诊断
-.\scripts\project-status.ps1 -Detailed -Category <问题类别>
+# 2. 验证配置文件（默认递归搜索）
+.\scripts\Validate-JsonConfigs.ps1
 
-# 3. 验证配置文件
-.\scripts\Validate-JsonConfigs.ps1 -UseSchema
-
-# 4. 运行测试套件
+# 3. 运行测试套件
 .\scripts\Run-AllTests.ps1 -TestType All
 ```
 
-### 持续集成流程
+#### 持续集成/开发流程
 ```powershell
 # CI/CD 管道中的检查序列
-.\scripts\run-quick-check.ps1 -Level Critical -Quiet
-.\scripts\Validate-JsonConfigs.ps1 -UseSchema -Quiet
+.\health-check.ps1 -Quiet
+.\scripts\Validate-JsonConfigs.ps1 -Quiet
 .\scripts\Run-AllTests.ps1 -TestType Unit -Parallel
-.\scripts\project-status.ps1 -ExportJson -ExportPath ci-status.json
 ```
 
-### 开发环境设置
+#### 问题修复流程
 ```powershell
-# 开发者首次设置检查
-.\scripts\project-status.ps1 -Category All -FixIssues
+# 自动修复JSON格式（默认递归）
 .\scripts\Validate-JsonConfigs.ps1 -Fix
+
+# 运行完整测试验证
 .\scripts\Run-AllTests.ps1 -TestType Integration
 ```
 
@@ -184,9 +143,8 @@
 - 适用于多文件操作和独立检查任务
 
 ### 智能缓存
-- `run-quick-check.ps1` 支持结果缓存（30分钟有效期）
-- 缓存文件：`.quick-check-cache.json`
-- 使用 `-UseCache` 参数启用
+- 部分脚本支持结果缓存以提高性能
+- 使用 `-UseCache` 参数启用（如果支持）
 
 ### 渐进式检查
 - `Critical`: 仅检查核心文件（< 5秒）
@@ -222,8 +180,6 @@
 ### 调试模式
 ```powershell
 # 启用详细输出
-.\scripts\project-status.ps1 -Verbosity Diagnostic
-
 # 查看完整错误信息
 .\scripts\Run-AllTests.ps1 -Verbosity Detailed -ContinueOnError
 ```
@@ -262,4 +218,4 @@
 
 ---
 
-💡 **提示**: 建议在开发过程中定期运行 `run-quick-check.ps1` 进行快速状态检查，在发布前运行完整的测试套件确保质量。
+💡 **核心理念**: 每个工具专注于单一职责，通过组合使用实现完整的项目管理功能。定期运行健康检查，提交前执行完整验证，确保项目质量和稳定性。

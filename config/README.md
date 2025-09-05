@@ -164,11 +164,11 @@ config/
 
 ### 项目状态检查
 ```powershell
-# 快速检查
-.\scripts\run-quick-check.ps1
+# 快速状态检查
+.\health-check.ps1
 
-# 详细状态检查
-.\scripts\project-status.ps1 -Detailed
+# 详细健康检查
+.\health-check.ps1 -Detailed
 ```
 
 ## 📝 配置文件版本

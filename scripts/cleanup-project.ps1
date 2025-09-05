@@ -154,7 +154,7 @@ function Get-CleanupConfiguration {
         Deep = @{
             TempFiles = @("*.tmp", "*.temp", "*.bak", "*.old", "*.orig", "*.swp", "*~")
             CacheFiles = @(".quick-check-cache.json", "*.cache", "*.cached", ".pester-cache")
-            LogFiles = if ($IncludeLogs) { @("*.log", "install.log", "health-report.json", "project-status.json", "quick-check-results.json") } else { @() }
+            LogFiles = if ($IncludeLogs) { @("*.log", "install.log", "health-report.json") } else { @() }
             BackupDirs = @(".dotfiles-backup-old", "backup-*")
             RecursiveDirs = @("node_modules\.cache", "\.vs", "\.vscode\extensions\.obsolete")
             Description = "深度清理模式（包含更多文件类型）"
@@ -310,25 +310,25 @@ function Start-ProjectCleanup {
     Write-CleanupMessage "清理模式: $($config.Description)" "Info"
 
     # 清理临时文件
-    if ($config.TempFiles.Count -gt 0) {
+    if ($config.TempFiles -and $config.TempFiles.Count -gt 0) {
         Write-CleanupMessage "🗂️ 清理临时文件..." "Info"
         Clear-FilesByPattern -Patterns $config.TempFiles -Type "Temp File"
     }
 
     # 清理缓存文件
-    if ($config.CacheFiles.Count -gt 0) {
+    if ($config.CacheFiles -and $config.CacheFiles.Count -gt 0) {
         Write-CleanupMessage "💾 清理缓存文件..." "Info"
         Clear-FilesByPattern -Patterns $config.CacheFiles -Type "Cache File"
     }
 
     # 清理日志文件
-    if ($config.LogFiles.Count -gt 0 -and $IncludeLogs) {
+    if ($config.LogFiles -and $config.LogFiles.Count -gt 0 -and $IncludeLogs) {
         Write-CleanupMessage "📄 清理日志文件..." "Info"
         Clear-FilesByPattern -Patterns $config.LogFiles -Type "Log File"
     }
 
     # 清理备份目录
-    if ($config.BackupDirs.Count -gt 0) {
+    if ($config.BackupDirs -and $config.BackupDirs.Count -gt 0) {
         Write-CleanupMessage "📦 清理旧备份目录..." "Info"
         Clear-FilesByPattern -Patterns $config.BackupDirs -Type "Backup Directory"
     }
@@ -360,8 +360,8 @@ function Export-CleanupReport {
             TotalSize = $script:TotalSize
             TotalSizeFormatted = Format-FileSize $script:TotalSize
             Duration = (Get-Date) - $script:StartTime
-            SuccessfulOperations = ($script:CleanupResults | Where-Object Success).Count
-            FailedOperations = ($script:CleanupResults | Where-Object { -not $_.Success }).Count
+            SuccessfulOperations = @($script:CleanupResults | Where-Object Success).Count
+            FailedOperations = @($script:CleanupResults | Where-Object { -not $_.Success }).Count
         }
         Results = $script:CleanupResults
         Statistics = @{
@@ -402,8 +402,9 @@ function Show-CleanupSummary {
 
     if ($DryRun) {
         Write-CleanupMessage "预览模式完成" "Info"
-        Write-CleanupMessage "找到可清理项目: $($script:CleanupResults.Count)" "Info"
-        $totalPreviewSize = if ($script:CleanupResults.Count -gt 0) {
+        $resultsCount = if ($script:CleanupResults -is [array]) { $script:CleanupResults.Count } else { if ($script:CleanupResults) { 1 } else { 0 } }
+        Write-CleanupMessage "找到可清理项目: $resultsCount" "Info"
+        $totalPreviewSize = if ($resultsCount -gt 0) {
             ($script:CleanupResults | Measure-Object Size -Sum).Sum
         } else { 0 }
         Write-CleanupMessage "可节省空间: $(Format-FileSize $totalPreviewSize)" "Info"
@@ -414,18 +415,20 @@ function Show-CleanupSummary {
         Write-CleanupMessage "执行时间: $($duration.ToString('mm\:ss\.ff'))" "Info"
 
         # 失败统计
-        $failedCount = ($script:CleanupResults | Where-Object { -not $_.Success }).Count
+        $failedResults = @($script:CleanupResults | Where-Object { -not $_.Success })
+        $failedCount = $failedResults.Count
         if ($failedCount -gt 0) {
             Write-CleanupMessage "失败操作: $failedCount" "Warning"
         }
     }
 
     # 按类型显示统计
-    if ($script:CleanupResults.Count -gt 0 -and -not $Quiet) {
+    $resultsCount = if ($script:CleanupResults -is [array]) { $script:CleanupResults.Count } else { if ($script:CleanupResults) { 1 } else { 0 } }
+    if ($resultsCount -gt 0 -and -not $Quiet) {
         Write-CleanupMessage "" "Info"
         Write-CleanupMessage "按类型统计:" "Info"
         $script:CleanupResults | Group-Object Type | ForEach-Object {
-            $groupSize = if ($_.Group.Count -gt 0) {
+            $groupSize = if ($_.Group -and $_.Group.Count -gt 0) {
                 ($_.Group | Measure-Object Size -Sum).Sum
             } else { 0 }
             Write-CleanupMessage "  $($_.Name): $($_.Count) 项 ($(Format-FileSize $groupSize))" "Info"
