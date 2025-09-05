@@ -28,6 +28,9 @@
     - 远程领先：拉取远程更改
     - 双方都有更新：使用 rebase 合并
 
+.PARAMETER BackupFirst
+    同步前创建备份
+
 .EXAMPLE
     .\auto-sync.ps1 -Auto
     执行智能自动同步
@@ -40,6 +43,10 @@
     .\auto-sync.ps1 -Message "更新配置" -Push
     手动提交并推送
 
+.EXAMPLE
+    .\auto-sync.ps1 -BackupFirst -Auto
+    安全同步（先备份）
+
 .NOTES
     建议使用 -Auto 参数进行智能同步，脚本会自动处理各种情况
 #>
@@ -48,15 +55,19 @@
 param(
     [Parameter(Mandatory = $false)]
     [string]$Message,
-    
+
     [Parameter(Mandatory = $false)]
     [switch]$Push,
-    
+
     [Parameter(Mandatory = $false)]
     [switch]$DryRun,
 
     [Parameter(Mandatory = $false)]
     [switch]$Auto,
+
+    # 同步前创建备份
+    [Parameter(Mandatory = $false)]
+    [switch]$BackupFirst,
 
     # 强制执行详细的 fetch（含 --force），用于排查远程可见性问题
     [Parameter(Mandatory = $false)]
@@ -69,20 +80,71 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
- 
+
  # Log level used for safety-push messages (e.g., after a commit but divergence shows 0/0)
  # Options: "INFO" | "WARN" | "ERROR"
  $SafetyPushLogLevel = "INFO"
+
+# 创建备份函数
+function New-ProjectBackup {
+    param([string]$BackupReason = "Auto-sync backup")
+
+    try {
+        $BackupDir = Join-Path $env:USERPROFILE ".dotfiles-backup"
+        $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+        $BackupPath = Join-Path $BackupDir "backup-$Timestamp"
+
+        Write-Log "创建项目备份: $BackupPath" -Level "INFO"
+
+        # 创建备份目录
+        if (-not (Test-Path $BackupDir)) {
+            New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
+        }
+
+        # 获取项目根目录
+        $ProjectRoot = git rev-parse --show-toplevel 2>$null
+        if (-not $ProjectRoot -or $LASTEXITCODE -ne 0) {
+            $ProjectRoot = Get-Location
+        }
+
+        # 创建备份
+        Copy-Item -Path $ProjectRoot -Destination $BackupPath -Recurse -Force
+
+        # 清理Git目录（减少备份大小）
+        $GitDir = Join-Path $BackupPath ".git"
+        if (Test-Path $GitDir) {
+            Remove-Item $GitDir -Recurse -Force
+        }
+
+        # 创建备份信息文件
+        $BackupInfo = @{
+            Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Reason = $BackupReason
+            OriginalPath = $ProjectRoot
+            GitBranch = git branch --show-current 2>$null
+            GitCommit = git rev-parse HEAD 2>$null
+        }
+
+        $BackupInfo | ConvertTo-Json | Out-File (Join-Path $BackupPath "backup-info.json") -Encoding UTF8
+
+        Write-Log "备份创建成功: $BackupPath" -Level "INFO"
+        return $true
+    }
+    catch {
+        Write-Log "创建备份失败: $($_.Exception.Message)" -Level "ERROR"
+        return $false
+    }
+}
 
 function Write-Log {
     param(
         [string]$Message,
         [string]$Level = "INFO"
     )
-    
+
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $LogEntry = "[$Timestamp] [$Level] $Message"
-    
+
     switch ($Level) {
         "INFO" { Write-Host $LogEntry -ForegroundColor Green }
         "WARN" { Write-Host $LogEntry -ForegroundColor Yellow }
@@ -108,20 +170,20 @@ function Get-GitChanges {
             Deleted = @()
             Untracked = @()
         }
-        
+
         $GitStatus = git status --porcelain 2>$null
         if ($GitStatus) {
             foreach ($Line in $GitStatus) {
                 if ($Line.Length -ge 3) {
                     $StatusCode = $Line.Substring(0, 2)
                     $FilePath = $Line.Substring(3)
-                    
+
                     switch ($StatusCode.Trim()) {
                         'A' { $Changes.Added += $FilePath }
                         'M' { $Changes.Modified += $FilePath }
                         'D' { $Changes.Deleted += $FilePath }
                         '??' { $Changes.Untracked += $FilePath }
-                        default { 
+                        default {
                             if ($StatusCode[1] -eq 'M') { $Changes.Modified += $FilePath }
                             elseif ($StatusCode[1] -eq 'D') { $Changes.Deleted += $FilePath }
                             else { $Changes.Modified += $FilePath }
@@ -130,7 +192,7 @@ function Get-GitChanges {
                 }
             }
         }
-        
+
         return $Changes
     }
     catch {
@@ -167,11 +229,11 @@ function Get-Divergence {
     try {
         # 首先尝试 fetch 获取最新的远程状态
         Write-Log "正在获取远程最新状态..." -Level "INFO"
-        
+
         # 构建 fetch 参数
         $fetchArgs = @('--all', '--prune')
         if ($ForceFetch) { $fetchArgs += '--force' }
-        
+
         # 执行 fetch 操作，带重试机制
         $maxRetries = 3
         $success = $false
@@ -188,17 +250,17 @@ function Get-Divergence {
             catch {
                 $success = $false
             }
-            
+
             if (-not $success -and $i -lt $maxRetries) {
                 Write-Log "git fetch 失败，重试 $($i+1)/$maxRetries..." -Level "WARN"
                 Start-Sleep -Seconds 1
             }
         }
-        
+
         if (-not $success) {
             Write-Log "git fetch 失败，使用本地缓存的远程状态" -Level "WARN"
         }
-        
+
         # 检查是否有上游分支
         if (-not (Test-BranchHasUpstream)) {
             Write-Log "未检测到上游分支，尝试自动设置..." -Level "WARN"
@@ -216,7 +278,7 @@ function Get-Divergence {
                 return @{ Ahead = 0; Behind = 0 }
             }
         }
-        
+
         # 获取分歧计数
         try {
             $counts = git rev-list --left-right --count "HEAD...HEAD@{u}" 2>$null
@@ -227,25 +289,25 @@ function Get-Divergence {
         catch {
             $counts = $null
         }
-        
+
         if (-not $counts -or $counts.Trim() -eq '') {
             Write-Log "无法获取分歧计数，可能分支完全同步" -Level "INFO"
             return @{ Ahead = 0; Behind = 0 }
         }
-        
+
         # 解析分歧计数
         $parts = @($counts.Trim() -split '\s+') | Where-Object { $_ -ne '' -and $_ -match '^\d+$' }
         if ($parts.Count -lt 2) {
             Write-Log "分歧计数格式异常: '$counts'，假设同步状态" -Level "WARN"
             return @{ Ahead = 0; Behind = 0 }
         }
-        
+
         $ahead = [int]$parts[0]
         $behind = [int]$parts[1]
-        
+
         Write-Log "分歧状态：本地领先 $ahead 个提交，远程领先 $behind 个提交" -Level "INFO"
         return @{ Ahead = $ahead; Behind = $behind }
-        
+
     } catch {
         Write-Log "获取分歧信息时发生异常: $($_.Exception.Message)" -Level "ERROR"
         return @{ Ahead = 0; Behind = 0 }
@@ -296,20 +358,20 @@ function Invoke-AutoSync {
         # 重新获取分歧状态
         $div = Get-Divergence
         Write-Log "提交后分支状态：本地领先 $($div.Ahead) 个提交，远程领先 $($div.Behind) 个提交" -Level "INFO"
-        
+
         # 如果本地有领先的提交，直接推送
         if ($div.Ahead -gt 0) {
             Write-Log "本地有新提交，正在推送..." -Level "INFO"
             $pushArgs = @()
             if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
-            
+
             $maxRetries = 3
             $pushOk = $false
             for ($i = 1; $i -le $maxRetries -and -not $pushOk; $i++) {
-                if ($pushArgs.Count -gt 0) { 
-                    git push @pushArgs 2>$null 
-                } else { 
-                    git push 2>$null 
+                if ($pushArgs.Count -gt 0) {
+                    git push @pushArgs 2>$null
+                } else {
+                    git push 2>$null
                 }
                 $pushOk = ($LASTEXITCODE -eq 0)
                 if (-not $pushOk -and $i -lt $maxRetries) {
@@ -317,7 +379,7 @@ function Invoke-AutoSync {
                     Start-Sleep -Seconds 1
                 }
             }
-            
+
             if (-not $pushOk) {
                 Write-Log "推送失败" -Level "ERROR"
                 return $false
@@ -464,22 +526,22 @@ function New-CommitMessage {
         [hashtable]$Changes,
         [string]$CustomMessage
     )
-    
+
     if ($CustomMessage) {
         return $CustomMessage
     }
-    
+
     $AddedCount = $Changes.Added.Count
     $ModifiedCount = $Changes.Modified.Count
     $DeletedCount = $Changes.Deleted.Count
     $UntrackedCount = $Changes.Untracked.Count
-    
+
     $Actions = @()
     if ($AddedCount -gt 0) { $Actions += "add $AddedCount files" }
     if ($ModifiedCount -gt 0) { $Actions += "modify $ModifiedCount files" }
     if ($DeletedCount -gt 0) { $Actions += "remove $DeletedCount files" }
     if ($UntrackedCount -gt 0) { $Actions += "add $UntrackedCount new files" }
-    
+
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     return "Auto commit: " + ($Actions -join ", ") + " - $Timestamp"
 }
@@ -491,40 +553,40 @@ function Invoke-GitCommit {
         [switch]$PushToRemote,
         [switch]$DryRunMode
     )
-    
+
     try {
         # 显示变更摘要
         Write-Host "`n=== 文件变更摘要 ===" -ForegroundColor Cyan
-        
+
         if ($Changes.Added.Count -gt 0) {
             Write-Host "新增文件 ($($Changes.Added.Count)):" -ForegroundColor Green
             $Changes.Added | ForEach-Object { Write-Host "  + $_" -ForegroundColor Green }
         }
-        
+
         if ($Changes.Modified.Count -gt 0) {
             Write-Host "修改文件 ($($Changes.Modified.Count)):" -ForegroundColor Yellow
             $Changes.Modified | ForEach-Object { Write-Host "  ~ $_" -ForegroundColor Yellow }
         }
-        
+
         if ($Changes.Deleted.Count -gt 0) {
             Write-Host "删除文件 ($($Changes.Deleted.Count)):" -ForegroundColor Red
             $Changes.Deleted | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
         }
-        
+
         if ($Changes.Untracked.Count -gt 0) {
             Write-Host "未跟踪文件 ($($Changes.Untracked.Count)):" -ForegroundColor Magenta
             $Changes.Untracked | ForEach-Object { Write-Host "  ? $_" -ForegroundColor Magenta }
         }
-        
+
         Write-Host "`n=== 提交消息 ===" -ForegroundColor Cyan
         Write-Host $CommitMessage -ForegroundColor White
         Write-Host ""
-        
+
         if ($DryRunMode) {
             Write-Host "=== 预览模式 - 不会实际执行提交 ===" -ForegroundColor Yellow
             return $true
         }
-        
+
         # 添加所有变更到暂存区
         Write-Log "添加文件到暂存区..." -Level "INFO"
         git add . 2>$null
@@ -532,7 +594,7 @@ function Invoke-GitCommit {
             Write-Log "添加文件到暂存区失败" -Level "ERROR"
             return $false
         }
-        
+
         # 执行提交
         Write-Log "执行提交..." -Level "INFO"
         git commit -m $CommitMessage 2>$null
@@ -540,9 +602,9 @@ function Invoke-GitCommit {
             Write-Log "提交失败" -Level "ERROR"
             return $false
         }
-        
+
         Write-Log "提交成功" -Level "INFO"
-        
+
         # 推送到远程（如果需要）
         if ($PushToRemote) {
             $branch = Get-CurrentBranch
@@ -563,7 +625,7 @@ function Invoke-GitCommit {
                 return $false
             }
         }
-        
+
         return $true
     }
     catch {
@@ -576,33 +638,51 @@ function Main {
     try {
         Write-Host "=== 智能自动提交与同步工具 ===" -ForegroundColor Cyan
         Write-Host ""
-        
+
         # 检查Git仓库
         if (-not (Test-GitRepository)) {
             Write-Log "当前目录不是Git仓库" -Level "ERROR"
             return $false
         }
-        
-        # 默认使用 Auto 模式进行智能同步，除非明确指定了其他参数
+
+        # 创建备份（如果需要）
+        if ($BackupFirst) {
+            Write-Log "正在创建同步前备份..." -Level "INFO"
+            $backupResult = New-ProjectBackup -BackupReason "Pre-sync backup"
+            if (-not $backupResult) {
+                Write-Log "备份失败，同步已取消" -Level "ERROR"
+                return $false
+            }
+        }
+
+        # 默认使用 Auto 模式进行智能同步，除否明确指定了其他参数
         if ($Auto -or (-not $Push -and -not $Message -and -not $DryRun)) {
             Write-Log "使用智能同步模式" -Level "INFO"
-            return (Invoke-AutoSync -DryRunMode:$DryRun)
+            return Invoke-AutoSync -DryRunMode:$DryRun
         }
 
         # 手动模式：获取变更
         $Changes = Get-GitChanges
-        
+
         # 检查是否有变更
         $TotalChanges = $Changes.Added.Count + $Changes.Modified.Count + $Changes.Deleted.Count + $Changes.Untracked.Count
         if ($TotalChanges -eq 0) {
             Write-Log "没有检测到本地文件变更" -Level "INFO"
-            
+
             # 即使没有本地变更，也检查是否有未推送的提交
             $div = Get-Divergence
             if ($div.Ahead -gt 0) {
                 Write-Log "检测到 $($div.Ahead) 个未推送的提交，正在推送..." -Level "INFO"
                 if (-not $DryRun) {
-                    git push 2>$null
+                    $pushArgs = @()
+                    if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
+
+                    if ($pushArgs.Count -gt 0) {
+                        git push @pushArgs 2>$null
+                    } else {
+                        git push 2>$null
+                    }
+
                     if ($LASTEXITCODE -eq 0) {
                         Write-Log "推送成功" -Level "INFO"
                     } else {
@@ -615,29 +695,29 @@ function Main {
             }
             return $true
         }
-        
+
         Write-Log "检测到 $TotalChanges 个变更文件" -Level "INFO"
-        
+
         # 生成提交消息
         $CommitMessage = New-CommitMessage -Changes $Changes -CustomMessage $Message
-        
+
         # 在手动模式下，默认也推送到远程（除非明确指定不推送）
         $ShouldPush = $Push -or (-not $PSBoundParameters.ContainsKey('Push'))
-        
+
         # 执行提交
         $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$ShouldPush -DryRunMode:$DryRun
-        
+
         if ($Success) {
             Write-Host "✅ 操作完成" -ForegroundColor Green
         } else {
             Write-Host "❌ 操作失败" -ForegroundColor Red
             return $false
         }
-        
+
         return $true
     }
     catch {
-        Write-Log "程序执行失败: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Main 函数执行时发生异常: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }

@@ -190,7 +190,7 @@ function Test-CoreFiles {
                         try {
                             $tokens = $errors = $null
                             [System.Management.Automation.Language.Parser]::ParseFile($filePath, [ref]$tokens, [ref]$errors)
-                            if ($errors.Count -gt 0) {
+                            if ($errors -and $errors.Count -gt 0) {
                                 $result.Status = "Warning"
                                 $result.Message += " (语法警告)"
                             }
@@ -211,7 +211,7 @@ function Test-CoreFiles {
         }.GetNewClosure()
     }
 
-    if ($Parallel -and $coreFiles.Count -gt 2) {
+    if ($Parallel -and $coreFiles -and $coreFiles.Count -gt 2) {
         Write-QuickMessage "并行检查核心文件..." "Info"
 
         $jobs = @()
@@ -257,7 +257,7 @@ function Test-CoreFiles {
                         try {
                             $tokens = $errors = $null
                             [System.Management.Automation.Language.Parser]::ParseFile($filePath, [ref]$tokens, [ref]$errors)
-                            if ($errors.Count -gt 0) {
+                            if ($errors -and $errors.Count -gt 0) {
                                 $result.Status = "Warning"
                                 $result.Message += " (语法警告)"
                                 $result.Metadata.SyntaxErrors = $errors.Count
@@ -327,7 +327,7 @@ function Test-ConfigFiles {
             $dirPath = Join-Path $script:ProjectRoot $dir
 
             if (Test-Path $dirPath) {
-                $files = Get-ChildItem $dirPath -File -Recurse -ErrorAction SilentlyContinue
+                $files = @(Get-ChildItem $dirPath -File -Recurse -ErrorAction SilentlyContinue)
                 $fileCount = $files.Count
 
                 if ($fileCount -gt 0) {
@@ -393,7 +393,7 @@ function Test-ModulesAndScripts {
 
     $modulesPath = Join-Path $script:ProjectRoot "modules"
     if (Test-Path $modulesPath) {
-        $modules = Get-ChildItem $modulesPath -Filter "*.psm1" -ErrorAction SilentlyContinue
+        $modules = @(Get-ChildItem $modulesPath -Filter "*.psm1" -ErrorAction SilentlyContinue)
         if ($modules.Count -gt 0) {
             $modulesResult.Status = "Success"
             $modulesResult.Message = "$($modules.Count) 模块"
@@ -418,7 +418,7 @@ function Test-ModulesAndScripts {
 
         $scriptsPath = Join-Path $script:ProjectRoot "scripts"
         if (Test-Path $scriptsPath) {
-            $scripts = Get-ChildItem $scriptsPath -Filter "*.ps1" -ErrorAction SilentlyContinue
+            $scripts = @(Get-ChildItem $scriptsPath -Filter "*.ps1" -ErrorAction SilentlyContinue)
             $scriptsResult.Status = "Success"
             $scriptsResult.Message = "$($scripts.Count) 脚本"
             $scriptsResult.Metadata.ScriptCount = $scripts.Count
@@ -453,9 +453,9 @@ function Measure-Performance {
     $allResults += $script:CheckResults.Files
     $allResults += $script:CheckResults.Config
 
-    $perfData.CheckCount = $allResults.Count
-    $perfData.CacheHits = ($allResults | Where-Object { $_.Cached }).Count
-    $perfData.AverageCheckTime = if ($allResults.Count -gt 0) {
+    $perfData.CheckCount = @($allResults).Count
+    $perfData.CacheHits = @($allResults | Where-Object { $_.Cached }).Count
+    $perfData.AverageCheckTime = if (@($allResults).Count -gt 0) {
         [math]::Round(($allResults | ForEach-Object { $_.Duration.TotalMilliseconds } | Measure-Object -Average).Average, 2)
     } else { 0 }
 
@@ -495,11 +495,11 @@ function Show-QuickResults {
     param([array]$AllResults)
 
     $summary = @{
-        Total = $AllResults.Count
-        Success = ($AllResults | Where-Object { $_.Status -eq "Success" }).Count
-        Warnings = ($AllResults | Where-Object { $_.Status -eq "Warning" }).Count
-        Errors = ($AllResults | Where-Object { $_.Status -eq "Error" }).Count
-        Cached = ($AllResults | Where-Object { $_.Cached }).Count
+        Total = @($AllResults).Count
+        Success = @($AllResults | Where-Object { $_.Status -eq "Success" }).Count
+        Warnings = @($AllResults | Where-Object { $_.Status -eq "Warning" }).Count
+        Errors = @($AllResults | Where-Object { $_.Status -eq "Error" }).Count
+        Cached = @($AllResults | Where-Object { $_.Cached }).Count
     }
 
     Write-Host ""

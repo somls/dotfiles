@@ -7,24 +7,23 @@
 ### 🧪 测试和验证脚本
 
 #### `Run-AllTests.ps1`
-**功能**: 综合测试运行器
-- **用途**: 执行单元测试、集成测试、性能测试
-- **特性**: 并行执行、代码覆盖率、性能基准测试
+**功能**: 简化的测试运行器
+- **用途**: 运行项目中的所有测试文件
+- **特性**: 支持 Pester 测试框架和原生 PowerShell 测试
 - **参数**: 
-  - `-TestType`: Unit/Integration/Performance/All
-  - `-Parallel`: 启用并行执行
-  - `-Coverage`: 启用代码覆盖率分析
-  - `-Benchmark`: 启用性能基准测试
+  - `-Detailed`: 显示详细输出
+  - `-Quiet`: 静默模式
+  - `-Filter`: 过滤测试文件
 
 ```powershell
 # 执行所有测试
 .\scripts\Run-AllTests.ps1
 
-# 并行执行单元测试
-.\scripts\Run-AllTests.ps1 -TestType Unit -Parallel
+# 详细模式运行测试
+.\scripts\Run-AllTests.ps1 -Detailed
 
-# 生成详细报告
-.\scripts\Run-AllTests.ps1 -GenerateReport -Detailed
+# 运行特定测试
+.\scripts\Run-AllTests.ps1 -Filter "*Utilities*"
 ```
 
 #### `Validate-JsonConfigs.ps1`

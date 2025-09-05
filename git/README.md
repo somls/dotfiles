@@ -22,20 +22,22 @@ git/
 
 ## 安装说明
 
-使用提供的 PowerShell 安装脚本：
+使用主安装脚本安装 Git 配置：
 
 ```powershell
-# 标准安装（复制文件）
+# 从项目根目录运行：
+
+# 安装所有配置（包括 Git）
 .\install.ps1
 
-# 开发模式（使用符号链接）
-.\install.ps1 -Symlink
-
-# 强制覆盖现有配置
-.\install.ps1 -Force
+# 只安装 Git 配置
+.\install.ps1 -Type Git
 
 # 预览安装（不实际更改任何内容）
-.\install.ps1 -WhatIf
+.\install.ps1 -Type Git -DryRun
+
+# 强制覆盖现有配置
+.\install.ps1 -Type Git -Force
 ```
 
 ## 配置说明
@@ -145,7 +147,7 @@ npm install -g @commitlint/cli @commitlint/config-conventional
 1. 安装后，`gitconfig.local` 会自动链接到 `~/.gitconfig.local`
 2. 根据个人喜好修改任何配置文件
 3. 对于临时更改，可直接编辑 `~/.gitconfig.local`
-4. 对于永久性更改，请考虑编辑存储库中的相应配置文件并重新运行安装脚本
+4. 对于永久性更改，请考虑编辑存储库中的相应配置文件并重新运行 `.\install.ps1 -Type Git`
 
 ## 安全考虑
 

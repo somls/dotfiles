@@ -42,3 +42,13 @@
 # 1. 避免在版本控制中包含代理设置
 # 2. 不同环境可以有不同的代理配置
 # 3. 保持主配置文件的清洁性
+[user]
+	name = Test User
+	email = test@example.com
+[core]
+	editor = code --wait
+	safecrlf = warn
+[pull]
+	rebase = true
+[color]
+	ui = auto

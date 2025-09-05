@@ -289,16 +289,13 @@ z project            # 智能目录跳转（需要 zoxide）
 
 ```powershell
 # Neovim 配置管理
-.\neovim\install.ps1                     # 安装 Neovim 配置
-.\neovim\install.ps1 -DryRun             # 预览安装操作
-.\neovim\install.ps1 -Force              # 强制重新安装
-.\neovim\validate-config.ps1             # 验证配置完整性
+# Neovim 配置（通过主安装脚本管理）
+.\install.ps1 -Type Neovim              # 安装 Neovim 配置
+.\install.ps1 -Type Neovim -DryRun       # 预览安装操作
+.\install.ps1 -Type Neovim -Force        # 强制重新安装
 
-# Neovim 测试和验证
-.\neovim\tests\run-all-tests.ps1         # 运行所有测试
-.\neovim\tests\test-config-syntax.ps1    # 测试配置语法
-.\neovim\tests\test-plugin-functionality.ps1  # 测试插件功能
-.\neovim\tests\test-performance.ps1      # 性能测试
+# Neovim 验证
+nvim --headless -c "checkhealth" -c "qa" # 检查 Neovim 健康状态
 
 # 环境管理
 .\install_apps.ps1                      # 安装依赖工具

@@ -1,0 +1,28 @@
+{
+  "TestFile": "DotfilesUtilities.Tests.ps1",
+  "FilePath": "D:\\sync\\dotfiles\\scripts\\DotfilesUtilities.Tests.ps1",
+  "TotalCount": 12,
+  "PassedCount": 12,
+  "FailedCount": 0,
+  "SkippedCount": 0,
+  "Duration": {
+    "Ticks": 29401481,
+    "Days": 0,
+    "Hours": 0,
+    "Milliseconds": 940,
+    "Microseconds": 148,
+    "Nanoseconds": 100,
+    "Minutes": 0,
+    "Seconds": 2,
+    "TotalDays": 3.4029491898148145E-05,
+    "TotalHours": 0.0008167078055555556,
+    "TotalMilliseconds": 2940.1481,
+    "TotalMicroseconds": 2940148.1,
+    "TotalNanoseconds": 2940148100.0,
+    "TotalMinutes": 0.049002468333333334,
+    "TotalSeconds": 2.9401481
+  },
+  "Success": true,
+  "Output": "",
+  "Errors": []
+}
