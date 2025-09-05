@@ -1054,7 +1054,7 @@ $links = @{
     "scripts\cmd\aliases.cmd" = @{ Target = ".cmd\aliases.cmd"; Type = "CMD"; ForceCopy = $true };
 
     # Windows Terminal
-    "WindowsTerminal\settings.json" = @{ Target = "$($adaptivePaths['WindowsTerminal'])\settings.json"; Type = "WindowsTerminal" };
+    "WindowsTerminal\settings.json" = @{ Target = "$($adaptivePaths['WindowsTerminal'])"; Type = "WindowsTerminal" };
 
     # WezTerm
     "WezTerm\wezterm.lua" = @{ Target = "$($adaptivePaths['WezTerm'])"; Type = "WezTerm" };
