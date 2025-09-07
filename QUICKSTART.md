@@ -67,11 +67,12 @@ notepad %USERPROFILE%\.gitconfig.local
 # 安装基础工具
 .\install_apps.ps1
 
-# 安装开发工具
-.\install_apps.ps1 -Category Development
+# 安装所有工具
+.\install_apps.ps1 -All
 
-# 安装可选工具
-.\install_apps.ps1 -Category Optional
+# 按分类安装
+.\install_apps.ps1 -Essential -Programming
+.\install_apps.ps1 -Development -GitEnhanced
 ```
 
 ### 配置可选组件（可选）

@@ -106,23 +106,43 @@ cd C:\dotfiles
 
 | 配置 | 描述 | 包数量 | 适用场景 |
 |------|------|---------|----------|
-| **minimal** | 仅核心组件 | 12个 | 服务器环境，最小化需求 |
-| **standard** | 标准配置 | 20个 | 日常使用，办公环境 |
-| **optimized** | ⭐ 优化配置 | 28个 | **推荐**，性能与功能平衡 |
-| **developer** | 开发者配置 | 28个 | 开发工作，完整功能 |
-| **full** | 完整配置 | 35个 | 所有功能，备用环境 |
+| **Essential** | 核心开发工具 | 13个 | 基础必需工具，覆盖90%日常场景 |
+| **Development** | 开发工具扩展 | +2个 | 代码检查和GitHub集成 |
+| **GitEnhanced** | Git可视化 | +1个 | Git终端界面管理 |
+| **Programming** | 编程语言 | +2个 | Python和Node.js运行时 |
+| **All** | ⭐ 完整配置 | 18个 | **推荐**，精选优化包集合 |
 
 ### 📦 优化配置特点
 
-**optimized** 配置是我们的推荐选项：
+**All** 配置是我们的推荐选项（基于 scoop/packages.txt）：
 
-- ✅ **精简包数量**: 从62个减少到28个（减少55%）
-- ✅ **完整功能**: 保留所有PowerShell模块和配置
-- ✅ **性能优化**: 更快的启动速度和更低的系统负担
-- ✅ **智能选择**: 覆盖90%的日常使用场景
-- ✅ **快速模式**: 支持按需启用快速启动模式
+- ✅ **精选包集合**: 经过优化的18个核心开发工具
+- ✅ **分类管理**: Essential(13) + Development(2) + GitEnhanced(1) + Programming(2)
+- ✅ **高效安装**: 支持按分类选择性安装
+- ✅ **完整覆盖**: 涵盖版本控制、文本处理、代码编辑、语言运行时
+- ✅ **快速启动**: 轻量化配置，优化的启动性能
 
-### 🔧 手动安装（可选）
+### 🔧 应用程序安装
+
+```powershell
+# 安装核心工具（推荐，13个包）
+.\install_apps.ps1
+
+# 安装所有工具（18个包）
+.\install_apps.ps1 -All
+
+# 按分类安装
+.\install_apps.ps1 -Essential -Programming
+.\install_apps.ps1 -Development -GitEnhanced
+
+# 预览安装（不实际执行）
+.\install_apps.ps1 -DryRun -All
+
+# 更新已安装的包
+.\install_apps.ps1 -Update
+```
+
+### 🔧 手动配置安装（可选）
 
 ```powershell
 # 指定组件安装
@@ -131,7 +151,7 @@ cd C:\dotfiles
 # 预览安装（不实际执行）
 .\install.ps1 -DryRun
 
-# 仅安装Scoop包管理器
+# 仅安装配置文件
 .\install.ps1 -Type Scoop
 ```
 

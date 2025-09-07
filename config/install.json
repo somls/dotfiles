@@ -26,7 +26,9 @@
         "enabled": true,
         "priority": 2,
         "description": "PowerShell 配置文件和模块",
-        "dependencies": ["scoop"],
+        "dependencies": [
+          "scoop"
+        ],
         "paths": {
           "source": "powershell",
           "target": "$env:USERPROFILE\\Documents\\PowerShell"
@@ -52,7 +54,9 @@
         "enabled": true,
         "priority": 4,
         "description": "Starship 提示符配置",
-        "dependencies": ["powershell"],
+        "dependencies": [
+          "powershell"
+        ],
         "paths": {
           "source": "starship/starship.toml",
           "target": "$env:USERPROFILE\\.config\\starship.toml"
@@ -75,38 +79,6 @@
         "installMode": "copy",
         "backupExisting": true,
         "validateCommand": "Get-AppxPackage Microsoft.WindowsTerminal"
-      },
-      "wezterm": {
-        "enabled": false,
-        "priority": 6,
-        "description": "WezTerm 终端配置 (已禁用 - 与 Windows Terminal 功能重叠)",
-        "dependencies": [],
-        "paths": {
-          "source": "WezTerm",
-          "target": "$env:USERPROFILE\\.config\\wezterm"
-        },
-        "installMode": "copy",
-        "backupExisting": true,
-        "validateCommand": "wezterm --version",
-        "optional": true,
-        "deprecated": true,
-        "reason": "功能与 Windows Terminal 重叠，建议使用 Windows Terminal"
-      },
-      "alacritty": {
-        "enabled": false,
-        "priority": 7,
-        "description": "Alacritty 终端配置 (已禁用 - 与 Windows Terminal 功能重叠)",
-        "dependencies": [],
-        "paths": {
-          "source": "Alacritty",
-          "target": "$env:APPDATA\\alacritty"
-        },
-        "installMode": "copy",
-        "backupExisting": true,
-        "validateCommand": "alacritty --version",
-        "optional": true,
-        "deprecated": true,
-        "reason": "功能与 Windows Terminal 重叠，建议使用 Windows Terminal"
       }
     },
     "editors": {
@@ -178,7 +150,12 @@
   "profiles": {
     "minimal": {
       "description": "最小安装 - 仅核心组件",
-      "components": ["scoop", "powershell", "git", "starship"]
+      "components": [
+        "scoop",
+        "powershell",
+        "git",
+        "starship"
+      ]
     },
     "standard": {
       "description": "标准安装 - 核心组件 + Windows Terminal",
@@ -276,7 +253,9 @@
   "metadata": {
     "lastModified": "2025-01-07T12:00:00Z",
     "configVersion": "2.1.0",
-    "compatibleVersions": ["2.x"],
+    "compatibleVersions": [
+      "2.x"
+    ],
     "author": "Dotfiles Manager",
     "description": "Enhanced configuration for granular dotfiles installation control with optimized package management"
   }
