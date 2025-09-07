@@ -13,11 +13,28 @@
 
 .PARAMETER Category
     指定要安装的软件包类别，可选值：
-    - Essential: 基础工具（git, pwsh, starship, 7zip, curl, sudo, wget, jq）
-    - Development: 开发工具（nodejs, python, gh, delta, ripgrep, bat, fd, fzf, zoxide, sd, tokei, hyperfine, jid）
-    - SystemTools: 系统工具（btop, dust, procs）
-    - Editors: 编辑器（neovim, windows-terminal）
+    - Essential: 基础工具（git, pwsh, starship, 7zip, curl, sudo, jq）
+    - Development: 核心开发工具（nodejs, python, gh, ripgrep, bat, fd, fzf, zoxide）
+    - VersionManagers: 版本管理器（fnm, pyenv-win）
+    - ModernTools: 现代开发工具（prettier, shellcheck）
+    - FileTools: 文件管理工具（eza, tre）
+    - SystemTools: 系统监控工具（btop, dust, procs）
+    - NetworkTools: 网络工具（bandwhich）
+    - ProductivityTools: 效率工具（just, choose, duf）
+    - GitEnhanced: Git 增强工具（delta, lazygit）
+    - Optional: 可选专业工具（sd, tokei, hyperfine, jid, tealdeer）
+    - Editors: 编辑器（neovim）
     默认安装 Essential 类别
+
+.PARAMETER Profile
+    使用预定义的用户配置文件，可选值：
+    - minimalist: 极简配置，仅核心工具
+    - developer: 开发者配置，完整开发环境 
+    - poweruser: 高级用户配置，包含所有工具
+    - researcher: 研究配置，专注数据处理
+    - sysadmin: 系统管理员配置，专注系统监控
+    - help/list: 显示所有可用配置文件
+    使用 -Profile 会覆盖 -Category 参数
 
 .PARAMETER DryRun
     预览模式，显示将要执行的操作但不实际安装
@@ -37,8 +54,24 @@
     使用默认设置安装基础软件包，交互式选择 Scoop 路径
 
 .EXAMPLE
-    .\install_apps.ps1 -Category Essential,Development,SystemTools
-    安装基础、开发和系统工具三个类别的软件包
+    .\install_apps.ps1 -Profile developer
+    使用开发者配置文件安装完整开发环境
+
+.EXAMPLE
+    .\install_apps.ps1 -Profile list
+    显示所有可用的用户配置文件
+
+.EXAMPLE
+    .\install_apps.ps1 -Profile poweruser -DryRun
+    预览高级用户配置的安装内容
+
+.EXAMPLE
+    .\install_apps.ps1 -Category Essential,Development,VersionManagers
+    安装基础、开发工具和版本管理器三个类别的软件包
+
+.EXAMPLE
+    .\install_apps.ps1 -Category ModernTools,FileTools -DryRun
+    预览模式查看现代工具和文件工具的安装
 
 .EXAMPLE
     .\install_apps.ps1 -ScoopDir "D:\Tools\Scoop"
@@ -70,12 +103,13 @@
 param(
     [switch]$DryRun,       # 预览模式，不实际安装
     [string[]]$Category = @('Essential'),   # 安装指定类别
+    [string]$Profile,      # 使用预定义的用户配置文件
     [switch]$Update,       # 更新已安装的包
     [string]$ScoopDir,     # 自定义 Scoop 安装目录
     [switch]$Interactive = $true  # 交互式安装（默认启用）
 )
 
-# 推荐软件包配置
+# 推荐软件包配置 - 重组优化版
 $PackageCategories = @{
     Essential = @(
         'git',
@@ -84,32 +118,56 @@ $PackageCategories = @{
         '7zip',
         'curl',
         'sudo',
-        'wget',
         'jq'
     )
     Development = @(
         'nodejs',
         'python',
         'gh',
-        'delta',
         'ripgrep',
         'bat',
         'fd',
         'fzf',
-        'zoxide',
-        'sd',
-        'tokei',
-        'hyperfine',
-        'jid'
+        'zoxide'
+    )
+    VersionManagers = @(
+        'fnm',         # 快速 Node.js 版本管理器
+        'pyenv-win'    # Python 版本管理器
+    )
+    ModernTools = @(
+        'prettier',    # 代码格式化工具
+        'shellcheck'   # Shell 脚本检查器
+    )
+    FileTools = @(
+        'eza',         # 现代 ls 替代
+        'tre'          # 现代 tree 命令
     )
     SystemTools = @(
         'btop',
         'dust',
         'procs'
     )
+    NetworkTools = @(
+        'bandwhich'    # 网络使用监控
+    )
+    Optional = @(
+        'sd',          # 现代 sed 替代
+        'tokei',       # 代码行数统计
+        'hyperfine',   # 基准测试工具
+        'jid',         # JSON 增量解析器
+        'tealdeer'     # 删除 tldr - tealdeer 更快，无 Node.js 依赖
+    )
+    ProductivityTools = @(
+        'just',        # 现代命令运行器，Makefile 替代
+        'choose',      # 现代 cut/awk 替代
+        'duf'          # 现代 df 替代，磁盘使用可视化
+    )
+    GitEnhanced = @(
+        'delta',       # Git diff 美化（从 Development 移过来）
+        'lazygit'      # 可视化 Git TUI 界面
+    )
     Editors = @(
-        'neovim',
-        'windows-terminal'
+        'neovim'       # 现代编辑器
     )
 }
 
@@ -128,6 +186,75 @@ function Write-Status {
         default { 'ℹ️' }
     }
     Write-Host "$icon $Message" -ForegroundColor $color
+}
+
+function Get-UserProfile {
+    <#
+    .SYNOPSIS
+        加载用户配置文件
+    #>
+    param(
+        [string]$ProfileName,
+        [string]$ConfigPath = "$PSScriptRoot\config\user-profiles.json"
+    )
+    
+    if (-not (Test-Path $ConfigPath)) {
+        Write-Status "用户配置文件不存在: $ConfigPath" 'Warning'
+        return $null
+    }
+    
+    try {
+        $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+        if ($ProfileName -and $config.profiles.PSObject.Properties.Name -contains $ProfileName) {
+            return $config.profiles.$ProfileName
+        } elseif (-not $ProfileName -and $config.defaultProfile) {
+            Write-Status "使用默认配置文件: $($config.defaultProfile)" 'Info'
+            return $config.profiles.($config.defaultProfile)
+        } else {
+            Write-Status "配置文件不存在或未指定: $ProfileName" 'Warning'
+            return $null
+        }
+    } catch {
+        Write-Status "解析用户配置文件失败: $($_.Exception.Message)" 'Error'
+        return $null
+    }
+}
+
+function Show-AvailableProfiles {
+    <#
+    .SYNOPSIS
+        显示可用的用户配置文件
+    #>
+    param(
+        [string]$ConfigPath = "$PSScriptRoot\config\user-profiles.json"
+    )
+    
+    if (-not (Test-Path $ConfigPath)) {
+        Write-Status "用户配置文件不存在，将使用默认分类" 'Warning'
+        return
+    }
+    
+    try {
+        $config = Get-Content $ConfigPath -Raw | ConvertFrom-Json
+        Write-Host "`n🎯 可用的用户配置文件:" -ForegroundColor Cyan
+        Write-Host "=" * 50 -ForegroundColor Cyan
+        
+        foreach ($profileName in $config.profiles.PSObject.Properties.Name) {
+            $profile = $config.profiles.$profileName
+            $isDefault = $profileName -eq $config.defaultProfile
+            $marker = if ($isDefault) { " (默认)" } else { "" }
+            
+            Write-Host "`n📋 $($profile.name)$marker" -ForegroundColor Yellow
+            Write-Host "   描述: $($profile.description)" -ForegroundColor Gray
+            Write-Host "   包含: $($profile.categories -join ', ')" -ForegroundColor Green
+            Write-Host "   预计时间: $($profile.estimatedInstallTime)" -ForegroundColor Blue
+            Write-Host "   磁盘空间: $($profile.diskSpace)" -ForegroundColor Magenta
+        }
+        
+        Write-Host "`n使用方法: .\install_apps.ps1 -Profile <配置文件名>" -ForegroundColor Cyan
+    } catch {
+        Write-Status "显示配置文件失败: $($_.Exception.Message)" 'Error'
+    }
 }
 
 function Get-ScoopInstallPath {
@@ -215,6 +342,37 @@ function Get-ScoopInstallPath {
         }
     }
 }
+
+# === 用户配置文件处理 ===
+if ($Profile -eq 'help' -or $Profile -eq 'list') {
+    Show-AvailableProfiles
+    exit 0
+}
+
+# 如果指定了配置文件，加载配置
+if ($Profile) {
+    Write-Host "`n🎯 正在加载用户配置文件: $Profile" -ForegroundColor Cyan
+    $userProfile = Get-UserProfile -ProfileName $Profile
+    
+    if ($userProfile) {
+        # 使用配置文件中的类别覆盖命令行参数
+        $Category = $userProfile.categories
+        Write-Status "已加载配置文件: $($userProfile.name)" 'Success'
+        Write-Status "包含类别: $($Category -join ', ')" 'Info'
+        
+        # 应用配置文件设置
+        if ($userProfile.settings.verboseOutput -eq $false) {
+            $VerbosePreference = 'SilentlyContinue'
+        }
+    } else {
+        Write-Status "无法加载配置文件 '$Profile'，将使用默认设置" 'Warning'
+        Write-Host "可用的配置文件:"
+        Show-AvailableProfiles
+        exit 1
+    }
+}
+
+# === Scoop 安装检查开始 ===
 
 # 检查 Scoop 是否安装
 if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) {

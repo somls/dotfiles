@@ -248,28 +248,33 @@ procs --memory                                 # 按内存使用率排序
 
 ## 🌐 网络工具
 
-### Wget - 文件下载
-```bash
-# 基本下载
-wget https://example.com/file.zip              # 下载文件
-wget -O newname.zip https://example.com/file.zip # 指定文件名
-
-# 高级选项
-wget -c https://example.com/largefile.zip      # 断点续传
-wget -r https://example.com/                   # 递归下载
-wget --limit-rate=200k https://example.com/file.zip # 限制下载速度
-```
-
-### Curl - HTTP 客户端
+### Curl - HTTP 客户端 (推荐使用系统内置版本)
 ```bash
 # 基本请求
 curl https://api.github.com                    # GET 请求
 curl -X POST https://api.example.com           # POST 请求
 curl -H "Content-Type: application/json" -d '{"key":"value"}' https://api.example.com
 
-# 文件操作
-curl -O https://example.com/file.zip           # 下载文件
-curl -L https://example.com/redirect           # 跟随重定向
+# 文件下载 (替代 wget)
+curl -O https://example.com/file.zip           # 下载文件，保持原名
+curl -o newname.zip https://example.com/file.zip # 指定文件名
+curl -C - -O https://example.com/largefile.zip # 断点续传
+```
+
+### HTTPie - 现代 HTTP 客户端
+```bash
+# 基本请求
+http GET https://api.github.com                # GET 请求
+http POST https://api.example.com key=value    # POST 请求
+http https://api.example.com Authorization:"Bearer token" # 带认证
+
+# JSON 数据
+http POST https://api.example.com name=John age:=25 # 自动 JSON 格式
+http POST https://api.example.com < data.json       # 从文件读取
+
+# 文件下载
+http --download https://example.com/file.zip        # 下载文件
+http --print=HhBb https://api.example.com          # 显示详细信息
 ```
 
 ---
@@ -296,6 +301,92 @@ gh issue view 123                              # 查看 issue
 # 认证
 gh auth login                                  # 登录 GitHub
 gh auth status                                 # 查看认证状态
+```
+
+### Delta - Git Diff 美化
+```bash
+# 基本使用 (配置在 .gitconfig 中)
+git diff                                       # 自动使用 delta 美化输出
+git log -p                                     # 带 diff 的日志
+git show HEAD                                  # 显示最新提交的 diff
+
+# 直接使用 delta
+delta file1.txt file2.txt                     # 比较两个文件
+git diff | delta                               # 管道输出给 delta
+```
+
+### Lazygit - 可视化 Git TUI
+```bash
+# 启动
+lazygit                                        # 在 Git 仓库中启动
+
+# 常用快捷键（在 lazygit 中）：
+# j/k: 上下移动
+# h/l: 左右切换面板
+# enter: 选择/展开
+# space: 暂存/取消暂存
+# c: 提交
+# P: 推送
+# p: 拉取
+# q: 退出
+```
+
+---
+
+## 🚀 效率工具 (ProductivityTools)
+
+### Just - 现代命令运行器
+```bash
+# 项目根目录创建 justfile
+just                                           # 列出所有可用命令
+just build                                     # 运行 build 任务
+just test                                      # 运行 test 任务
+
+# justfile 示例内容：
+# build:
+#     cargo build --release
+# test:
+#     cargo test
+# deploy: build test
+#     ./deploy.sh
+```
+
+### Choose - 现代 cut/awk 替代
+```bash
+# 选择列
+echo "one two three" | choose 1                # 选择第二列 (zero-indexed)
+echo "1,2,3,4" | choose -f , 0,2              # 选择第1和第3列 (逗号分隔)
+ps aux | choose 1                              # 选择进程列表的用户列
+
+# 范围选择
+echo "a b c d e" | choose 1:3                 # 选择第2到第4列
+echo "a b c d e" | choose :2                  # 选择前3列
+echo "a b c d e" | choose 2:                  # 选择第3列到末尾
+```
+
+### Duf - 磁盘使用可视化
+```bash
+# 基本使用
+duf                                            # 显示所有挂载点
+duf /home /var                                 # 显示特定路径
+duf --only local                               # 只显示本地文件系统
+
+# 输出格式
+duf --json                                     # JSON 格式输出
+duf --theme dark                               # 使用深色主题
+```
+
+### Tealdeer - 快速命令帮助
+```bash
+# 基本使用
+tldr ls                                        # 显示 ls 命令的示例
+tldr git                                       # 显示 git 命令的示例
+tldr tar                                       # 显示 tar 命令的示例
+
+# 管理
+tldr --update                                  # 更新示例数据库
+tldr --list                                    # 列出所有可用命令
+tldr --random                                  # 显示随机命令示例
 ```
 
 ---

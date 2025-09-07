@@ -1,5 +1,5 @@
 # detect-environment.ps1
-# 自动检测用户环境和应用安装情况
+# Environment detection script for checking user environment and application installation
 
 [CmdletBinding()]
 param(
@@ -32,14 +32,14 @@ function Test-ApplicationInstalled {
         Version = $null
     }
 
-    # 检查命令（优先使用命令检测，更可靠）
+    # Check commands (prefer command detection, more reliable)
     foreach ($cmd in $Commands) {
         $command = Get-Command $cmd -ErrorAction SilentlyContinue
         if ($command) {
             $result.Installed = $true
             $result.Path = $command.Source
 
-            # 判断安装类型
+            # Determine installation type
             $path = $command.Source
             if ($path -match "scoop|portable") {
                 $result.InstallType = "Portable/Scoop"
@@ -51,14 +51,14 @@ function Test-ApplicationInstalled {
                 $result.InstallType = "System PATH"
             }
 
-            # 获取版本信息
+            # Get version information
             try {
                 $versionOutput = & $cmd --version 2>$null | Select-Object -First 1
                 if ($versionOutput) {
                     $result.Version = $versionOutput.Trim()
                 }
             } catch {
-                # 某些应用可能不支持 --version 参数
+                # Some applications may not support --version parameter
             }
 
             return $result
@@ -71,7 +71,7 @@ function Test-ApplicationInstalled {
 function Get-ConfigPaths {
     param([string]$AppName, [bool]$IsInstalled, [string]$InstallPath)
 
-    # 简化版：只返回主要配置路径
+    # Simplified: only return main configuration paths
     $configPath = switch ($AppName) {
         "WindowsTerminal" { "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState" }
         "Alacritty" { "$env:APPDATA\alacritty" }
@@ -88,14 +88,14 @@ function Get-ConfigPaths {
     return @{}
 }
 
-# 主检测逻辑
+# Main detection logic
 $detection = @{
     System = Get-WindowsVersion
     Applications = @{}
     Recommendations = @()
 }
 
-# 检测应用程序（简化版，只检测命令）
+# Check applications (simplified version, only check commands)
 $appsToCheck = @{
     PowerShell = @("pwsh")
     WindowsTerminal = @("wt")
@@ -118,53 +118,53 @@ foreach ($appName in $appsToCheck.Keys) {
     $detection.Applications[$appName] = $result
 }
 
-# 生成建议
+# Generate recommendations
 $installedCount = ($detection.Applications.Values | Where-Object { $_.Installed }).Count
 $totalCount = $detection.Applications.Count
 
 if (-not $detection.Applications.PowerShell.Installed) {
-    $detection.Recommendations += "建议安装 PowerShell 7+ 以获得更好的体验"
+    $detection.Recommendations += "Recommend installing PowerShell 7+ for better experience"
 }
 
 if (-not $detection.Applications.Git.Installed) {
-    $detection.Recommendations += "建议安装 Git 进行版本控制"
+    $detection.Recommendations += "Recommend installing Git for version control"
 }
 
 if ($installedCount -eq 0) {
-    $detection.Recommendations += "未检测到支持的应用程序，建议先安装基础工具"
+    $detection.Recommendations += "No supported applications detected, recommend installing basic tools first"
 } elseif ($installedCount -lt 3) {
-    $detection.Recommendations += "检测到较少应用程序，可考虑安装更多开发工具"
+    $detection.Recommendations += "Few applications detected, consider installing more development tools"
 }
 
-# 输出结果
+# Output results
 if ($Json) {
     $detection | ConvertTo-Json -Depth 4
 } else {
-    Write-Host "🔍 环境检测报告" -ForegroundColor Cyan
+    Write-Host "Environment Detection Report" -ForegroundColor Cyan
     Write-Host "=" * 50 -ForegroundColor Cyan
 
-    # 系统信息
-    Write-Host "`n💻 系统信息:" -ForegroundColor Yellow
-    Write-Host "  操作系统: $($detection.System.Name)" -ForegroundColor Gray
-    Write-Host "  版本: $($detection.System.Version) (Build $($detection.System.Build))" -ForegroundColor Gray
+    # System information
+    Write-Host "`nSystem Information:" -ForegroundColor Yellow
+    Write-Host "  OS: $($detection.System.Name)" -ForegroundColor Gray
+    Write-Host "  Version: $($detection.System.Version) (Build $($detection.System.Build))" -ForegroundColor Gray
     Write-Host "  Windows 11: $($detection.System.IsWindows11)" -ForegroundColor Gray
 
-    # 应用程序状态
-    Write-Host "`n📦 应用程序状态:" -ForegroundColor Yellow
+    # Application status
+    Write-Host "`nApplication Status:" -ForegroundColor Yellow
     foreach ($appName in $detection.Applications.Keys) {
         $app = $detection.Applications[$appName]
-        $status = if ($app.Installed) { "✅" } else { "❌" }
+        $status = if ($app.Installed) { "OK" } else { "MISSING" }
         $installType = if ($app.Installed) { " ($($app.InstallType))" } else { "" }
 
         Write-Host "  $status $appName$installType" -ForegroundColor $(if ($app.Installed) { 'Green' } else { 'Red' })
 
         if ($Detailed -and $app.Installed) {
-            Write-Host "    路径: $($app.Path)" -ForegroundColor DarkGray
+            Write-Host "    Path: $($app.Path)" -ForegroundColor DarkGray
             if ($app.Version) {
-                Write-Host "    版本: $($app.Version)" -ForegroundColor DarkGray
+                Write-Host "    Version: $($app.Version)" -ForegroundColor DarkGray
             }
             if ($app.ConfigPaths) {
-                Write-Host "    配置路径:" -ForegroundColor DarkGray
+                Write-Host "    Config Paths:" -ForegroundColor DarkGray
                 foreach ($type in $app.ConfigPaths.Keys) {
                     Write-Host "      $type`: $($app.ConfigPaths[$type])" -ForegroundColor DarkGray
                 }
@@ -172,13 +172,13 @@ if ($Json) {
         }
     }
 
-    # 建议
+    # Recommendations
     if ($detection.Recommendations.Count -gt 0) {
-        Write-Host "`n💡 建议:" -ForegroundColor Yellow
+        Write-Host "`nRecommendations:" -ForegroundColor Yellow
         foreach ($rec in $detection.Recommendations) {
             Write-Host "  • $rec" -ForegroundColor Gray
         }
     }
 
-    Write-Host "`n✨ 检测完成" -ForegroundColor Green
+    Write-Host "`nDetection Complete" -ForegroundColor Green
 }

@@ -1,0 +1,148 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "user-profiles.schema.json",
+  "title": "User Profiles Configuration Schema",
+  "description": "Schema for user profile configurations in dotfiles system",
+  "type": "object",
+  "required": ["version", "profiles", "defaultProfile"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Configuration version (semantic versioning)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Overall description of the configuration"
+    },
+    "profiles": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "$ref": "#/definitions/Profile"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Collection of user profiles"
+    },
+    "defaultProfile": {
+      "type": "string",
+      "description": "Default profile to use if none specified"
+    },
+    "metadata": {
+      "$ref": "#/definitions/Metadata"
+    }
+  },
+  "definitions": {
+    "Profile": {
+      "type": "object",
+      "required": ["name", "description", "categories"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable profile name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the profile"
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "Essential",
+              "Development", 
+              "VersionManagers",
+              "ModernTools",
+              "FileTools",
+              "SystemTools",
+              "NetworkTools",
+              "Optional",
+              "Editors"
+            ]
+          },
+          "description": "Tool categories to include"
+        },
+        "includedTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific tools to include (in addition to categories)"
+        },
+        "excludedTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific tools to exclude from categories"
+        },
+        "settings": {
+          "$ref": "#/definitions/ProfileSettings"
+        },
+        "estimatedInstallTime": {
+          "type": "string",
+          "description": "Estimated installation time"
+        },
+        "diskSpace": {
+          "type": "string", 
+          "description": "Estimated disk space usage"
+        },
+        "note": {
+          "type": "string",
+          "description": "Additional notes about the profile"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ProfileSettings": {
+      "type": "object",
+      "properties": {
+        "autoUpdate": {
+          "type": "boolean",
+          "description": "Whether to automatically update tools"
+        },
+        "verboseOutput": {
+          "type": "boolean",
+          "description": "Whether to show verbose installation output"
+        },
+        "confirmInstalls": {
+          "type": "boolean",
+          "description": "Whether to confirm each installation"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Metadata": {
+      "type": "object",
+      "properties": {
+        "lastModified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification timestamp"
+        },
+        "version": {
+          "type": "string",
+          "description": "Metadata version"
+        },
+        "compatibleWith": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Compatible script versions"
+        },
+        "author": {
+          "type": "string",
+          "description": "Configuration author"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

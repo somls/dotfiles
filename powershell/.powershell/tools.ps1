@@ -1,29 +1,13 @@
 # ~/.powershell/tools.ps1
-# 第三方工具集成
+# Third-party tool integration - complete functionality version
 
-# 快速模式检查
+# Fast mode check
 if ($env:POWERSHELL_FAST_MODE -eq "1") { return }
 
-# Starship 提示符 (延迟初始化)
-if (Get-Command starship -ErrorAction SilentlyContinue) {
-    Invoke-Expression (&starship init powershell)
-}
+# --- Starship (cross-platform prompt) ---
+# Starship is initialized in main configuration file
 
-# fzf 模糊搜索
-if (Get-Command fzf -ErrorAction SilentlyContinue) {
-    Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
-}
-
-# zoxide 智能跳转
-if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& { (zoxide init powershell | Out-String) })
-}
-# 精简版：只包含核心的第三方工具集成
-
-# --- Starship (跨平台提示符) ---
-# Starship 在主配置文件中初始化
-
-# --- Zoxide (智能目录跳转) ---
+# --- Zoxide (smart directory jump) ---
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     try {
         Invoke-Expression ((&zoxide init powershell --no-aliases) -join "`n")
@@ -33,12 +17,16 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     }
 }
 
-# --- FZF (模糊搜索) ---
+# --- FZF (fuzzy search) ---
 if (Get-Command fzf -ErrorAction SilentlyContinue) {
     $env:FZF_DEFAULT_OPTS = '--height 40% --layout=reverse --border'
+    # Set Tab key completion
+    if (Get-Command Invoke-FzfTabCompletion -ErrorAction SilentlyContinue) {
+        Set-PSReadLineKeyHandler -Key Tab -ScriptBlock { Invoke-FzfTabCompletion }
+    }
 }
 
-# --- Bat (增强版 cat) ---
+# --- Bat (enhanced cat) ---
 if (Get-Command bat -ErrorAction SilentlyContinue) {
     $env:BAT_THEME = "Dracula"
     $env:BAT_STYLE = "numbers,changes,header"
@@ -49,13 +37,13 @@ if (Get-Module -ListAvailable -Name Terminal-Icons) {
     Import-Module -Name Terminal-Icons -ErrorAction SilentlyContinue
 }
 
-# --- 工具状态检查 ---
+# --- Tool status check ---
 function Show-ToolsStatus {
     <#
     .SYNOPSIS
-    显示已安装的工具状态
+    Display installed tool status
     #>
-    Write-Host "`n🛠️  Tools Status" -ForegroundColor Cyan
+    Write-Host "`nTools Status" -ForegroundColor Cyan
     Write-Host "=" * 20 -ForegroundColor Gray
 
     $tools = @{
@@ -66,24 +54,19 @@ function Show-ToolsStatus {
         "Ripgrep" = (Get-Command rg -ErrorAction SilentlyContinue) -ne $null
         "Fd" = (Get-Command fd -ErrorAction SilentlyContinue) -ne $null
         "JQ" = (Get-Command jq -ErrorAction SilentlyContinue) -ne $null
-        "Wget" = (Get-Command wget -ErrorAction SilentlyContinue) -ne $null
         "Btop" = (Get-Command btop -ErrorAction SilentlyContinue) -ne $null
         "Dust" = (Get-Command dust -ErrorAction SilentlyContinue) -ne $null
         "Procs" = (Get-Command procs -ErrorAction SilentlyContinue) -ne $null
-        "SD" = (Get-Command sd -ErrorAction SilentlyContinue) -ne $null
-        "Tokei" = (Get-Command tokei -ErrorAction SilentlyContinue) -ne $null
-        "Hyperfine" = (Get-Command hyperfine -ErrorAction SilentlyContinue) -ne $null
-        "JID" = (Get-Command jid -ErrorAction SilentlyContinue) -ne $null
         "GitHub CLI" = (Get-Command gh -ErrorAction SilentlyContinue) -ne $null
     }
 
     foreach ($tool in $tools.Keys) {
-        $status = if ($tools[$tool]) { "✅" } else { "❌" }
+        $status = if ($tools[$tool]) { "OK" } else { "ERROR" }
         $color = if ($tools[$tool]) { "Green" } else { "Red" }
         Write-Host "$status $tool" -ForegroundColor $color
     }
     Write-Host ""
 }
 
-# 添加别名
+# Add alias
 Set-Alias -Name "tools" -Value "Show-ToolsStatus" -Option AllScope

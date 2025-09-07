@@ -34,11 +34,11 @@ function Write-Status {
     }
 
     $prefix = switch ($Type) {
-        'Success' { '✅' }
-        'Warning' { '⚠️ ' }
-        'Error' { '❌' }
-        'Info' { 'ℹ️ ' }
-        default { '•' }
+        'Success' { 'OK' }
+        'Warning' { 'Warning' }
+        'Error' { 'Error' }
+        'Info' { 'Info' }
+        default { '*' }
     }
 
     $displayMessage = if ($Component) { "[$Component] $Message" } else { $Message }
@@ -58,7 +58,7 @@ function Test-ConfigFile {
     }
 }
 
-Write-Host "🩺 Dotfiles 健康检查" -ForegroundColor Cyan
+Write-Host "Dotfiles 健康检查" -ForegroundColor Cyan
 Write-Host "=" * 50 -ForegroundColor Cyan
 Write-Host "项目路径: $root" -ForegroundColor Gray
 Write-Host ""
@@ -70,9 +70,8 @@ function Test-CoreFiles {
     $coreFiles = @{
         'PowerShell Profile' = 'powershell\Microsoft.PowerShell_profile.ps1'
         'Git Config' = 'git\gitconfig'
-
         'Windows Terminal' = 'WindowsTerminal\settings.json'
-    'Alacritty' = 'Alacritty\alacritty.toml'
+        'Alacritty' = 'Alacritty\alacritty.toml'
         'Starship Config' = 'starship\starship.toml'
         'Neovim Config' = 'neovim\init.lua'
     }
@@ -83,288 +82,6 @@ function Test-CoreFiles {
         $exists = Test-ConfigFile -Path $path -Component $name
         $results.Components[$name] = @{ Exists = $exists; Path = $path }
         if (-not $exists) { $allGood = $false }
-    }
-
-    return $allGood
-}
-
-# 检查PowerShell配置
-function Test-PowerShellConfig {
-    if ($Component -ne 'All' -and $Component -ne 'PowerShell') { return $true }
-
-    Write-Status "检查PowerShell配置..." 'Info'
-
-    $psFiles = @{
-        'Aliases' = 'powershell\.powershell\aliases.ps1'
-        'Functions' = 'powershell\.powershell\functions.ps1'
-        'Theme' = 'powershell\.powershell\theme.ps1'
-    }
-
-    $allGood = $true
-    foreach ($name in $psFiles.Keys) {
-        $path = Join-Path $root $psFiles[$name]
-        $exists = Test-ConfigFile -Path $path -Component 'PowerShell'
-        if (-not $exists) { $allGood = $false }
-    }
-
-    # 检查PowerShell配置是否已安装
-    $profilePath = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
-    if (Test-Path $profilePath) {
-        Write-Status "PowerShell配置已安装" 'Success' 'PowerShell'
-    } else {
-        Write-Status "PowerShell配置未安装" 'Warning' 'PowerShell'
-        $results.Recommendations += "运行 .\install.ps1 -Type PowerShell 安装配置"
-    }
-
-    return $allGood
-}
-
-# 检查Git配置
-function Test-GitConfig {
-    if ($Component -ne 'All' -and $Component -ne 'Git') { return $true }
-
-    Write-Status "检查Git配置..." 'Info'
-
-    # 检查Git是否安装
-    $gitCmd = Get-Command git -ErrorAction SilentlyContinue
-    if (-not $gitCmd) {
-        Write-Status "Git未安装" 'Error' 'Git'
-        $results.Issues += "Git未安装，请先安装Git"
-        return $false
-    }
-
-    Write-Status "Git已安装: $($gitCmd.Source)" 'Success' 'Git'
-
-    # 检查Git配置文件的符号链接状态
-    $gitConfigs = @{
-        '.gitconfig' = @{
-            Path = Join-Path $env:USERPROFILE '.gitconfig'
-            Source = Join-Path $root 'git\gitconfig'
-            Description = 'Git主配置文件'
-        }
-        '.gitconfig.d' = @{
-            Path = Join-Path $env:USERPROFILE '.gitconfig.d'
-            Source = Join-Path $root 'git\gitconfig.d'
-            Description = 'Git配置模块目录'
-        }
-        '.gitignore_global' = @{
-            Path = Join-Path $env:USERPROFILE '.gitignore_global'
-            Source = Join-Path $root 'git\gitignore_global'
-            Description = 'Git全局忽略文件'
-        }
-        '.gitmessage' = @{
-            Path = Join-Path $env:USERPROFILE '.gitmessage'
-            Source = Join-Path $root 'git\gitmessage'
-            Description = 'Git提交消息模板'
-        }
-        '.gitconfig.local' = @{
-            Path = Join-Path $env:USERPROFILE '.gitconfig.local'
-            Source = Join-Path $root 'git\gitconfig.local'
-            Description = 'Git本地配置文件'
-        }
-    }
-
-    $allLinksGood = $true
-    foreach ($configName in $gitConfigs.Keys) {
-        $config = $gitConfigs[$configName]
-        $userPath = $config.Path
-        $sourcePath = $config.Source
-        $desc = $config.Description
-
-        if (Test-Path $userPath) {
-            $item = Get-Item $userPath
-            if ($item.LinkType -eq 'SymbolicLink') {
-                if ($item.Target -eq $sourcePath) {
-                    Write-Status "$desc 符号链接正确" 'Success' 'Git'
-                } else {
-                    Write-Status "$desc 符号链接目标错误: $($item.Target)" 'Warning' 'Git'
-                    $results.Issues += "Git配置符号链接目标错误: $configName"
-                    $results.Recommendations += "重新运行 .\install.ps1 -Type Git -Force 修复Git配置"
-                    $allLinksGood = $false
-                }
-            } else {
-                Write-Status "$desc 不是符号链接" 'Warning' 'Git'
-                $results.Issues += "Git配置文件不是符号链接: $configName"
-                $results.Recommendations += "运行 .\install.ps1 -Type Git -Force 创建符号链接"
-                $allLinksGood = $false
-            }
-        } else {
-            Write-Status "$desc 不存在" 'Warning' 'Git'
-            $results.Issues += "缺失Git配置文件: $configName"
-            $results.Recommendations += "运行 .\install.ps1 -Type Git 安装Git配置"
-            $allLinksGood = $false
-        }
-    }
-
-    if ($allLinksGood) {
-        Write-Status "所有Git配置文件符号链接状态正常" 'Success' 'Git'
-    }
-
-    # 检查用户配置（兼容包含本地文件 ~/.gitconfig.local 的场景）
-    $userName = git config --global --get user.name 2>$null
-    $userEmail = git config --global --get user.email 2>$null
-
-    $localGitconfig = Join-Path $env:USERPROFILE ".gitconfig.local"
-    if ((-not $userName -or -not $userEmail) -and (Test-Path $localGitconfig)) {
-        try {
-            $localContent = Get-Content -Raw $localGitconfig
-            if (-not $userName) {
-                $m = [regex]::Match($localContent, "(?m)^\s*name\s*=\s*(.+)$")
-                if ($m.Success) { $userName = $m.Groups[1].Value.Trim() }
-            }
-            if (-not $userEmail) {
-                $m2 = [regex]::Match($localContent, "(?m)^\s*email\s*=\s*(.+)$")
-                if ($m2.Success) { $userEmail = $m2.Groups[1].Value.Trim() }
-            }
-        } catch {}
-    }
-
-    $isPlaceholderName = $userName -and ($userName -match "(?i)^your name$")
-    $isPlaceholderEmail = $userEmail -and ($userEmail -match "(?i)^your\\.email@example\\.com$")
-
-    if (-not $userName -or -not $userEmail -or $isPlaceholderName -or $isPlaceholderEmail) {
-        Write-Status "Git用户信息未配置或仍为占位内容" 'Warning' 'Git'
-        $results.Recommendations += "配置Git用户信息: git config --global user.name 'Your Name'"
-        $results.Recommendations += "配置Git用户邮箱: git config --global user.email 'your@email.com'"
-        if (Test-Path $localGitconfig) {
-            $results.Recommendations += "亦可编辑 $localGitconfig 设置 [user] name/email"
-        }
-    } else {
-        Write-Status "Git用户信息已配置: $userName <$userEmail>" 'Success' 'Git'
-    }
-
-    # 检查Git别名功能是否正常工作
-    $aliasTest = git config --get alias.st 2>$null
-    if ($aliasTest -eq 'status') {
-        Write-Status "Git别名功能正常" 'Success' 'Git'
-    } else {
-        Write-Status "Git别名功能异常" 'Warning' 'Git'
-        $results.Issues += "Git别名配置未正确加载"
-        $results.Recommendations += "检查 .gitconfig 和 .gitconfig.d 目录的符号链接状态"
-        $allLinksGood = $false
-    }
-
-    return $allLinksGood
-}
-
-# 检查Neovim配置
-function Test-NeovimConfig {
-    if ($Component -ne 'All' -and $Component -ne 'Neovim') { return $true }
-
-    Write-Status "检查Neovim配置..." 'Info'
-
-    # 检查Neovim是否安装
-    $nvimCmd = Get-Command nvim -ErrorAction SilentlyContinue
-    if (-not $nvimCmd) {
-        Write-Status "Neovim未安装" 'Error' 'Neovim'
-        $results.Issues += "Neovim未安装，请先安装Neovim"
-        $results.Recommendations += "运行 scoop install neovim 或 choco install neovim 安装Neovim"
-        return $false
-    }
-
-    # 获取版本信息
-    try {
-        $versionOutput = & nvim --version 2>$null | Select-Object -First 1
-        if ($versionOutput -match "NVIM v(\d+\.\d+\.\d+)") {
-            $version = $matches[1]
-            Write-Status "Neovim已安装: v$version" 'Success' 'Neovim'
-        } else {
-            Write-Status "Neovim已安装但无法获取版本" 'Warning' 'Neovim'
-        }
-    } catch {
-        Write-Status "检测Neovim版本时出错" 'Warning' 'Neovim'
-    }
-
-    # 检查配置文件（按当前最小化配置）
-    $configFiles = @{
-        'Init File' = 'neovim\init.lua'
-        'Plugin List' = 'neovim\lua\plugins.lua'
-    }
-
-    $allGood = $true
-    foreach ($name in $configFiles.Keys) {
-        $path = Join-Path $root $configFiles[$name]
-        $exists = Test-ConfigFile -Path $path -Component 'Neovim'
-        if (-not $exists) { $allGood = $false }
-    }
-
-    # 检查Neovim配置是否已安装
-    $nvimConfigPath = "$env:LOCALAPPDATA\nvim"
-    if (Test-Path $nvimConfigPath) {
-        Write-Status "Neovim配置已安装" 'Success' 'Neovim'
-
-        # 检查关键文件
-        $initFile = Join-Path $nvimConfigPath "init.lua"
-        if (Test-Path $initFile) {
-            Write-Status "配置文件完整" 'Success' 'Neovim'
-        } else {
-            Write-Status "配置文件不完整" 'Warning' 'Neovim'
-            $results.Issues += "Neovim配置文件不完整"
-        }
-
-        # 检测 lazy.nvim 是否已引导
-        $lazyPath = "$env:LOCALAPPDATA\nvim-data\lazy\lazy.nvim"
-        if (Test-Path $lazyPath) {
-            Write-Status "lazy.nvim 已就绪" 'Success' 'Neovim'
-        } else {
-            Write-Status "lazy.nvim 尚未安装（首次启动Neovim会自动安装）" 'Warning' 'Neovim'
-        }
-    } else {
-        Write-Status "Neovim配置未安装" 'Warning' 'Neovim'
-        $results.Recommendations += "运行 .\install.ps1 -Type Neovim 安装配置"
-    }
-
-    # 读取本仓库 init.lua 以根据当前配置调整建议
-    $repoInit = Join-Path $root 'neovim\init.lua'
-    $initContent = if (Test-Path $repoInit) { Get-Content -Raw $repoInit } else { '' }
-
-    $nodeProviderDisabled = $initContent -match 'vim\.g\.loaded_node_provider\s*=\s*0'
-    $pyProviderDisabled = $initContent -match 'vim\.g\.loaded_python3_provider\s*=\s*0'
-
-    # 可选：检查 Treesitter 编译器（Windows 友好）
-    $compilers = @('zig', 'clang', 'gcc', 'cc', 'cl')
-    $compilerFound = $false
-    foreach ($c in $compilers) {
-        if (Get-Command $c -ErrorAction SilentlyContinue) { $compilerFound = $true; break }
-    }
-    if (-not $compilerFound) {
-        $results.Recommendations += "为 nvim-treesitter 编译建议安装 zig 或 llvm（scoop install zig / llvm）"
-        Write-Status "未检测到可用的 C/zig 编译器，Treesitter 本地编译将不可用" 'Warning' 'Neovim'
-    } else {
-        Write-Status "已检测到可用编译器用于 Treesitter（$c）" 'Success' 'Neovim'
-    }
-
-    # Provider 建议：仅在未显式禁用时提示
-    if (-not $nodeProviderDisabled) {
-        $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
-        if ($nodeCmd) {
-            $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
-            if ($npmCmd) {
-                # 可进一步检测 neovim npm 包
-                $neovimPkg = (& npm ls -g neovim --depth=0 2>$null)
-                if (-not ($neovimPkg -match 'neovim@')) {
-                    $results.Recommendations += "可安装 Node.js provider：npm install -g neovim"
-                }
-            }
-        }
-    } else {
-        Write-Status "已禁用 Node.js provider（按当前配置）" 'Info' 'Neovim'
-    }
-
-    if (-not $pyProviderDisabled) {
-        $py = Get-Command python -ErrorAction SilentlyContinue
-        $py3 = Get-Command python3 -ErrorAction SilentlyContinue
-        if ($py -or $py3) {
-            $pipCmd = Get-Command pip -ErrorAction SilentlyContinue
-            if ($pipCmd) {
-                $pynvim = (& pip show pynvim 2>$null)
-                if (-not $pynvim) {
-                    $results.Recommendations += "可安装 Python provider：pip install --user pynvim"
-                }
-            }
-        }
-    } else {
-        Write-Status "已禁用 Python3 provider（按当前配置）" 'Info' 'Neovim'
     }
 
     return $allGood
@@ -386,15 +103,20 @@ function Test-Applications {
         'Fd' = @('fd')
         'Zoxide' = @('zoxide')
         'JQ' = @('jq')
-        'Wget' = @('wget')
         'Btop' = @('btop')
         'Dust' = @('dust')
         'Procs' = @('procs')
-        'SD' = @('sd')
-        'Tokei' = @('tokei')
-        'Hyperfine' = @('hyperfine')
-        'JID' = @('jid')
         'GitHub CLI' = @('gh')
+        'Choose' = @('choose')
+        'Duf' = @('duf')
+        'Delta' = @('delta')
+        'Lazygit' = @('lazygit')
+        'FnM' = @('fnm')
+        'ShellCheck' = @('shellcheck')
+        'Prettier' = @('prettier')
+        'Eza' = @('eza')
+        'Tre' = @('tre')
+        'Bandwhich' = @('bandwhich')
     }
 
     foreach ($appName in $apps.Keys) {
@@ -417,117 +139,12 @@ function Test-Applications {
     }
 }
 
-# 检查符号链接状态
-function Test-SymbolicLinks {
-    if ($Quick) { return $true }
-
-    Write-Status "检查符号链接状态..." 'Info'
-
-    # 检查仓库内的损坏符号链接
-    $brokenRepoLinks = @()
-    Get-ChildItem -Path $root -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
-        if ($_.LinkType -eq 'SymbolicLink') {
-            if (-not (Test-Path $_.Target)) {
-                $brokenRepoLinks += $_
-            }
-        }
-    }
-
-    # 检查用户目录中的配置符号链接状态
-    $userConfigLinks = @{
-        'PowerShell Profile' = @{
-            Path = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
-            Source = Join-Path $root 'powershell\Microsoft.PowerShell_profile.ps1'
-        }
-        'Git Config' = @{
-            Path = "$env:USERPROFILE\.gitconfig"
-            Source = Join-Path $root 'git\gitconfig'
-        }
-        'Git Config Directory' = @{
-            Path = "$env:USERPROFILE\.gitconfig.d"
-            Source = Join-Path $root 'git\gitconfig.d'
-        }
-        'Git Ignore Global' = @{
-            Path = "$env:USERPROFILE\.gitignore_global"
-            Source = Join-Path $root 'git\gitignore_global'
-        }
-        'Git Message Template' = @{
-            Path = "$env:USERPROFILE\.gitmessage"
-            Source = Join-Path $root 'git\gitmessage'
-        }
-        'Git Local Config' = @{
-            Path = "$env:USERPROFILE\.gitconfig.local"
-            Source = Join-Path $root 'git\gitconfig.local'
-            Description = 'Git 本地配置文件'
-        }
-    }
-
-    $brokenUserLinks = @()
-    foreach ($configName in $userConfigLinks.Keys) {
-        $config = $userConfigLinks[$configName]
-        $userPath = $config.Path
-        $sourcePath = $config.Source
-
-        if (Test-Path $userPath) {
-            $item = Get-Item $userPath
-            if ($item.LinkType -eq 'SymbolicLink') {
-                if (-not (Test-Path $item.Target)) {
-                    $brokenUserLinks += @{
-                        Name = $configName
-                        Path = $userPath
-                        Target = $item.Target
-                        ExpectedTarget = $sourcePath
-                    }
-                } elseif ($item.Target -ne $sourcePath) {
-                    Write-Status "$configName 符号链接目标不正确" 'Warning'
-                    if ($Detailed) {
-                        Write-Host "  当前: $($item.Target)" -ForegroundColor DarkGray
-                        Write-Host "  期望: $sourcePath" -ForegroundColor DarkGray
-                    }
-                }
-            }
-        }
-    }
-
-    $totalIssues = $brokenRepoLinks.Count + $brokenUserLinks.Count
-    if ($totalIssues -gt 0) {
-        Write-Status "发现 $totalIssues 个符号链接问题" 'Warning'
-
-        if ($brokenRepoLinks.Count -gt 0 -and $Detailed) {
-            Write-Host "  仓库内损坏的符号链接:" -ForegroundColor DarkYellow
-            foreach ($link in $brokenRepoLinks) {
-                Write-Host "    • $($link.FullName) -> $($link.Target)" -ForegroundColor DarkGray
-            }
-        }
-
-        if ($brokenUserLinks.Count -gt 0 -and $Detailed) {
-            Write-Host "  用户配置损坏的符号链接:" -ForegroundColor DarkYellow
-            foreach ($link in $brokenUserLinks) {
-                Write-Host "    • $($link.Name): $($link.Path) -> $($link.Target)" -ForegroundColor DarkGray
-            }
-        }
-
-        $results.Issues += "存在损坏的符号链接"
-        if ($brokenUserLinks.Count -gt 0) {
-            $results.Recommendations += "运行 .\install.ps1 -Force 重新创建用户配置符号链接"
-        }
-        return $false
-    } else {
-        Write-Status "符号链接状态正常" 'Success'
-        return $true
-    }
-}
-
 # 主执行逻辑
 $allChecks = @()
 
 # 执行检查
 $allChecks += Test-CoreFiles
-$allChecks += Test-PowerShellConfig
-$allChecks += Test-GitConfig
-$allChecks += Test-NeovimConfig
 Test-Applications
-$allChecks += Test-SymbolicLinks
 
 # 生成报告
 Write-Host "`n" + "=" * 50 -ForegroundColor Cyan
@@ -540,25 +157,17 @@ Write-Status "总体状态: $overallStatus" $overallStatus
 
 # 显示问题和建议
 if ($results.Issues.Count -gt 0) {
-    Write-Host "`n🔍 发现的问题:" -ForegroundColor Yellow
+    Write-Host "`n发现的问题:" -ForegroundColor Yellow
     foreach ($issue in $results.Issues) {
         Write-Host "  • $issue" -ForegroundColor Red
     }
 }
 
 if ($results.Recommendations.Count -gt 0) {
-    Write-Host "`n💡 建议:" -ForegroundColor Yellow
+    Write-Host "`n建议:" -ForegroundColor Yellow
     foreach ($rec in $results.Recommendations) {
         Write-Host "  • $rec" -ForegroundColor Gray
     }
-}
-
-# 自动修复
-if ($Fix -and $results.Issues.Count -gt 0) {
-    Write-Host "`n🔧 尝试自动修复..." -ForegroundColor Cyan
-
-    # 这里可以添加自动修复逻辑
-    Write-Status "自动修复功能开发中" 'Info'
 }
 
 # 输出结果

@@ -79,7 +79,7 @@
       "wezterm": {
         "enabled": false,
         "priority": 6,
-        "description": "WezTerm 终端配置",
+        "description": "WezTerm 终端配置 (已禁用 - 与 Windows Terminal 功能重叠)",
         "dependencies": [],
         "paths": {
           "source": "WezTerm",
@@ -88,12 +88,14 @@
         "installMode": "copy",
         "backupExisting": true,
         "validateCommand": "wezterm --version",
-        "optional": true
+        "optional": true,
+        "deprecated": true,
+        "reason": "功能与 Windows Terminal 重叠，建议使用 Windows Terminal"
       },
       "alacritty": {
         "enabled": false,
         "priority": 7,
-        "description": "Alacritty 终端配置",
+        "description": "Alacritty 终端配置 (已禁用 - 与 Windows Terminal 功能重叠)",
         "dependencies": [],
         "paths": {
           "source": "Alacritty",
@@ -102,7 +104,9 @@
         "installMode": "copy",
         "backupExisting": true,
         "validateCommand": "alacritty --version",
-        "optional": true
+        "optional": true,
+        "deprecated": true,
+        "reason": "功能与 Windows Terminal 重叠，建议使用 Windows Terminal"
       }
     },
     "editors": {
@@ -187,6 +191,23 @@
         "cmd"
       ]
     },
+    "optimized": {
+      "description": "优化安装 - 核心组件 + 精简包配置",
+      "components": [
+        "scoop",
+        "powershell",
+        "git",
+        "starship",
+        "windowsTerminal",
+        "neovim",
+        "cmd"
+      ],
+      "settings": {
+        "validation": {
+          "strictMode": false
+        }
+      }
+    },
     "full": {
       "description": "完整安装 - 所有组件",
       "components": [
@@ -253,10 +274,10 @@
     }
   },
   "metadata": {
-    "lastModified": "2024-01-15T10:30:00Z",
-    "configVersion": "2.0.0",
+    "lastModified": "2025-01-07T12:00:00Z",
+    "configVersion": "2.1.0",
     "compatibleVersions": ["2.x"],
     "author": "Dotfiles Manager",
-    "description": "Enhanced configuration for granular dotfiles installation control"
+    "description": "Enhanced configuration for granular dotfiles installation control with optimized package management"
   }
 }

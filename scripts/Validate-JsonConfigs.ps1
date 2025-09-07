@@ -1,5 +1,5 @@
 # Validate-JsonConfigs.ps1
-# JSON配置文件验证脚本 - 重写版本，修复编码和语法问题
+# JSON configuration file validation script
 
 [CmdletBinding()]
 param(
@@ -17,16 +17,16 @@ param(
     [switch]$IncludeExamples
 )
 
-# 严格模式
+# Strict mode
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
 
-# 全局变量
+# Global variables
 $script:ProjectRoot = Split-Path $PSScriptRoot -Parent
 $script:ValidationResults = @()
 $script:StartTime = Get-Date
 
-# JSON验证结果类
+# JSON validation result class
 function New-ValidationResult {
     param(
         [string]$FilePath,
@@ -53,7 +53,7 @@ function New-ValidationResult {
     }
 }
 
-# 输出函数
+# Output function
 function Write-ValidationMessage {
     param(
         [string]$Message,
@@ -72,10 +72,10 @@ function Write-ValidationMessage {
     }
 
     $prefix = switch ($Type) {
-        "Success" { "✅" }
-        "Error" { "❌" }
-        "Warning" { "⚠️" }
-        "Info" { "ℹ️" }
+        "Success" { "OK" }
+        "Error" { "ERROR" }
+        "Warning" { "WARN" }
+        "Info" { "INFO" }
     }
 
     if ($NoNewline) {
@@ -85,7 +85,7 @@ function Write-ValidationMessage {
     }
 }
 
-# 验证JSON语法
+# Validate JSON syntax
 function Test-JsonSyntax {
     param([string]$FilePath)
 
@@ -93,72 +93,72 @@ function Test-JsonSyntax {
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
 
     try {
-        # 读取文件内容
+        # Read file content
         if (-not (Test-Path $FilePath)) {
             $result.Status = "Error"
-            $result.Message = "文件不存在"
-            $result.Errors += "指定的文件路径不存在"
+            $result.Message = "File does not exist"
+            $result.Errors += "Specified file path does not exist"
             return $result
         }
 
         $content = Get-Content $FilePath -Raw -Encoding UTF8 -ErrorAction Stop
 
-        # 检查空文件
+        # Check empty file
         if ([string]::IsNullOrWhiteSpace($content)) {
             $result.Status = "Warning"
-            $result.Message = "文件为空"
-            $result.Warnings += "JSON文件内容为空"
-            $result.Suggestion = "添加有效的JSON内容"
+            $result.Message = "File is empty"
+            $result.Warnings += "JSON file content is empty"
+            $result.Suggestion = "Add valid JSON content"
             return $result
         }
 
-        # 尝试解析JSON
+        # Try to parse JSON
         $null = $content | ConvertFrom-Json -ErrorAction Stop
 
         $result.IsValid = $true
         $result.Status = "Success"
-        $result.Message = "JSON语法正确"
+        $result.Message = "JSON syntax is valid"
 
-        # 检查最佳实践
+        # Check best practices
         $warnings = @()
 
-        # 检查注释（JSON标准不支持）
+        # Check comments (JSON standard does not support)
         if ($content -match '//.*|/\*[\s\S]*?\*/') {
-            $warnings += "检测到注释，JSON标准不支持注释"
+            $warnings += "Comments detected, JSON standard does not support comments"
         }
 
-        # 检查尾随逗号
+        # Check trailing commas
         if ($content -match ',\s*[\}\]]') {
-            $warnings += "检测到尾随逗号，可能导致某些解析器失败"
+            $warnings += "Trailing commas detected, may cause parser failures"
         }
 
-        # 检查单引号
+        # Check single quotes
         if ($content -match "'[^']*':\s*|:\s*'[^']*'") {
-            $warnings += "检测到单引号，JSON标准要求使用双引号"
+            $warnings += "Single quotes detected, JSON standard requires double quotes"
         }
 
         if ($warnings -and $warnings.Count -gt 0) {
             $result.Status = "Warning"
             $result.Warnings = $warnings
-            $result.Suggestion = "遵循JSON最佳实践以确保兼容性"
+            $result.Suggestion = "Follow JSON best practices for compatibility"
         }
 
     } catch {
         $result.IsValid = $false
         $result.Status = "Error"
-        $result.Message = "JSON语法错误"
+        $result.Message = "JSON syntax error"
         $result.Errors += $_.Exception.Message
 
-        # 尝试提供更详细的错误信息
+        # Try to provide more detailed error information
         $errorMessage = $_.Exception.Message
         if ($errorMessage -match "line (\d+)") {
             $lineNumber = $matches[1]
-            $result.Suggestion = "检查第 $lineNumber 行的JSON语法错误"
+            $result.Suggestion = "Check JSON syntax error on line $lineNumber"
         } elseif ($errorMessage -match "position (\d+)") {
             $position = $matches[1]
-            $result.Suggestion = "检查位置 $position 处的JSON语法错误"
+            $result.Suggestion = "Check JSON syntax error at position $position"
         } else {
-            $result.Suggestion = "检查JSON语法，确保所有括号匹配且语法正确"
+            $result.Suggestion = "Check JSON syntax, ensure all brackets match and syntax is correct"
         }
     } finally {
         $timer.Stop()
@@ -168,7 +168,7 @@ function Test-JsonSyntax {
     return $result
 }
 
-# 架构验证（如果提供了架构文件）
+# Schema validation (if schema file provided)
 function Test-JsonSchema {
     param(
         [string]$JsonFilePath,
@@ -181,31 +181,31 @@ function Test-JsonSchema {
     }
 
     if (-not (Test-Path $SchemaFilePath)) {
-        $Result.Warnings += "架构文件不存在: $SchemaFilePath"
+        $Result.Warnings += "Schema file does not exist: $SchemaFilePath"
         return $Result
     }
 
     try {
-        # 这里可以添加更复杂的JSON架构验证逻辑
-        # 目前只做基本检查
+        # More complex JSON schema validation logic can be added here
+        # Currently only basic checks
         $schemaContent = Get-Content $SchemaFilePath -Raw -Encoding UTF8
         $null = $schemaContent | ConvertFrom-Json
 
-        # 简单的架构验证示例
+        # Simple schema validation example
         $jsonContent = Get-Content $JsonFilePath -Raw -Encoding UTF8
         $jsonObject = $jsonContent | ConvertFrom-Json
 
         $schemaErrors = @()
         $schemaWarnings = @()
 
-        # 这里可以根据具体需求添加架构验证规则
-        # 例如检查必需字段、数据类型等
+        # Schema validation rules can be added here based on specific needs
+        # For example, check required fields, data types, etc.
 
         if ($schemaErrors -and $schemaErrors.Count -gt 0) {
             $Result.Status = "Error"
             $Result.IsValid = $false
             $Result.Errors += $schemaErrors
-            $Result.Suggestion = "修复架构验证错误以符合定义的JSON架构"
+            $Result.Suggestion = "Fix schema validation errors to comply with defined JSON schema"
         } elseif ($schemaWarnings -and $schemaWarnings.Count -gt 0) {
             if ($Result.Status -eq "Success") {
                 $Result.Status = "Warning"
@@ -214,7 +214,7 @@ function Test-JsonSchema {
         }
 
     } catch {
-        $Result.Errors += "架构验证失败: $($_.Exception.Message)"
+        $Result.Errors += "Schema validation failed: $($_.Exception.Message)"
         if ($Result.Status -eq "Success") {
             $Result.Status = "Warning"
         }
@@ -223,7 +223,7 @@ function Test-JsonSchema {
     return $Result
 }
 
-# 自动修复功能
+# Auto-repair function
 function Repair-JsonFile {
     param(
         [string]$FilePath,
@@ -235,20 +235,20 @@ function Repair-JsonFile {
     try {
         $content = Get-Content $FilePath -Raw -Encoding UTF8
 
-        # 简单的修复：格式化JSON
+        # Simple repair: format JSON
         if ($Result.IsValid) {
             $jsonObject = $content | ConvertFrom-Json
             $formattedContent = $jsonObject | ConvertTo-Json -Depth 10 -Compress:$false
 
             if ($content -ne $formattedContent) {
-                # 创建备份
+                # Create backup
                 $backupPath = "$FilePath.backup"
                 Copy-Item $FilePath $backupPath
 
-                # 保存修复后的内容
+                # Save repaired content
                 $formattedContent | Out-File $FilePath -Encoding UTF8
 
-                $Result.Message += " (已自动修复格式)"
+                $Result.Message += " (auto-formatted)"
                 $Result.Status = "Success"
                 $Result.Metadata.AutoFixed = $true
                 $Result.Metadata.BackupPath = $backupPath
@@ -256,17 +256,17 @@ function Repair-JsonFile {
         }
 
     } catch {
-        $Result.Warnings += "自动修复失败: $($_.Exception.Message)"
+        $Result.Warnings += "Auto-repair failed: $($_.Exception.Message)"
     }
 
     return $Result
 }
 
-# 显示单个验证结果
+# Display single validation result
 function Show-ValidationResult {
     param([object]$Result)
 
-    # 过滤日志级别
+    # Filter log level
     $shouldShow = switch ($Level) {
         "Error" { $Result.Status -eq "Error" }
         "Warning" { $Result.Status -in @("Error", "Warning") }
@@ -276,12 +276,12 @@ function Show-ValidationResult {
 
     if (-not $shouldShow) { return }
 
-    # 输出结果
+    # Output result
     $statusSymbol = switch ($Result.Status) {
-        "Success" { " ✅" }
-        "Warning" { " ⚠️" }
-        "Error" { " ❌" }
-        default { " ❓" }
+        "Success" { " OK" }
+        "Warning" { " WARN" }
+        "Error" { " ERROR" }
+        default { " ?" }
     }
 
     Write-Host $statusSymbol -ForegroundColor $(switch ($Result.Status) {
@@ -293,40 +293,40 @@ function Show-ValidationResult {
 
     Write-Host " $($Result.FilePath): $($Result.Message)" -ForegroundColor White
 
-    # 显示详细信息
+    # Show detailed information
     if ($Detailed) {
         if ($Result.Errors -and $Result.Errors.Count -gt 0) {
-            Write-Host "   错误:" -ForegroundColor Red
+            Write-Host "   Errors:" -ForegroundColor Red
             foreach ($error in $Result.Errors) {
                 Write-Host "     - $error" -ForegroundColor Red
             }
         }
 
         if ($Result.Warnings -and $Result.Warnings.Count -gt 0) {
-            Write-Host "   警告:" -ForegroundColor Yellow
+            Write-Host "   Warnings:" -ForegroundColor Yellow
             foreach ($warning in $Result.Warnings) {
                 Write-Host "     - $warning" -ForegroundColor Yellow
             }
         }
 
         if (-not [string]::IsNullOrWhiteSpace($Result.Suggestion)) {
-            Write-Host "   建议: $($Result.Suggestion)" -ForegroundColor Cyan
+            Write-Host "   Suggestion: $($Result.Suggestion)" -ForegroundColor Cyan
         }
 
         if ($Result.ValidationDuration.TotalMilliseconds -gt 10) {
-            Write-Host "   耗时: $($Result.ValidationDuration.TotalMilliseconds.ToString('F0'))ms" -ForegroundColor Gray
+            Write-Host "   Duration: $($Result.ValidationDuration.TotalMilliseconds.ToString('F0'))ms" -ForegroundColor Gray
         }
     }
 }
 
-# 获取要验证的JSON文件列表
+# Get JSON files to validate
 function Get-JsonFiles {
     param([string[]]$InputPaths)
 
     $jsonFiles = @()
 
     if ($InputPaths.Count -eq 0) {
-        # 如果没有指定路径，使用项目根目录并自动启用递归
+        # If no path specified, use project root and auto-enable recursive
         $InputPaths = @($script:ProjectRoot)
         $Recursive = $true
     }
@@ -340,24 +340,24 @@ function Get-JsonFiles {
 
         if (Test-Path $resolvedPath) {
             if ((Get-Item $resolvedPath).PSIsContainer) {
-                # 目录
+                # Directory
                 if ($Recursive) {
                     $jsonFiles += Get-ChildItem $resolvedPath -Filter "*.json" -Recurse -File
                 } else {
                     $jsonFiles += Get-ChildItem $resolvedPath -Filter "*.json" -File
                 }
             } else {
-                # 文件
+                # File
                 if ($resolvedPath.EndsWith('.json')) {
                     $jsonFiles += Get-Item $resolvedPath
                 }
             }
         } else {
-            Write-ValidationMessage "路径不存在: $resolvedPath" "Warning"
+            Write-ValidationMessage "Path does not exist: $resolvedPath" "Warning"
         }
     }
 
-    # 排除示例文件（除非明确包含）
+    # Exclude example files (unless explicitly included)
     if (-not $IncludeExamples) {
         $jsonFiles = $jsonFiles | Where-Object { $_.Name -notmatch '\.example\.json$|\.sample\.json$|\.template\.json$' }
     }
@@ -365,7 +365,7 @@ function Get-JsonFiles {
     return $jsonFiles
 }
 
-# 导出验证报告
+# Export validation report
 function Export-ValidationReport {
     if (-not $ExportReport) { return }
 
@@ -412,73 +412,73 @@ function Export-ValidationReport {
         }
 
         $report | ConvertTo-Json -Depth 5 | Out-File $reportPath -Encoding UTF8
-        Write-ValidationMessage "验证报告已导出: $reportPath" "Success"
+        Write-ValidationMessage "Validation report exported: $reportPath" "Success"
 
     } catch {
-        Write-ValidationMessage "导出报告失败: $($_.Exception.Message)" "Error"
+        Write-ValidationMessage "Failed to export report: $($_.Exception.Message)" "Error"
     }
 }
 
-# 主执行逻辑
+# Main execution logic
 function Start-JsonValidation {
-    Write-ValidationMessage "🔍 开始JSON配置文件验证" "Info"
+    Write-ValidationMessage "Starting JSON configuration file validation" "Info"
 
-    # 获取要验证的文件
+    # Get files to validate
     $jsonFiles = Get-JsonFiles -InputPaths $Path
 
     if (-not $jsonFiles -or $jsonFiles.Count -eq 0) {
-        Write-ValidationMessage "没有找到JSON文件进行验证" "Warning"
+        Write-ValidationMessage "No JSON files found for validation" "Warning"
         return
     }
 
     $fileCount = if ($jsonFiles -is [array]) { $jsonFiles.Count } else { 1 }
-    Write-ValidationMessage "找到 $fileCount 个JSON文件" "Info"
+    Write-ValidationMessage "Found $fileCount JSON files" "Info"
 
-    # 验证每个文件
+    # Validate each file
     foreach ($file in $jsonFiles) {
         $result = Test-JsonSyntax -FilePath $file.FullName
 
-        # 架构验证
+        # Schema validation
         if ($UseSchema) {
             $result = Test-JsonSchema -JsonFilePath $file.FullName -SchemaFilePath $SchemaPath -Result $result
         }
 
-        # 自动修复
+        # Auto-repair
         if ($Fix) {
             $result = Repair-JsonFile -FilePath $file.FullName -Result $result
         }
 
         $script:ValidationResults += $result
 
-        # 显示结果
+        # Show result
         Show-ValidationResult -Result $result
     }
 
-    # 显示总结
+    # Show summary
     Write-Host ""
-    Write-ValidationMessage "验证完成总结:" "Info"
-    Write-ValidationMessage "总计文件: $($script:ValidationResults.Count)" "Info"
-    Write-ValidationMessage "有效文件: $(@($script:ValidationResults | Where-Object { $_.IsValid }).Count)" "Success"
+    Write-ValidationMessage "Validation complete summary:" "Info"
+    Write-ValidationMessage "Total files: $($script:ValidationResults.Count)" "Info"
+    Write-ValidationMessage "Valid files: $(@($script:ValidationResults | Where-Object { $_.IsValid }).Count)" "Success"
 
     $invalidFiles = @($script:ValidationResults | Where-Object { -not $_.IsValid })
     $invalidCount = $invalidFiles.Count
     if ($invalidCount -gt 0) {
-        Write-ValidationMessage "无效文件: $invalidCount" "Error"
+        Write-ValidationMessage "Invalid files: $invalidCount" "Error"
     }
 
     $warningFiles = @($script:ValidationResults | Where-Object { $_.Status -eq "Warning" })
     $warningCount = $warningFiles.Count
     if ($warningCount -gt 0) {
-        Write-ValidationMessage "警告文件: $warningCount" "Warning"
+        Write-ValidationMessage "Warning files: $warningCount" "Warning"
     }
 
     $duration = (Get-Date) - $script:StartTime
-    Write-ValidationMessage "总耗时: $($duration.TotalSeconds.ToString('F2'))秒" "Info"
+    Write-ValidationMessage "Total time: $($duration.TotalSeconds.ToString('F2')) seconds" "Info"
 
-    # 导出报告
+    # Export report
     Export-ValidationReport
 
-    # 返回退出码
+    # Return exit code
     if ($invalidCount -gt 0) {
         return 1
     } elseif ($warningCount -gt 0) {
@@ -488,11 +488,11 @@ function Start-JsonValidation {
     }
 }
 
-# 执行验证
+# Execute validation
 try {
     $exitCode = Start-JsonValidation
     exit $exitCode
 } catch {
-    Write-ValidationMessage "验证过程发生致命错误: $($_.Exception.Message)" "Error"
+    Write-ValidationMessage "Fatal error during validation: $($_.Exception.Message)" "Error"
     exit 1
 }

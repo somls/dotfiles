@@ -1,71 +1,124 @@
 # =============================================================================
-# PowerShell 7 Profile - Optimized Configuration
-# 快速启动，核心功能
+# PowerShell 7 Profile - Complete functionality configuration
+# Optimized startup performance while preserving all modules
 # =============================================================================
 
-# 快速模式检查
+# Fast mode check (optional)
 $FastMode = $env:POWERSHELL_FAST_MODE -eq "1"
-# 运行时环境
+# Runtime environment
 $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6)
 
-# 基础设置 (必需)
+# Basic settings (required)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-# 配置目录
+# Configuration directory
 $ProfileDir = Join-Path $env:USERPROFILE ".powershell"
 
-# 快速初始化
+# Quick initialization
 if (-not (Test-Path $ProfileDir)) {
     New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
 }
 
-# 智能模块加载 - 按需加载，提升启动速度
+# Smart module loading - preserve complete functionality but optimize loading strategy
 $coreConfigs = if ($IsWinPS) { @("functions.winps", "aliases") } else { @("functions", "aliases") }
 $optionalConfigs = @("history", "keybindings", "tools", "theme", "extra")
 
-# 加载核心配置
+# Load core configurations
 foreach ($config in $coreConfigs) {
     $configPath = Join-Path $ProfileDir "$config.ps1"
     if (Test-Path $configPath) {
-        try { . $configPath } catch { Write-Warning "Failed to load $config.ps1" }
-    }
-}
-
-# 延迟加载可选配置 (除非快速模式)
-if (-not $FastMode) {
-    foreach ($config in $optionalConfigs) {
-        $configPath = Join-Path $ProfileDir "$config.ps1"
-        if (Test-Path $configPath) {
-            try { . $configPath } catch { }
+        try { 
+            . $configPath 
+        } catch { 
+            Write-Warning "Failed to load $config.ps1" 
         }
     }
 }
 
-# 5. ---- Starship 提示符 ----
+# Delay load optional configurations (unless fast mode)
+if (-not $FastMode) {
+    foreach ($config in $optionalConfigs) {
+        $configPath = Join-Path $ProfileDir "$config.ps1"
+        if (Test-Path $configPath) {
+            try { 
+                . $configPath 
+            } catch { 
+                Write-Warning "Failed to load $config.ps1"
+            }
+        }
+    }
+}
+
+# Starship prompt
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     try {
         Invoke-Expression (&starship init powershell)
     } catch {
-        # 简单备用提示符
-        function global:prompt { "PS $(Split-Path -Leaf (Get-Location))> " }
+        # Simple fallback prompt
+        function global:prompt { 
+            $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
+            "PS $path> " 
+        }
     }
 } else {
-    # 默认简单提示符
+    # Default simple prompt
     function global:prompt {
         $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
         "PS $path> "
     }
 }
 
-# 6. ---- 启动提示 ----
-if (-not $FastMode) {
-    if ($IsWinPS) {
-        Write-Host "Tip: run 'config-info' to see available features" -ForegroundColor DarkGray
-    } else {
-        Write-Host "💡 使用 'config-info' 查看可用功能" -ForegroundColor DarkGray
+# Performance optimization functions
+function Test-ProfilePerformance {
+    <#
+    .SYNOPSIS
+    Test PowerShell configuration file loading performance
+    #>
+    $startTime = Get-Date
+    
+    # Simulate complete configuration loading process
+    $configs = @("functions", "aliases", "history", "keybindings", "tools", "theme", "extra")
+    foreach ($config in $configs) {
+        $configPath = Join-Path $ProfileDir "$config.ps1"
+        if (Test-Path $configPath) {
+            . $configPath
+        }
     }
+    
+    $endTime = Get-Date
+    $duration = ($endTime - $startTime).TotalMilliseconds
+    
+    Write-Host "`n⏱️  Profile Performance Test" -ForegroundColor Cyan
+    Write-Host "Load Time: $duration ms" -ForegroundColor Green
+    Write-Host "Fast Mode: $FastMode" -ForegroundColor Yellow
+    Write-Host "PowerShell Edition: $(if ($IsWinPS) { 'Windows PowerShell' } else { 'PowerShell 7+' })" -ForegroundColor Gray
 }
 
+# Fast mode toggle functions
+function Enable-FastMode {
+    <#
+    .SYNOPSIS
+    Enable fast mode for better performance
+    #>
+    $env:POWERSHELL_FAST_MODE = "1"
+    Write-Host "✅ Fast mode enabled. Restart PowerShell for full effect." -ForegroundColor Green
+}
 
+function Disable-FastMode {
+    <#
+    .SYNOPSIS
+    Disable fast mode for full functionality
+    #>
+    $env:POWERSHELL_FAST_MODE = "0"
+    Write-Host "❌ Fast mode disabled. Full features enabled." -ForegroundColor Yellow
+}
 
+# Startup tips
+if (-not $FastMode) {
+    if ($IsWinPS) {
+        Write-Host "Tip: Use 'Enable-FastMode' for better performance or 'config-info' for features" -ForegroundColor DarkGray
+    } else {
+        Write-Host "💡 Use 'Enable-FastMode' for better performance or 'config-info' to view features" -ForegroundColor DarkGray
+    }
+}

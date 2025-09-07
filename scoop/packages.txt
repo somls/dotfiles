@@ -1,8 +1,4 @@
-# List of desired packages to satisfy health-check.ps1
-# Install via: scoop install <each>
-# Buckets needed: main, extras, versions, nerd-fonts
-
-# 核心开发工具
+# 核心开发工具 (Essential & Development) - 精简优化版
 git
 ripgrep
 zoxide
@@ -14,18 +10,43 @@ neovim
 starship
 vscode
 sudo
-wget
+curl
+7zip
 
-# 系统监控和诊断工具
+# 版本管理器 (VersionManager) - 统一使用fnm
+fnm
+# 移除 pyenv-win - 使用fnm统一管理
+
+# 开发工具 (Development Tools) - 精简版
+shellcheck
+prettier
+gh
+delta
+
+# 文件管理增强 (FileTools) - 精简版
+eza
+tre
+choose
+duf
+# 移除 broot - 功能与tre重叠，tre更轻量
+
+# 系统监控工具 (SystemTools) - 精简版
 btop
 dust
 procs
+bandwhich
+# 移除 gping - 使用系统ping命令
 
-# 文件处理和开发工具
-sd
-tokei
-hyperfine
-jid
+# Git增强工具 (GitEnhanced) - 精简版
+lazygit
 
-# Git和协作工具
-gh
+# 编程语言支持
+python
+nodejs
+
+# 移除的包 (功能重叠或使用频率低)：
+# httpie (curl已够用)
+# just, dog, hexyl (专用工具，使用频率低)
+# gping, sd, tokei, hyperfine, jid, tealdeer (可选工具)
+# pyenv-win (使用fnm统一管理)
+# broot (与tre功能重叠)

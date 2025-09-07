@@ -1,16 +1,18 @@
 # ~/.powershell/functions.ps1
-# 核心实用函数 
+# Core utility functions
 
-# Git 快速操作
+# Git quick operations
 function ngc { 
     param([string]$msg = "update")
-    git add . && git commit -m $msg && git push
+    git add .
+    git commit -m $msg
+    git push
 }
 
 function gst { git status --short }
 function glog { git log --oneline -10 }
 
-# 目录操作
+# Directory operations
 function mkcd { 
     param([string]$path)
     New-Item -ItemType Directory -Path $path -Force | Out-Null
@@ -21,7 +23,7 @@ function .. { Set-Location .. }
 function ... { Set-Location ..\.. }
 function ~ { Set-Location $env:USERPROFILE }
 
-# 系统管理
+# System management
 function sys-update {
     if (Get-Command scoop -ErrorAction SilentlyContinue) { 
         scoop update *
@@ -35,49 +37,49 @@ function sys-update {
 
 function swp { 
     if (Get-Command scoop -ErrorAction SilentlyContinue) {
-        scoop cleanup * && scoop cache rm *
+        scoop cleanup *
+        scoop cache rm *
     }
 }
 
-# 实用工具
+# Utility tools
 function which { param($cmd) (Get-Command $cmd).Source }
 function reload { . $PROFILE }
 function edit-profile { code $PROFILE }
 
-# 快速信息
+# Quick system information
 function sysinfo {
     $os = (Get-CimInstance Win32_OperatingSystem).Caption
     $cpu = (Get-CimInstance Win32_Processor).Name
     $ram = [math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 2)
     
-    Write-Host "💻 System Info" -ForegroundColor Cyan
+    Write-Host "System Information" -ForegroundColor Cyan
     Write-Host "OS: $os" -ForegroundColor White
     Write-Host "CPU: $cpu" -ForegroundColor White
     Write-Host "RAM: ${ram}GB" -ForegroundColor White
 }
 
-# 配置信息
+# Configuration information
 function config-info {
-    Write-Host "🔧 Dotfiles 配置信息" -ForegroundColor Cyan
-    Write-Host "===================" -ForegroundColor Cyan
-    Write-Host "📁 配置目录: $(Split-Path $PROFILE -Parent)" -ForegroundColor White
-    Write-Host "⚡ 快速模式: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { '启用' } else { '禁用' })" -ForegroundColor White
+    Write-Host "Dotfiles Configuration Information" -ForegroundColor Cyan
+    Write-Host "=============================" -ForegroundColor Cyan
+    Write-Host "Configuration Directory: $(Split-Path $PROFILE -Parent)" -ForegroundColor White
+    Write-Host "Fast Mode: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
     Write-Host ""
-    Write-Host "🚀 核心命令:" -ForegroundColor Yellow
+    Write-Host "Core Commands:" -ForegroundColor Yellow
     Write-Host "  Git: ngc, gst, glog" -ForegroundColor Gray
-    Write-Host "  系统: sys-update, swp, sysinfo" -ForegroundColor Gray
-    Write-Host "  导航: mkcd, .., ..., ~" -ForegroundColor Gray
-    Write-Host "  代理: px [system|clash|v2ray|singbox|off], px-auto, px-test" -ForegroundColor Gray
+    Write-Host "  System: sys-update, swp, sysinfo" -ForegroundColor Gray
+    Write-Host "  Navigation: mkcd, .., ..., ~" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "📚 使用帮助: Get-Help <命令名>" -ForegroundColor Green
+    Write-Host "Usage Help: Get-Help <command-name>" -ForegroundColor Green
 }
 
-# 配置性能分析
+# Configuration performance analysis
 function profile-perf {
-    Write-Host "⚡ PowerShell 配置性能报告" -ForegroundColor Cyan
-    Write-Host "=========================" -ForegroundColor Cyan
+    Write-Host "PowerShell Configuration Performance Report" -ForegroundColor Cyan
+    Write-Host "==========================================" -ForegroundColor Cyan
     
-    # 智能检测配置目录
+    # Intelligent configuration directory detection
     $configDir = if ($env:USERPROFILE -and (Test-Path (Join-Path $env:USERPROFILE ".powershell"))) {
         Join-Path $env:USERPROFILE ".powershell"
     } elseif (Test-Path ".\.powershell") {
@@ -94,50 +96,50 @@ function profile-perf {
         $PROFILE
     }
     
-    Write-Host "📊 配置文件分析:" -ForegroundColor Yellow
-    Write-Host "  主配置: $profilePath" -ForegroundColor Gray
-    Write-Host "  配置目录: $configDir" -ForegroundColor Gray
+    Write-Host "Configuration File Analysis:" -ForegroundColor Yellow
+    Write-Host "  Main Profile: $profilePath" -ForegroundColor Gray
+    Write-Host "  Config Directory: $configDir" -ForegroundColor Gray
     Write-Host ""
     
-    # 检查各个配置文件
+    # Check each configuration file
     $configFiles = @("functions", "aliases", "history", "keybindings", "tools", "theme", "extra")
     $totalSize = 0
     
-    Write-Host "📁 配置文件状态:" -ForegroundColor Yellow
+    Write-Host "Configuration File Status:" -ForegroundColor Yellow
     foreach ($config in $configFiles) {
         $configPath = Join-Path $configDir "$config.ps1"
         if (Test-Path $configPath) {
             $size = (Get-Item $configPath).Length
             $totalSize += $size
             $sizeKB = [math]::Round($size / 1KB, 2)
-            Write-Host "  ✅ $config.ps1 (${sizeKB}KB)" -ForegroundColor Green
+            Write-Host "  OK $config.ps1 (${sizeKB}KB)" -ForegroundColor Green
         } else {
-            Write-Host "  ❌ $config.ps1 (缺失)" -ForegroundColor Red
+            Write-Host "  ERROR $config.ps1 (missing)" -ForegroundColor Red
         }
     }
     
     Write-Host ""
-    Write-Host "📈 性能指标:" -ForegroundColor Yellow
-    Write-Host "  总配置大小: $([math]::Round($totalSize / 1KB, 2))KB" -ForegroundColor White
-    Write-Host "  快速模式: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { '启用 ⚡' } else { '禁用' })" -ForegroundColor White
+    Write-Host "Performance Metrics:" -ForegroundColor Yellow
+    Write-Host "  Total Config Size: $([math]::Round($totalSize / 1KB, 2))KB" -ForegroundColor White
+    Write-Host "  Fast Mode: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
     
-    # 模块加载状态
+    # Module loading status
     $loadedModules = Get-Module | Where-Object { $_.ModuleType -eq 'Script' -or $_.Name -like '*profile*' }
-    Write-Host "  已加载模块: $($loadedModules.Count)" -ForegroundColor White
+    Write-Host "  Loaded Modules: $($loadedModules.Count)" -ForegroundColor White
     
-    # 启动建议
+    # Startup suggestions
     Write-Host ""
-    Write-Host "💡 性能优化建议:" -ForegroundColor Green
+    Write-Host "Performance Optimization Suggestions:" -ForegroundColor Green
     if ($env:POWERSHELL_FAST_MODE -ne '1') {
-        Write-Host "  • 启用快速模式: `$env:POWERSHELL_FAST_MODE = '1'" -ForegroundColor Gray
+        Write-Host "  • Enable fast mode: `$env:POWERSHELL_FAST_MODE = '1'" -ForegroundColor Gray
     }
     if ($totalSize -gt 50KB) {
-        Write-Host "  • 配置文件较大，考虑精简不必要的功能" -ForegroundColor Gray
+        Write-Host "  • Configuration files are large, consider trimming unnecessary features" -ForegroundColor Gray
     }
-    Write-Host "  • 使用 'reload' 重新加载配置" -ForegroundColor Gray
+    Write-Host "  • Use 'reload' to reload configuration" -ForegroundColor Gray
 }
 
-# 缺失的实用函数
+# Missing utility functions
 function New-Directory {
     param([string]$Path)
     New-Item -ItemType Directory -Path $Path -Force
@@ -153,7 +155,7 @@ function Get-FileSize {
             $size = $item.Length
         }
         
-        # 格式化文件大小
+        # Format file size
         if ($size -gt 1GB) {
             "{0:N2} GB" -f ($size / 1GB)
         } elseif ($size -gt 1MB) {
@@ -175,10 +177,10 @@ function Start-Elevated {
     )
     
     if (-not $Command) {
-        # 如果没有指定命令，以管理员身份启动新的 PowerShell 会话
+        # If no command specified, start new PowerShell session as administrator
         Start-Process pwsh -Verb RunAs
     } else {
-        # 以管理员身份运行指定命令
+        # Run specified command as administrator
         $argumentList = if ($Arguments.Count -gt 0) { $Arguments -join ' ' } else { '' }
         Start-Process $Command -ArgumentList $argumentList -Verb RunAs
     }
