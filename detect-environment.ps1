@@ -294,6 +294,15 @@ $appsToCheck = @{
     Jq = @("jq")
     Curl = @("curl")
     Wget = @("wget")
+    # 新增检测项目
+    Python = @("python", "py")
+    NodeJS = @("node")
+    Zoxide = @("zoxide", "z")
+    LazyGit = @("lazygit")
+    SevenZip = @("7z")
+    Sudo = @("sudo")
+    ShellCheck = @("shellcheck")
+    GitHubCLI = @("gh")
 }
 
 Write-DetectionLog "Starting application detection..." 'Info'
@@ -363,10 +372,22 @@ try {
     }
 
     # Command line tools recommendations
-    $cliTools = @('Ripgrep', 'Fzf', 'Bat', 'Fd')
+    $cliTools = @('Ripgrep', 'Fzf', 'Bat', 'Fd', 'Zoxide')
     $installedCliTools = $cliTools | Where-Object { $detection.Applications[$_].Installed }
-    if ($installedCliTools.Count -lt 2) {
-        $detection.Recommendations += "Recommend installing command line enhancement tools (ripgrep, fzf, bat, fd)"
+    if ($installedCliTools.Count -lt 3) {
+        $detection.Recommendations += "Recommend installing command line enhancement tools (ripgrep, fzf, bat, fd, zoxide)"
+    }
+
+    # Programming language recommendations
+    $progLangs = @('Python', 'NodeJS')
+    $installedLangs = $progLangs | Where-Object { $detection.Applications[$_].Installed }
+    if ($installedLangs.Count -eq 0) {
+        $detection.Recommendations += "Consider installing programming languages (Python, Node.js) for development"
+    }
+
+    # Git enhancement tools
+    if ($detection.Applications.Git.Installed -and -not $detection.Applications.LazyGit.Installed) {
+        $detection.Recommendations += "Consider installing LazyGit for enhanced Git workflow"
     }
 
     # Overall assessment

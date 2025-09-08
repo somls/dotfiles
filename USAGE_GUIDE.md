@@ -8,12 +8,18 @@
 
 ### 新用户安装
 ```powershell
-# 分步安装（推荐）
-.\detect-environment.ps1    # 检测环境
-.\install_apps.ps1          # 安装应用
-.\install.ps1               # 部署配置
-.\health-check.ps1          # 验证安装
+# 分步安装（推荐）- 现在包含自动环境检查
+.\detect-environment.ps1    # 检测环境（22+ 应用程序）
+.\install_apps.ps1          # 安装应用（自动环境兼容性检查）
+.\install.ps1               # 部署配置（智能路径检测）
+.\health-check.ps1          # 验证安装（全面健康检查）
 ```
+
+### 🆕 环境适配增强
+- ✅ **自动环境检查**: 安装前检查 PowerShell 版本、执行策略、网络连接、磁盘空间
+- ✅ **智能路径检测**: 自动适配不同的软件安装方式和用户环境
+- ✅ **扩展应用支持**: 新增 Python、NodeJS、Zoxide、LazyGit 等应用检测
+- ✅ **增强错误处理**: 提供详细的问题说明和解决建议
 
 ### 开发者模式
 ```powershell
@@ -97,12 +103,24 @@
 # 只检查符号链接
 .\health-check.ps1 -Category SymLinks
 
+# 🆕 系统环境兼容性检查
+.\health-check.ps1 -Category System
+
 # 自动修复问题
 .\health-check.ps1 -Fix
 
 # JSON格式输出
 .\health-check.ps1 -OutputFormat JSON
 ```
+
+### 🆕 新增检查项目
+| 检查项目 | 说明 | 自动修复 |
+|----------|------|----------|
+| **磁盘空间** | 检查可用空间（推荐2GB+） | ❌ |
+| **网络连接** | 测试关键下载源连通性 | ❌ |
+| **用户权限** | 检查管理员权限状态 | ❌ |
+| **开发者模式** | 检查符号链接支持 | ❌ |
+| **执行策略** | 检查脚本执行权限 | ✅ |
 
 ## 🛠️ 高级用法
 
@@ -129,6 +147,16 @@ Copy-Item $PROFILE "$PROFILE.backup.$(Get-Date -Format 'yyyyMMdd')"
 2. **符号链接失败**: 启用开发者模式或使用管理员权限
 3. **模块加载失败**: 检查 `$env:PSModulePath` 或手动导入模块
 4. **Scoop路径错误**: 检查 `$env:SCOOP` 环境变量
+
+### 🆕 自动问题检测
+现在脚本会自动检测并提示解决方案：
+```powershell
+# 环境兼容性问题示例
+[WARN] Environment compatibility issues found:
+  - Low disk space: 1.2GB available (minimum 2GB recommended)
+  - Internet connectivity issue - may affect package downloads
+Do you want to continue anyway? [Continue/Exit]
+```
 
 ### 调试命令
 ```powershell

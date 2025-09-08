@@ -415,29 +415,30 @@ function Get-AdaptiveConfigPaths {
     try {
         $paths = @{}
 
-        # Windows Terminal path detection
+        # Windows Terminal path detection (enhanced with more paths)
         $wtPaths = @(
             "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState",
-            "$env:LOCALAPPDATA\Microsoft\Windows Terminal"
+            "$env:LOCALAPPDATA\Microsoft\Windows Terminal",
+            "$env:APPDATA\Microsoft\Windows Terminal"
         )
 
         $wtPath = $null
         foreach ($path in $wtPaths) {
             if (Test-Path $path) {
                 $wtPath = $path.Replace($env:USERPROFILE + '\', '')
-                Write-Verbose "Found Windows Terminal directory: $wtPath"
+                Write-InstallLog "Found Windows Terminal directory: $wtPath" "DEBUG"
                 break
             }
         }
 
         if (-not $wtPath) {
-            $wtPath = $wtPaths[0]  # Use first path as default
+            $wtPath = $wtPaths[0].Replace($env:USERPROFILE + '\', '')  # Use first path as default
             Write-InstallLog "Windows Terminal installation not found, using default path: $wtPath" "WARN"
         }
 
         $paths["WindowsTerminal"] = $wtPath
 
-        # PowerShell path detection
+        # PowerShell path detection (enhanced with version detection)
         $psVersion = $PSVersionTable.PSVersion.Major
         $psPath = if ($psVersion -ge 6) {
             "Documents\PowerShell"  # PowerShell Core/7+
@@ -445,10 +446,16 @@ function Get-AdaptiveConfigPaths {
             "Documents\WindowsPowerShell"  # Windows PowerShell 5.x
         }
 
+        # Verify PowerShell profile directory exists or can be created
+        $fullPsPath = Join-Path $env:USERPROFILE $psPath
+        if (-not (Test-Path $fullPsPath)) {
+            Write-InstallLog "PowerShell profile directory does not exist, will be created: $fullPsPath" "INFO"
+        }
+
         $paths["PowerShell"] = $psPath
         Write-InstallLog "PowerShell version: $($PSVersionTable.PSVersion), config path: $psPath" -Level 'INFO'
 
-        # Scoop configuration path detection
+        # Scoop configuration path detection (enhanced)
         $scoopPath = if ($env:SCOOP) {
             # If SCOOP is under user directory, return relative path; otherwise return absolute path
             $scoopFull = $env:SCOOP
@@ -461,18 +468,55 @@ function Get-AdaptiveConfigPaths {
             }
         } elseif (Test-Path "$env:USERPROFILE\scoop") {
             "scoop\.config\scoop"
+        } elseif ($env:SCOOP_GLOBAL) {
+            # Check for global Scoop installation
+            Write-InstallLog "Global Scoop installation detected: $env:SCOOP_GLOBAL" "INFO"
+            ".config\scoop"  # Use user config directory
         } else {
             ".config\scoop"  # Default path
         }
 
         $paths["Scoop"] = $scoopPath
 
-        # Starship configuration path
-        $paths["Starship"] = ".config"
+        # Starship configuration path (enhanced)
+        $starshipPaths = @(
+            ".config",
+            "AppData\Roaming"  # Alternative location
+        )
+        
+        $starshipPath = ".config"  # Default
+        foreach ($path in $starshipPaths) {
+            $fullPath = Join-Path $env:USERPROFILE $path
+            if (Test-Path $fullPath) {
+                $starshipPath = $path
+                break
+            }
+        }
+        
+        $paths["Starship"] = $starshipPath
 
-        # Neovim configuration path
-        $paths["Neovim"] = "AppData\Local\nvim"
+        # Neovim configuration path (enhanced with multiple possible locations)
+        $nvimPaths = @(
+            "AppData\Local\nvim",
+            ".config\nvim"  # Unix-style path on Windows
+        )
+        
+        $nvimPath = "AppData\Local\nvim"  # Default
+        foreach ($path in $nvimPaths) {
+            $fullPath = Join-Path $env:USERPROFILE $path
+            if (Test-Path $fullPath) {
+                $nvimPath = $path
+                Write-InstallLog "Found existing Neovim config: $fullPath" "DEBUG"
+                break
+            }
+        }
+        
+        $paths["Neovim"] = $nvimPath
 
+        # Git configuration (always in user home)
+        $paths["Git"] = ""  # Empty means directly in user home
+
+        Write-InstallLog "Adaptive path detection completed successfully" "SUCCESS"
         return $paths
     }
     catch {
@@ -484,6 +528,7 @@ function Get-AdaptiveConfigPaths {
             "Scoop" = ".config\scoop"
             "Starship" = ".config"
             "Neovim" = "AppData\Local\nvim"
+            "Git" = ""
         }
     }
 }

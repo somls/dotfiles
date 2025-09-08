@@ -141,6 +141,69 @@ function Test-ScoopInstalled {
     }
 }
 
+# Enhanced environment compatibility check
+function Test-InstallEnvironment {
+    Write-AppLog "Checking installation environment compatibility..." "INFO"
+    
+    $issues = @()
+    
+    # Check PowerShell version
+    if ($PSVersionTable.PSVersion.Major -lt 5) {
+        $issues += "PowerShell 5.0+ required, current: $($PSVersionTable.PSVersion)"
+    }
+    
+    # Check execution policy
+    $policy = Get-ExecutionPolicy
+    if ($policy -eq 'Restricted') {
+        $issues += "Execution policy is Restricted, may prevent script execution"
+    }
+    
+    # Check internet connectivity
+    try {
+        $null = Invoke-WebRequest -Uri "https://get.scoop.sh" -Method Head -TimeoutSec 10 -ErrorAction Stop
+        Write-AppLog "Internet connectivity: OK" "DEBUG"
+    } catch {
+        $issues += "Internet connectivity issue - may affect package downloads"
+    }
+    
+    # Check available disk space (minimum 2GB)
+    try {
+        $drive = Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq $env:SystemDrive }
+        $freeSpaceGB = [math]::Round($drive.FreeSpace / 1GB, 2)
+        if ($freeSpaceGB -lt 2) {
+            $issues += "Low disk space: ${freeSpaceGB}GB available (minimum 2GB recommended)"
+        }
+        Write-AppLog "Available disk space: ${freeSpaceGB}GB" "DEBUG"
+    } catch {
+        Write-AppLog "Could not check disk space" "WARN"
+    }
+    
+    if ($issues.Count -gt 0) {
+        Write-AppLog "Environment compatibility issues found:" "WARN"
+        foreach ($issue in $issues) {
+            Write-AppLog "  - $issue" "WARN"
+        }
+        
+        # Ask user if they want to continue
+        $choices = @(
+            [System.Management.Automation.Host.ChoiceDescription]::new("&Continue", "Continue despite issues")
+            [System.Management.Automation.Host.ChoiceDescription]::new("&Exit", "Exit and fix issues first")
+        )
+        
+        $decision = $Host.UI.PromptForChoice(
+            "Environment Issues Detected",
+            "Some environment issues were detected. Do you want to continue anyway?",
+            $choices,
+            1  # Default to Exit
+        )
+        
+        return $decision -eq 0
+    }
+    
+    Write-AppLog "Environment compatibility check passed" "SUCCESS"
+    return $true
+}
+
 # Install Scoop if not present
 function Install-Scoop {
     Write-AppLog "Scoop not found. Installing Scoop..." "INFO"
@@ -338,6 +401,12 @@ function Main {
     if (-not $Category -and -not $Apps) {
         Write-AppLog "No category or specific apps specified. Use -Category or -Apps parameter." "ERROR"
         Show-AvailableApps
+        exit 1
+    }
+    
+    # Enhanced environment check before proceeding
+    if (-not (Test-InstallEnvironment)) {
+        Write-AppLog "Environment check failed, aborting installation" "ERROR"
         exit 1
     }
     

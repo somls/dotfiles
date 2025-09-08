@@ -187,6 +187,94 @@ function Test-SystemRequirements {
             }
         }
     }
+    
+    # Enhanced environment compatibility checks
+    Test-EnvironmentCompatibility
+}
+
+# Enhanced environment compatibility check
+function Test-EnvironmentCompatibility {
+    Write-HealthLog "Checking environment compatibility..." "INFO"
+    
+    # Check available disk space
+    try {
+        $drive = Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq $env:SystemDrive }
+        $freeSpaceGB = [math]::Round($drive.FreeSpace / 1GB, 2)
+        if ($freeSpaceGB -ge 2) {
+            Write-HealthLog "Disk space: ${freeSpaceGB}GB available - OK" "SUCCESS"
+            Update-CategoryScore -Category "System" -Score 1
+        } else {
+            Write-HealthLog "Disk space: ${freeSpaceGB}GB available - Low" "WARN"
+            Add-CategoryIssue -Category "System" -Issue "Low disk space (${freeSpaceGB}GB)" -Fix "Free up disk space (minimum 2GB recommended)"
+            Update-CategoryScore -Category "System" -Score 0
+        }
+    } catch {
+        Write-HealthLog "Could not check disk space: $($_.Exception.Message)" "WARN"
+    }
+    
+    # Check internet connectivity
+    try {
+        $testUrls = @(
+            "https://get.scoop.sh",
+            "https://github.com",
+            "https://raw.githubusercontent.com"
+        )
+        
+        $connectivityOK = $false
+        foreach ($url in $testUrls) {
+            try {
+                $null = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 5 -ErrorAction Stop
+                $connectivityOK = $true
+                break
+            } catch {
+                continue
+            }
+        }
+        
+        if ($connectivityOK) {
+            Write-HealthLog "Internet connectivity - OK" "SUCCESS"
+            Update-CategoryScore -Category "System" -Score 1
+        } else {
+            Write-HealthLog "Internet connectivity - Failed" "WARN"
+            Add-CategoryIssue -Category "System" -Issue "No internet connectivity" -Fix "Check network connection and proxy settings"
+            Update-CategoryScore -Category "System" -Score 0
+        }
+    } catch {
+        Write-HealthLog "Could not test internet connectivity: $($_.Exception.Message)" "WARN"
+    }
+    
+    # Check user permissions
+    try {
+        $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
+        $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        
+        if ($isAdmin) {
+            Write-HealthLog "User permissions: Administrator - OK" "SUCCESS"
+            Update-CategoryScore -Category "System" -Score 1
+        } else {
+            Write-HealthLog "User permissions: Standard user - Limited" "INFO"
+            Write-HealthLog "Note: Some operations may require administrator privileges" "INFO"
+            Update-CategoryScore -Category "System" -Score 1  # Not necessarily a problem
+        }
+    } catch {
+        Write-HealthLog "Could not check user permissions: $($_.Exception.Message)" "WARN"
+    }
+    
+    # Check Windows features (Developer Mode for symbolic links)
+    try {
+        $devMode = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -ErrorAction SilentlyContinue
+        if ($devMode -and $devMode.AllowDevelopmentWithoutDevLicense -eq 1) {
+            Write-HealthLog "Developer Mode: Enabled - OK" "SUCCESS"
+            Update-CategoryScore -Category "System" -Score 1
+        } else {
+            Write-HealthLog "Developer Mode: Disabled - Limited symbolic link support" "INFO"
+            Write-HealthLog "Note: Enable Developer Mode for better symbolic link support without admin privileges" "INFO"
+            Update-CategoryScore -Category "System" -Score 1  # Not critical
+        }
+    } catch {
+        Write-HealthLog "Could not check Developer Mode status" "DEBUG"
+    }
 }
 
 # Check application installations

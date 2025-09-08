@@ -121,9 +121,16 @@ cd dotfiles
 **输出信息**:
 - Windows 版本和系统信息
 - PowerShell 版本和配置
-- 已安装的开发工具
-- 配置文件路径
-- 推荐的改进建议
+- 已安装的开发工具（22+ 应用程序）
+- 配置文件路径检测
+- 安装方式识别（Scoop、系统安装、Microsoft Store等）
+- 智能推荐建议
+
+**🆕 增强功能**:
+- ✅ **扩展应用检测**: 新增 Python、NodeJS、Zoxide、LazyGit 等 8 个应用检测
+- ✅ **智能安装识别**: 准确识别 Scoop、系统安装、便携版等安装方式
+- ✅ **版本信息获取**: 自动获取应用程序版本信息
+- ✅ **配置路径检测**: 检测各应用的配置文件路径
 
 ### 2. 应用程序管理 (`install_apps.ps1`)
 
@@ -144,6 +151,22 @@ cd dotfiles
 
 # 安装特定分类
 .\install_apps.ps1 -Category Development,Programming
+```
+
+**🆕 环境兼容性检查**:
+在开始安装前，脚本会自动进行环境检查：
+- ✅ **PowerShell 版本**: 检查是否为 5.0 或更高版本
+- ✅ **执行策略**: 检查是否允许脚本执行
+- ✅ **网络连接**: 测试 Scoop 下载源的连通性
+- ✅ **磁盘空间**: 检查可用空间（推荐 2GB+）
+- ✅ **用户交互**: 发现问题时询问是否继续安装
+
+```powershell
+# 示例输出
+[INFO] Checking installation environment compatibility...
+[DEBUG] Internet connectivity: OK
+[DEBUG] Available disk space: 27.47GB
+[SUCCESS] Environment compatibility check passed
 ```
 
 **应用程序分类**:
@@ -185,6 +208,21 @@ cd dotfiles
 - **Neovim**: 编辑器配置
 - **Starship**: 命令行提示符
 - **Windows Terminal**: 终端设置
+
+**🆕 智能路径检测**:
+脚本现在能够智能检测和适配不同环境的配置路径：
+- ✅ **Windows Terminal**: 检查多个可能的安装路径（Store版、传统安装）
+- ✅ **PowerShell**: 根据版本自动选择配置目录（5.x vs 7.x）
+- ✅ **Scoop**: 支持用户安装、全局安装、自定义路径
+- ✅ **Neovim**: 支持标准路径和 Unix 风格路径
+- ✅ **异常处理**: 路径检测失败时自动回退到默认配置
+
+```powershell
+# 示例路径检测日志
+[DEBUG] Found Windows Terminal directory: AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState
+[INFO] PowerShell version: 7.5.2, config path: Documents\PowerShell
+[DEBUG] Found existing Neovim config: C:\Users\Username\AppData\Local\nvim
+```
 
 
 ### 4. 符号链接管理 (`dev-link.ps1`)
@@ -228,17 +266,39 @@ cd dotfiles
 # 仅检查配置文件
 .\health-check.ps1 -ConfigOnly
 
+# 检查特定类别
+.\health-check.ps1 -Category System
+
 # 生成 JSON 报告
-.\health-check.ps1 -Json -LogFile "health-$(Get-Date -Format 'yyyyMMdd').log"
+.\health-check.ps1 -OutputFormat JSON
 ```
 
 **检查项目**:
 - ✅ 配置文件完整性和语法
 - ✅ 符号链接状态和有效性
 - ✅ 应用程序安装状态
-- ✅ 系统兼容性
+- ✅ 系统兼容性检查
 - ✅ 备份文件管理
 - ✅ 模板文件验证
+
+**🆕 环境兼容性检查**:
+新增全面的环境兼容性检查功能：
+- ✅ **磁盘空间**: 检查可用空间（推荐 2GB+）
+- ✅ **网络连接**: 测试关键下载源的连通性
+- ✅ **用户权限**: 检查管理员权限状态
+- ✅ **开发者模式**: 检查符号链接支持状态
+- ✅ **执行策略**: 自动修复过于严格的执行策略
+
+```powershell
+# 示例健康检查输出
+[SUCCESS] Windows version: 10.0.26100.0 - OK
+[SUCCESS] PowerShell version: 7.5.2 - OK
+[SUCCESS] Execution policy: RemoteSigned - OK
+[SUCCESS] Disk space: 27.47GB available - OK
+[SUCCESS] Internet connectivity - OK
+[SUCCESS] User permissions: Administrator - OK
+[SUCCESS] Developer Mode: Enabled - OK
+```
 
 ## 📝 使用场景
 
@@ -249,12 +309,17 @@ cd dotfiles
 git clone <repository-url> dotfiles
 cd dotfiles
 
-# 标准安装流程
-.\detect-environment.ps1    # 环境检测
-.\install_apps.ps1 -All     # 安装应用
-.\install.ps1               # 部署配置
-.\health-check.ps1          # 验证安装
+# 标准安装流程（现在包含自动环境检查）
+.\detect-environment.ps1    # 环境检测（22+ 应用程序）
+.\install_apps.ps1 -All     # 安装应用（自动环境兼容性检查）
+.\install.ps1               # 部署配置（智能路径检测）
+.\health-check.ps1          # 验证安装（全面健康检查）
 ```
+
+**🆕 自动化改进**:
+- 每个脚本现在都包含环境检查，减少安装失败的可能性
+- 智能路径检测确保配置文件部署到正确位置
+- 详细的状态报告帮助快速识别和解决问题
 
 ### 场景2：现有环境配置同步
 
@@ -341,6 +406,10 @@ Copy-Item "~\.gitconfig.backup" "~\.gitconfig"
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
+**🆕 自动检测和修复**:
+- `health-check.ps1 -Fix` 现在可以自动修复执行策略问题
+- `install_apps.ps1` 会在安装前检查执行策略并提示用户
+
 #### 2. Scoop 安装失败
 
 **问题**: Scoop 安装过程中网络错误
@@ -354,6 +423,11 @@ $env:SCOOP_PROXY = "http://proxy.example.com:8080"
 # 或手动安装 Scoop
 iwr -useb get.scoop.sh | iex
 ```
+
+**🆕 预防性检查**:
+- `install_apps.ps1` 现在会在安装前测试网络连接
+- 检测到网络问题时会提示用户检查代理设置
+- 提供详细的错误信息和解决建议
 
 #### 3. 符号链接创建失败
 
@@ -384,16 +458,31 @@ Start-Process pwsh -Verb RunAs
 .\install.ps1 -Force
 ```
 
+**🆕 智能冲突处理**:
+- `install.ps1` 现在能更好地检测现有配置
+- 自动备份功能确保数据安全
+- 智能路径检测减少配置冲突的可能性
+
 ### 诊断工具
 
 ```powershell
 # 全面系统诊断
-.\health-check.ps1 -Detailed -Json > diagnosis.json
+.\health-check.ps1 -Detailed -OutputFormat JSON
 
 # 检查特定组件
 .\detect-environment.ps1 -Detailed
 .\dev-link.ps1 -Verify
+
+# 🆕 环境兼容性专项检查
+.\health-check.ps1 -Category System
+.\install_apps.ps1 -DryRun  # 测试环境兼容性
 ```
+
+**🆕 增强的诊断能力**:
+- 更详细的环境信息收集（22+ 应用程序状态）
+- 网络连接和磁盘空间检查
+- 用户权限和开发者模式状态检查
+- 智能路径检测和验证
 
 ## 💡 最佳实践
 
