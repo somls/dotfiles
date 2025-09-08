@@ -89,10 +89,10 @@ cd dotfiles
 .\install.ps1 -SetDevMode
 
 # 2. 使用符号链接部署
-.\dev-link.ps1
+.\dev-link.ps1 -Action Create
 
-# 3. 验证符号链接
-.\dev-link.ps1 -Verify
+# 3. 验证符号链接状态
+.\dev-link.ps1 -Action Status
 
 # 4. 详细健康检查
 .\health-check.ps1 -Detailed
@@ -141,16 +141,16 @@ cd dotfiles
 .\install_apps.ps1
 
 # 安装所有工具
-.\install_apps.ps1 -All
+.\install_apps.ps1 -Category All
 
 # 预览模式（不实际安装）
-.\install_apps.ps1 -DryRun -All
+.\install_apps.ps1 -DryRun -Category All
 
 # 更新已安装的包
 .\install_apps.ps1 -Update
 
 # 安装特定分类
-.\install_apps.ps1 -Category Development,Programming
+.\install_apps.ps1 -Category Development,GitEnhanced
 ```
 
 **🆕 环境兼容性检查**:
@@ -229,25 +229,40 @@ cd dotfiles
 
 **功能**: 开发者专用的符号链接管理工具
 
+> ⚠️ **重要提示**: 创建符号链接需要管理员权限。请以管理员身份运行 PowerShell 后执行 Create 操作。
+
 ```powershell
-# 创建所有符号链接
-.\dev-link.ps1
+# 创建所有符号链接（需要管理员权限）
+.\dev-link.ps1 -Action Create
 
-# 验证符号链接状态
-.\dev-link.ps1 -Verify
+# 查看符号链接状态
+.\dev-link.ps1 -Action Status
 
-# 列出链接状态
-.\dev-link.ps1 -List
+# 删除所有符号链接
+.\dev-link.ps1 -Action Remove
 
-# 删除特定符号链接
-.\dev-link.ps1 -Remove -Type Neovim
+# 管理特定组件
+.\dev-link.ps1 -Action Create -Component PowerShell
+.\dev-link.ps1 -Action Status -Component Git
+.\dev-link.ps1 -Action Remove -Component Neovim
 
-# 预览模式
-.\dev-link.ps1 -DryRun
+# 强制操作（跳过确认提示）
+.\dev-link.ps1 -Action Create -Force
 
-# 强制重新创建
-.\dev-link.ps1 -Force
+# 静默模式（减少输出）
+.\dev-link.ps1 -Action Status -Quiet
 ```
+
+**支持的组件**:
+- **Git**: Git 配置文件
+- **GitExtras**: Git 扩展配置（忽略规则、提交模板）
+- **PowerShell**: PowerShell 配置文件
+- **PowerShellExtras**: PowerShell 扩展配置
+- **PowerShellModule**: PowerShell 模块
+- **Neovim**: Neovim 编辑器配置
+- **Starship**: 命令行提示符配置
+- **WindowsTerminal**: Windows Terminal 设置
+- **Scoop**: Scoop 包管理器配置
 
 ### 5. 系统健康检查 (`health-check.ps1`)
 
@@ -311,7 +326,7 @@ cd dotfiles
 
 # 标准安装流程（现在包含自动环境检查）
 .\detect-environment.ps1    # 环境检测（22+ 应用程序）
-.\install_apps.ps1 -All     # 安装应用（自动环境兼容性检查）
+.\install_apps.ps1 -Category All     # 安装应用（自动环境兼容性检查）
 .\install.ps1               # 部署配置（智能路径检测）
 .\health-check.ps1          # 验证安装（全面健康检查）
 ```
@@ -349,7 +364,7 @@ cd dotfiles
 ```powershell
 # 在新设备上
 git pull origin main
-.\install.ps1 -Mode Symlink
+.\dev-link.ps1 -Action Create  # 使用符号链接模式
 .\health-check.ps1 -Detailed
 ```
 
@@ -471,7 +486,7 @@ Start-Process pwsh -Verb RunAs
 
 # 检查特定组件
 .\detect-environment.ps1 -Detailed
-.\dev-link.ps1 -Verify
+.\dev-link.ps1 -Action Status
 
 # 🆕 环境兼容性专项检查
 .\health-check.ps1 -Category System
@@ -518,7 +533,7 @@ git push origin main
 ### 4. 多环境管理
 
 - **工作环境**: 使用复制模式 (`.\install.ps1`)
-- **开发环境**: 使用符号链接模式 (`.\dev-link.ps1`)
+- **开发环境**: 使用符号链接模式 (`.\dev-link.ps1 -Action Create`)
 - **测试环境**: 使用预览模式 (`.\install.ps1 -DryRun`)
 
 ## 📞 获取帮助

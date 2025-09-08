@@ -52,7 +52,7 @@ cd dotfiles
 
 # 2. 分步安装（推荐）- 现在包含自动环境检查
 .\detect-environment.ps1           # 检测环境（22+ 应用程序）
-.\install_apps.ps1 -Category Essential  # 安装应用程序（自动环境兼容性检查）
+.\install_apps.ps1 -Category All  # 安装应用程序（自动环境兼容性检查）
 .\install.ps1                      # 部署配置文件（智能路径检测）
 .\health-check.ps1                 # 验证安装（全面健康检查）
 ```

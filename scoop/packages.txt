@@ -16,10 +16,8 @@ curl
 # 开发工具 (Development)
 shellcheck
 gh
+nodejs
+python
 
 # Git增强工具 (GitEnhanced)
 lazygit
-
-# 编程语言支持 (Programming)
-python
-nodejs

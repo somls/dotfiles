@@ -30,6 +30,13 @@
 [safe]
     # 信任 dotfiles 目录
     directory = G:/Sync/dotfiles
+	directory = G:/Scoop/apps/scoop/current
+	directory = G:/Scoop/buckets/main
+	directory = G:/Scoop/buckets/extras
+	directory = G:/Scoop/buckets/versions
+	directory = G:/Scoop/buckets/apps
+	directory = G:/Scoop/buckets/dorado
+	directory = G:/Scoop/buckets/echo
 
 # 代理配置说明：
 # 如需配置代理，请在 .gitconfig.local 文件中添加：

@@ -7,7 +7,7 @@
     It can install predefined application sets or individual applications.
     
 .PARAMETER Category
-    Application category to install: Essential, Development, Programming, Media, All
+    Application category to install (loaded from scoop/packages.txt): Essential, Development, GitEnhanced, Programming, All
     
 .PARAMETER Apps
     Specific applications to install (comma-separated)
@@ -35,54 +35,78 @@
 #>
 
 param(
-    [ValidateSet('Essential', 'Development', 'Programming', 'Media', 'All')]
     [string]$Category,
     
     [string[]]$Apps,
     
+    [switch]$All,
     [switch]$Force,
     [switch]$Quiet,
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Update
 )
 
 # Script configuration
 $script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:LogFile = Join-Path $script:SourceRoot "install_apps.log"
 
-# Application definitions
-$script:AppCategories = @{
-    Essential = @{
-        Description = "Essential Tools"
-        Apps = @(
-            "git", "7zip", "curl", "wget", "which", "grep", "sed", "jq",
-            "powershell", "windows-terminal", "starship"
-        )
+# Load application definitions from packages.txt
+function Get-AppCategories {
+    $packagesFile = Join-Path $script:SourceRoot "scoop\packages.txt"
+    
+    if (-not (Test-Path $packagesFile)) {
+        Write-AppLog "Packages file not found: $packagesFile" "ERROR"
+        return @{}
     }
     
-    Development = @{
-        Description = "Development Tools"
-        Apps = @(
-            "nodejs", "python", "go", "rustup", "dotnet-sdk",
-            "vscode", "neovim", "docker", "docker-compose"
-        )
+    $categories = @{
+        Essential = @{
+            Description = "Essential Tools"
+            Apps = @()
+        }
+        Development = @{
+            Description = "Development Tools"
+            Apps = @()
+        }
+        GitEnhanced = @{
+            Description = "Git Enhanced Tools"
+            Apps = @()
+        }
     }
     
-    Programming = @{
-        Description = "Programming Language Support"
-        Apps = @(
-            "gcc", "llvm", "cmake", "make", "ninja",
-            "ruby", "php", "java", "kotlin", "scala"
-        )
+    $currentCategory = $null
+    $content = Get-Content $packagesFile -Encoding UTF8
+    
+    foreach ($line in $content) {
+        $line = $line.Trim()
+        
+        # Skip empty lines
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            continue
+        }
+        
+        # Parse category headers
+        if ($line -match '^#\s*.*\((\w+)\)') {
+            $currentCategory = $matches[1]
+            continue
+        }
+        
+        # Skip other comments
+        if ($line.StartsWith('#')) {
+            continue
+        }
+        
+        # Add app to current category
+        if ($currentCategory -and $categories.ContainsKey($currentCategory)) {
+            $categories[$currentCategory].Apps += $line
+        }
     }
     
-    Media = @{
-        Description = "Media and Graphics Tools"
-        Apps = @(
-            "ffmpeg", "imagemagick", "gimp", "inkscape",
-            "vlc", "obs-studio", "audacity"
-        )
-    }
+    return $categories
 }
+
+# Initialize application categories from file
+$script:AppCategories = Get-AppCategories
 
 # Logging function
 function Write-AppLog {
@@ -271,6 +295,33 @@ function Test-AppInstalled {
     }
 }
 
+# Update all installed packages
+function Update-InstalledPackages {
+    Write-AppLog "Updating all installed packages..." "INFO"
+    
+    if ($DryRun) {
+        Write-AppLog "Would update all installed packages" "INFO"
+        return $true
+    }
+    
+    try {
+        $updateCommand = "scoop update *"
+        Invoke-Expression $updateCommand
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-AppLog "Successfully updated all packages" "SUCCESS"
+            return $true
+        } else {
+            Write-AppLog "Package update completed with some issues" "WARN"
+            return $false
+        }
+    }
+    catch {
+        Write-AppLog "Error updating packages: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
 # Install single application
 function Install-Application {
     param(
@@ -382,6 +433,18 @@ function Install-SpecificApps {
     return $successCount -eq $totalCount
 }
 
+# Validate category parameter
+function Test-ValidCategory {
+    param([string]$CategoryName)
+    
+    if ([string]::IsNullOrWhiteSpace($CategoryName)) {
+        return $false
+    }
+    
+    $validCategories = @($script:AppCategories.Keys) + @('All')
+    return $CategoryName -in $validCategories
+}
+
 # Show available categories and applications
 function Show-AvailableApps {
     Write-AppLog "Available application categories:" "INFO"
@@ -397,9 +460,21 @@ function Show-AvailableApps {
 function Main {
     Write-AppLog "Starting install_apps.ps1" "INFO"
     
+    # Handle -All switch
+    if ($All) {
+        $Category = 'All'
+    }
+    
     # Validate parameters
     if (-not $Category -and -not $Apps) {
-        Write-AppLog "No category or specific apps specified. Use -Category or -Apps parameter." "ERROR"
+        Write-AppLog "No category or specific apps specified. Use -Category, -All, or -Apps parameter." "ERROR"
+        Show-AvailableApps
+        exit 1
+    }
+    
+    # Validate category if specified
+    if ($Category -and -not (Test-ValidCategory -CategoryName $Category)) {
+        Write-AppLog "Invalid category: $Category" "ERROR"
         Show-AvailableApps
         exit 1
     }
@@ -423,28 +498,34 @@ function Main {
     # Add essential buckets
     Add-ScoopBuckets
     
-    # Perform installation based on parameters
-    $success = $true
-    
-    if ($Apps) {
-        # Install specific applications
-        $appList = $Apps -split ',' | ForEach-Object { $_.Trim() }
-        $success = Install-SpecificApps -AppList $appList
-    }
-    elseif ($Category -eq 'All') {
-        # Install all categories
-        if (-not $Force) {
-            $response = Read-Host "This will install ALL applications. Continue? (y/N)"
-            if ($response -ne 'y' -and $response -ne 'Y') {
-                Write-AppLog "Installation cancelled by user" "INFO"
-                exit 0
-            }
-        }
-        $success = Install-AllApps
+    # Handle update mode
+    if ($Update) {
+        $success = Update-InstalledPackages
     }
     else {
-        # Install specific category
-        $success = Install-CategoryApps -CategoryName $Category
+        # Perform installation based on parameters
+        $success = $true
+        
+        if ($Apps) {
+            # Install specific applications
+            $appList = $Apps -split ',' | ForEach-Object { $_.Trim() }
+            $success = Install-SpecificApps -AppList $appList
+        }
+        elseif ($Category -eq 'All') {
+            # Install all categories
+            if (-not $Force) {
+                $response = Read-Host "This will install ALL applications. Continue? (y/N)"
+                if ($response -ne 'y' -and $response -ne 'Y') {
+                    Write-AppLog "Installation cancelled by user" "INFO"
+                    exit 0
+                }
+            }
+            $success = Install-AllApps
+        }
+        else {
+            # Install specific category
+            $success = Install-CategoryApps -CategoryName $Category
+        }
     }
     
     # Final status

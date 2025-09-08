@@ -39,7 +39,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 
 -- disable unused providers to silence health warnings
 vim.g.loaded_perl_provider = 0
-vim.g.loaded_ruby_provider = 0
+vim.g.loaded_ruby_provider = 0  -- Ruby not in essential tools
 vim.g.loaded_node_provider = 0
 vim.g.loaded_python3_provider = 0
 

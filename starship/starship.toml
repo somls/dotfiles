@@ -4,7 +4,7 @@
 add_newline = true
 
 # 简洁的提示符格式 - 单行显示，提高效率
-format = """$os$username$hostname$directory$git_branch$git_status$nodejs$python$dotnet$java$package$cmd_duration$line_break$character"""
+format = """$os$username$hostname$directory$git_branch$git_status$nodejs$python$package$cmd_duration$line_break$character"""
 
 # 右侧显示时间
 right_format = """$time"""
@@ -54,15 +54,9 @@ symbol = " "
 style = "bold yellow"
 format = "[$symbol($version)]($style) "
 
-[dotnet]
-symbol = " "
-style = "bold blue"
-format = "[$symbol($version)]($style) "
-
+# Java support disabled (not in essential tools)
 [java]
-symbol = " "
-style = "bold red"
-format = "[$symbol($version)]($style) "
+disabled = true
 
 # 包管理器
 [package]
@@ -110,10 +104,14 @@ style = "bold green"
 [rust]
 disabled = true
 
+# Disabled language modules (not in essential tools)
 [golang]
 disabled = true
 
 [php]
+disabled = true
+
+[dotnet]
 disabled = true
 
 [kubernetes]
