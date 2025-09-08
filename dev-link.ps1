@@ -118,19 +118,58 @@ function Get-ComponentPaths {
     # Application configuration paths
     $paths['Neovim'] = "$env:LOCALAPPDATA\nvim"
     $paths['Starship'] = "$env:USERPROFILE\.config"
-    $paths['WindowsTerminal'] = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+    # Windows Terminal 路径 - 动态检测包名
+    $wtPath = $null
+    $possibleWTPaths = @(
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState",
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState"
+    )
     
-    # Package manager paths - 检测实际的Scoop安装位置
+    # 动态搜索 Windows Terminal 包
+    $wtPackages = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue | 
+                  Where-Object { $_.Name -like "Microsoft.WindowsTerminal*" }
+    
+    foreach ($package in $wtPackages) {
+        $localStatePath = Join-Path $package.FullName "LocalState"
+        if (Test-Path $localStatePath) {
+            $wtPath = $localStatePath
+            break
+        }
+    }
+    
+    # 如果动态检测失败，使用默认路径
+    if (-not $wtPath) {
+        foreach ($path in $possibleWTPaths) {
+            if (Test-Path (Split-Path $path -Parent)) {
+                $wtPath = $path
+                break
+            }
+        }
+    }
+    
+    $paths['WindowsTerminal'] = if ($wtPath) { $wtPath } else { $possibleWTPaths[0] }
+    
+    # Package manager paths - 动态检测Scoop安装位置
     $scoopPath = $env:SCOOP
     if (-not $scoopPath) {
-        # 检查常见的Scoop安装位置
+        # 检查常见的Scoop安装位置（使用环境变量，避免硬编码驱动器）
         $possibleScoopPaths = @(
             "$env:USERPROFILE\scoop",
-            "G:\Scoop",
-            "C:\Scoop"
+            "$env:SCOOP_GLOBAL",
+            "$env:SystemDrive\Scoop",
+            "$env:ProgramData\scoop"
         )
+        
+        # 如果环境变量不存在，检查常见位置
+        if (-not $env:SCOOP_GLOBAL) {
+            $possibleScoopPaths += @(
+                "$env:SystemDrive\ProgramData\scoop",
+                "$env:SystemDrive\scoop"
+            )
+        }
+        
         foreach ($path in $possibleScoopPaths) {
-            if (Test-Path $path) {
+            if ($path -and (Test-Path $path)) {
                 $scoopPath = $path
                 break
             }
@@ -141,6 +180,26 @@ function Get-ComponentPaths {
     # CMD scripts 已移除
     
     return $paths
+}
+
+# Validate and create target directories if needed
+function Initialize-TargetDirectories {
+    param([hashtable]$Paths)
+    
+    foreach ($component in $Paths.Keys) {
+        $targetPath = $Paths[$component]
+        $parentDir = Split-Path $targetPath -Parent
+        
+        if ($parentDir -and -not (Test-Path $parentDir)) {
+            try {
+                New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                Write-DevLog "Created parent directory for $component`: $parentDir" "INFO"
+            }
+            catch {
+                Write-DevLog "Failed to create parent directory for $component`: $parentDir - $($_.Exception.Message)" "WARN"
+            }
+        }
+    }
 }
 
 # Define source to target mappings
@@ -398,9 +457,84 @@ function Invoke-ComponentAction {
     return $success
 }
 
+# Environment detection and reporting
+function Show-EnvironmentInfo {
+    Write-DevLog "=== Environment Detection Report ===" "INFO"
+    
+    # System info
+    Write-DevLog "OS: $($env:OS) $($env:PROCESSOR_ARCHITECTURE)" "INFO"
+    Write-DevLog "User: $($env:USERNAME)" "INFO"
+    Write-DevLog "Home: $($env:USERPROFILE)" "INFO"
+    
+    # PowerShell info
+    Write-DevLog "PowerShell: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))" "INFO"
+    
+    # Path detection results
+    $paths = Get-ComponentPaths
+    Write-DevLog "=== Detected Paths ===" "INFO"
+    foreach ($component in $paths.Keys | Sort-Object) {
+        $path = $paths[$component]
+        $exists = Test-Path $path
+        $status = if ($exists) { "EXISTS" } else { "MISSING" }
+        Write-DevLog "$component`: $path [$status]" "INFO"
+    }
+    
+    # Application detection
+    Write-DevLog "=== Application Detection ===" "INFO"
+    
+    # PowerShell versions
+    $pwsh7 = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($pwsh7) {
+        Write-DevLog "PowerShell 7: $($pwsh7.Source)" "SUCCESS"
+    } else {
+        Write-DevLog "PowerShell 7: Not found" "WARN"
+    }
+    
+    $pwsh5 = Get-Command powershell -ErrorAction SilentlyContinue
+    if ($pwsh5) {
+        Write-DevLog "Windows PowerShell 5: $($pwsh5.Source)" "SUCCESS"
+    } else {
+        Write-DevLog "Windows PowerShell 5: Not found" "WARN"
+    }
+    
+    # Scoop detection
+    $scoop = Get-Command scoop -ErrorAction SilentlyContinue
+    if ($scoop) {
+        Write-DevLog "Scoop: $($scoop.Source)" "SUCCESS"
+        if ($env:SCOOP) {
+            Write-DevLog "SCOOP env: $($env:SCOOP)" "INFO"
+        }
+    } else {
+        Write-DevLog "Scoop: Not found" "WARN"
+    }
+    
+    # Git detection
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($git) {
+        Write-DevLog "Git: $($git.Source)" "SUCCESS"
+    } else {
+        Write-DevLog "Git: Not found" "WARN"
+    }
+    
+    # Starship detection
+    $starship = Get-Command starship -ErrorAction SilentlyContinue
+    if ($starship) {
+        Write-DevLog "Starship: $($starship.Source)" "SUCCESS"
+    } else {
+        Write-DevLog "Starship: Not found" "WARN"
+    }
+    
+    Write-DevLog "=== End Environment Report ===" "INFO"
+}
+
 # Main execution
 function Main {
     Write-DevLog "Starting dev-link.ps1 - Action: $Action" "INFO"
+    
+    # Show environment info for debugging
+    if ($Action -eq 'Status' -and -not $Component) {
+        Show-EnvironmentInfo
+    }
     
     # Check administrator privileges for symbolic link creation
     if ($Action -eq 'Create' -and -not (Test-Administrator)) {
@@ -408,6 +542,10 @@ function Main {
         Write-DevLog "Please run PowerShell as Administrator and try again" "ERROR"
         exit 1
     }
+    
+    # Initialize target directories
+    $allPaths = Get-ComponentPaths
+    Initialize-TargetDirectories -Paths $allPaths
     
     $components = if ($Component) {
         @($Component)
