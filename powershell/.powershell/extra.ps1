@@ -1,4 +1,4 @@
-﻿# ~/.powershell/extra.ps1
+# ~/.powershell/extra.ps1
 # 智能代理管理 - 默认系统代理，支持快速切换本地代理
 
 # 代理配置 - 本地代理端口映射
@@ -210,6 +210,4 @@ function Initialize-ProxySettings {
 }
 
 # 启动时自动初始化代理设置
-if (-not $env:POWERSHELL_FAST_MODE) {
-    Initialize-ProxySettings
-}
+Initialize-ProxySettings

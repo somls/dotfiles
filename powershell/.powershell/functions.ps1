@@ -64,7 +64,7 @@ function config-info {
     Write-Host "Dotfiles Configuration Information" -ForegroundColor Cyan
     Write-Host "=============================" -ForegroundColor Cyan
     Write-Host "Configuration Directory: $(Split-Path $PROFILE -Parent)" -ForegroundColor White
-    Write-Host "Fast Mode: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+    Write-Host "Profile Mode: Standard" -ForegroundColor White
     Write-Host ""
     Write-Host "Core Commands:" -ForegroundColor Yellow
     Write-Host "  Git: ngc, gst, glog" -ForegroundColor Gray
@@ -121,7 +121,7 @@ function profile-perf {
     Write-Host ""
     Write-Host "Performance Metrics:" -ForegroundColor Yellow
     Write-Host "  Total Config Size: $([math]::Round($totalSize / 1KB, 2))KB" -ForegroundColor White
-    Write-Host "  Fast Mode: $(if ($env:POWERSHELL_FAST_MODE -eq '1') { 'Enabled' } else { 'Disabled' })" -ForegroundColor White
+    Write-Host "  Profile Mode: Standard" -ForegroundColor White
     
     # Module loading status
     $loadedModules = Get-Module | Where-Object { $_.ModuleType -eq 'Script' -or $_.Name -like '*profile*' }
@@ -130,9 +130,6 @@ function profile-perf {
     # Startup suggestions
     Write-Host ""
     Write-Host "Performance Optimization Suggestions:" -ForegroundColor Green
-    if ($env:POWERSHELL_FAST_MODE -ne '1') {
-        Write-Host "  • Enable fast mode: `$env:POWERSHELL_FAST_MODE = '1'" -ForegroundColor Gray
-    }
     if ($totalSize -gt 50KB) {
         Write-Host "  • Configuration files are large, consider trimming unnecessary features" -ForegroundColor Gray
     }

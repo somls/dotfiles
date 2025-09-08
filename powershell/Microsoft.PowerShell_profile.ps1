@@ -3,8 +3,7 @@
 # Optimized startup performance while preserving all modules
 # =============================================================================
 
-# Fast mode check (optional)
-$FastMode = $env:POWERSHELL_FAST_MODE -eq "1"
+
 # Runtime environment
 $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6)
 
@@ -36,16 +35,14 @@ foreach ($config in $coreConfigs) {
     }
 }
 
-# Delay load optional configurations (unless fast mode)
-if (-not $FastMode) {
-    foreach ($config in $optionalConfigs) {
-        $configPath = Join-Path $ProfileDir "$config.ps1"
-        if (Test-Path $configPath) {
-            try { 
-                . $configPath 
-            } catch { 
-                Write-Warning "Failed to load $config.ps1"
-            }
+# Load optional configurations
+foreach ($config in $optionalConfigs) {
+    $configPath = Join-Path $ProfileDir "$config.ps1"
+    if (Test-Path $configPath) {
+        try { 
+            . $configPath 
+        } catch { 
+            Write-Warning "Failed to load $config.ps1"
         }
     }
 }
@@ -69,56 +66,3 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
     }
 }
 
-# Performance optimization functions
-function Test-ProfilePerformance {
-    <#
-    .SYNOPSIS
-    Test PowerShell configuration file loading performance
-    #>
-    $startTime = Get-Date
-    
-    # Simulate complete configuration loading process
-    $configs = @("functions", "aliases", "history", "keybindings", "tools", "theme", "extra")
-    foreach ($config in $configs) {
-        $configPath = Join-Path $ProfileDir "$config.ps1"
-        if (Test-Path $configPath) {
-            . $configPath
-        }
-    }
-    
-    $endTime = Get-Date
-    $duration = ($endTime - $startTime).TotalMilliseconds
-    
-    Write-Host "`n⏱️  Profile Performance Test" -ForegroundColor Cyan
-    Write-Host "Load Time: $duration ms" -ForegroundColor Green
-    Write-Host "Fast Mode: $FastMode" -ForegroundColor Yellow
-    Write-Host "PowerShell Edition: $(if ($IsWinPS) { 'Windows PowerShell' } else { 'PowerShell 7+' })" -ForegroundColor Gray
-}
-
-# Fast mode toggle functions
-function Enable-FastMode {
-    <#
-    .SYNOPSIS
-    Enable fast mode for better performance
-    #>
-    $env:POWERSHELL_FAST_MODE = "1"
-    Write-Host "✅ Fast mode enabled. Restart PowerShell for full effect." -ForegroundColor Green
-}
-
-function Disable-FastMode {
-    <#
-    .SYNOPSIS
-    Disable fast mode for full functionality
-    #>
-    $env:POWERSHELL_FAST_MODE = "0"
-    Write-Host "❌ Fast mode disabled. Full features enabled." -ForegroundColor Yellow
-}
-
-# Startup tips
-if (-not $FastMode) {
-    if ($IsWinPS) {
-        Write-Host "Tip: Use 'Enable-FastMode' for better performance or 'config-info' for features" -ForegroundColor DarkGray
-    } else {
-        Write-Host "💡 Use 'Enable-FastMode' for better performance or 'config-info' to view features" -ForegroundColor DarkGray
-    }
-}

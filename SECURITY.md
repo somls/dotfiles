@@ -69,7 +69,7 @@ cp scoop/config.json.example scoop/config.json
 - `powershell/Microsoft.PowerShell_profile.ps1`
 - `starship/starship.toml`
 - `WindowsTerminal/settings.json`
-- `Alacritty/alacritty.toml`
+
 
 ### 🟡 **需要检查的文件** (可能包含个人偏好)
 - `git/.gitconfig` (已移除用户信息)
@@ -83,10 +83,7 @@ cp scoop/config.json.example scoop/config.json
 运行以下命令快速设置个人配置：
 
 ```powershell
-# 创建必要的个人配置文件
-.\setup-personal-configs.ps1
-
-# 或手动复制模板文件
+# 手动复制模板文件
 Copy-Item git\.gitconfig.local.example ~\.gitconfig.local
 Copy-Item scoop\config.json.example scoop\config.json
 ```
