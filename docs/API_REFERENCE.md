@@ -1,77 +1,93 @@
-# API 参考文档
+# 📚 API 参考文档
 
-本文档提供了 Dotfiles 项目中所有脚本的详细参数说明和使用示例。
+本文档提供了Windows Dotfiles管理系统所有脚本的详细API接口说明，包括参数、返回值、使用示例和错误处理。
 
 ## 📋 目录
 
 - [核心脚本 API](#核心脚本-api)
+  - [detect-environment.ps1](#detect-environmentps1)
+  - [install_apps.ps1](#install_appsps1)
+  - [install.ps1](#installps1)
+  - [health-check.ps1](#health-checkps1)
 - [辅助脚本 API](#辅助脚本-api)
-- [公共函数库](#公共函数库)
-- [配置文件格式](#配置文件格式)
-- [返回值规范](#返回值规范)
+  - [auto-sync.ps1](#auto-syncps1)
+- [PowerShell 模块 API](#powershell-模块-api)
+  - [DotfilesUtilities](#dotfilesutilities)
+- [配置文件架构](#配置文件架构)
+- [错误代码和异常处理](#错误代码和异常处理)
 
-## 🔧 核心脚本 API
+---
 
-### 1. detect-environment.ps1
+## 🎯 核心脚本 API
 
-**功能**: 检测系统环境和已安装应用程序
+### `detect-environment.ps1`
+
+智能环境检测脚本，分析系统状态和已安装应用程序。
 
 #### 语法
+
 ```powershell
-.\detect-environment.ps1 [-Detailed] [-Json] [-LogFile <String>] [-WhatIf] [-Confirm]
+.\detect-environment.ps1 
+    [-Json]
+    [-Detailed] 
+    [-LogFile <String>]
+    [-Quiet]
+    [<CommonParameters>]
 ```
 
 #### 参数
 
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `-Detailed` | Switch | 否 | False | 显示详细的检测信息 |
-| `-Json` | Switch | 否 | False | 以 JSON 格式输出结果 |
-| `-LogFile` | String | 否 | null | 指定日志文件路径 |
-| `-WhatIf` | Switch | 否 | False | 显示将要执行的操作但不实际执行 |
-| `-Confirm` | Switch | 否 | False | 在执行操作前请求确认 |
+| `-Json` | Switch | 否 | False | 以JSON格式输出结果 |
+| `-Detailed` | Switch | 否 | False | 显示详细信息，包括应用程序版本和路径 |
+| `-LogFile` | String | 否 | "detect-environment.log" | 日志文件路径 |
+| `-Quiet` | Switch | 否 | False | 静默模式，仅输出到日志文件 |
 
 #### 返回值
-- **成功**: 退出代码 0，输出环境检测报告
-- **失败**: 退出代码 1，输出错误信息
 
-#### 输出格式
-
-**标准输出**:
+**控制台输出格式**:
 ```
-=== 系统环境检测报告 ===
-Windows 版本: Windows 11 Pro (10.0.22621)
-PowerShell 版本: 7.3.6
-已安装应用程序:
-  ✓ Git: 2.41.0 (C:\Program Files\Git\bin\git.exe)
-  ✓ Visual Studio Code: 1.81.0 (Scoop)
-  ✗ Neovim: 未安装
+Environment Detection Report
+==================================================
+Detection Time: 2024-01-15 14:30:25
+PowerShell Version: 7.4.1
+
+System Information:
+  OS: Microsoft Windows 11 Pro
+  Version: 10.0.22631 (Build 22631)
+  Architecture: AMD64
+
+Application Statistics:
+  Total: 22
+  Installed: 15
+  Not Installed: 7
 ```
 
-**JSON 输出**:
+**JSON输出格式**:
 ```json
 {
-  "timestamp": "2025-01-08T12:00:00Z",
-  "system": {
-    "os": "Windows 11 Pro",
-    "version": "10.0.22621",
-    "architecture": "x64"
+  "DetectionTime": "2024-01-15T14:30:25.1234567+08:00",
+  "PowerShellVersion": "7.4.1",
+  "System": {
+    "Name": "Microsoft Windows 11 Pro",
+    "Version": "10.0.22631",
+    "Build": 22631,
+    "Architecture": "AMD64",
+    "IsWindows11": true
   },
-  "powershell": {
-    "version": "7.3.6",
-    "edition": "Core"
-  },
-  "applications": [
-    {
-      "name": "git",
-      "installed": true,
-      "version": "2.41.0",
-      "path": "C:\\Program Files\\Git\\bin\\git.exe",
-      "installMethod": "System"
+  "Applications": {
+    "Git": {
+      "Name": "Git",
+      "Installed": true,
+      "Version": "2.43.0",
+      "Path": "C:\\Program Files\\Git\\cmd\\git.exe",
+      "InstallType": "System Install"
     }
-  ],
-  "recommendations": [
-    "安装 Neovim 以获得更好的编辑体验"
+  },
+  "Recommendations": [
+    "Environment detection completed successfully",
+    "Found 15 installed applications out of 22 checked"
   ]
 }
 ```
@@ -79,251 +95,321 @@ PowerShell 版本: 7.3.6
 #### 使用示例
 
 ```powershell
-# 基本检测
+# 基础环境检测
 .\detect-environment.ps1
 
-# 详细检测并保存日志
-.\detect-environment.ps1 -Detailed -LogFile "detection.log"
+# 详细模式检测
+.\detect-environment.ps1 -Detailed
 
-# JSON 格式输出到文件
-.\detect-environment.ps1 -Json > environment.json
+# JSON格式输出并保存到文件
+.\detect-environment.ps1 -Json | Out-File "environment-report.json"
 
-# 预览模式
-.\detect-environment.ps1 -WhatIf
+# 静默模式检测
+.\detect-environment.ps1 -Quiet -LogFile "silent-detection.log"
+
+# 管道处理JSON数据
+$env = .\detect-environment.ps1 -Json | ConvertFrom-Json
+$installedApps = $env.Applications | Where-Object { $_.Installed -eq $true }
 ```
 
-### 2. install_apps.ps1
+#### 错误处理
 
-**功能**: 基于 Scoop 的应用程序批量安装
+| 退出代码 | 含义 | 处理建议 |
+|----------|------|----------|
+| 0 | 成功完成 | 无需处理 |
+| 1 | 权限不足 | 以管理员身份运行 |
+| 2 | 系统不兼容 | 检查Windows版本和PowerShell版本 |
+| 3 | 网络连接问题 | 检查网络连接或代理设置 |
+
+---
+
+### `install_apps.ps1`
+
+基于Scoop的应用程序批量安装管理脚本。
 
 #### 语法
+
 ```powershell
-.\install_apps.ps1 [-Category <String[]>] [-All] [-DryRun] [-Update] [-Force] [-LogFile <String>]
+.\install_apps.ps1
+    [-Category <String[]>]
+    [-All]
+    [-DryRun]
+    [-Update]
+    [-Retry]
+    [-SkipInstalled]
+    [-Quiet]
+    [-CustomList <String>]
+    [-Exclude <String[]>]
+    [-Force]
+    [-LogFile <String>]
+    [<CommonParameters>]
 ```
 
 #### 参数
 
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `-Category` | String[] | 否 | @("Essential") | 要安装的包分类 |
-| `-All` | Switch | 否 | False | 安装所有分类的包 |
-| `-DryRun` | Switch | 否 | False | 预览模式，不实际安装 |
-| `-Update` | Switch | 否 | False | 更新已安装的包 |
-| `-Force` | Switch | 否 | False | 强制重新安装 |
-| `-LogFile` | String | 否 | null | 指定日志文件路径 |
+| `-Category` | String[] | 否 | @("Essential") | 要安装的应用程序分类 |
+| `-All` | Switch | 否 | False | 安装所有分类的应用程序 |
+| `-DryRun` | Switch | 否 | False | 预览模式，显示将要安装的应用但不实际执行 |
+| `-Update` | Switch | 否 | False | 更新已安装的应用程序 |
+| `-Retry` | Switch | 否 | False | 重试之前失败的安装 |
+| `-SkipInstalled` | Switch | 否 | False | 跳过已安装的应用程序 |
+| `-Quiet` | Switch | 否 | False | 静默安装模式 |
+| `-CustomList` | String | 否 | $null | 自定义应用程序列表文件路径 |
+| `-Exclude` | String[] | 否 | @() | 要排除的应用程序或分类 |
+| `-Force` | Switch | 否 | False | 强制安装，覆盖现有安装 |
+| `-LogFile` | String | 否 | "install-apps.log" | 日志文件路径 |
 
-#### 包分类
+#### 应用程序分类
 
-| 分类 | 包数量 | 描述 | 包含应用 |
-|------|--------|------|----------|
-| `Essential` | 13 | 核心开发工具 | git, ripgrep, zoxide, fzf, bat, fd, jq, neovim, starship, vscode, sudo, curl, 7zip |
-| `Development` | 2 | 开发辅助工具 | shellcheck, gh |
-| `GitEnhanced` | 1 | Git 增强工具 | lazygit |
-| `Programming` | 2 | 编程语言运行时 | python, nodejs |
-
-#### 返回值
-- **成功**: 退出代码 0
-- **部分失败**: 退出代码 1
-- **完全失败**: 退出代码 2
+| 分类 | 应用数量 | 包含应用程序 |
+|------|----------|--------------|
+| **Essential** | 13 | git, ripgrep, zoxide, fzf, bat, fd, jq, neovim, starship, vscode, sudo, curl, 7zip |
+| **Development** | 2 | shellcheck, gh |
+| **GitEnhanced** | 1 | lazygit |
+| **Programming** | 2 | python, nodejs |
 
 #### 使用示例
 
 ```powershell
-# 安装核心工具
+# 安装基础工具（默认）
 .\install_apps.ps1
 
-# 安装所有工具
+# 安装所有分类
 .\install_apps.ps1 -All
 
 # 安装特定分类
 .\install_apps.ps1 -Category Development,Programming
 
-# 预览安装
+# 预览安装计划
 .\install_apps.ps1 -All -DryRun
 
-# 更新已安装包
+# 更新已安装的应用
 .\install_apps.ps1 -Update
 
-# 强制重新安装核心工具
-.\install_apps.ps1 -Force -LogFile "install.log"
+# 静默安装并跳过已安装
+.\install_apps.ps1 -All -Quiet -SkipInstalled
+
+# 使用自定义应用列表
+.\install_apps.ps1 -CustomList "my-apps.txt"
+
+# 排除特定应用
+.\install_apps.ps1 -All -Exclude git,vscode
+
+# 强制重新安装
+.\install_apps.ps1 -Category Essential -Force
+
+# 检查环境兼容性并安装
+if (.\detect-environment.ps1 -Json | ConvertFrom-Json | Select-Object -ExpandProperty System | Where-Object IsWindows11) {
+    .\install_apps.ps1 -All
+}
 ```
 
-### 3. install.ps1
+#### 返回对象
 
-**功能**: 配置文件智能部署和管理
+安装完成后返回安装报告对象：
+
+```powershell
+@{
+    StartTime = [DateTime]
+    EndTime = [DateTime]
+    Duration = [TimeSpan]
+    TotalApps = [int]
+    SuccessfulInstalls = [int]
+    FailedInstalls = [int]
+    SkippedApps = [int]
+    InstalledApps = [String[]]
+    FailedApps = [String[]]
+    SkippedApps = [String[]]
+    Errors = [String[]]
+}
+```
+
+---
+
+### `install.ps1`
+
+配置文件智能部署脚本，支持复制模式和符号链接模式。
 
 #### 语法
+
 ```powershell
-.\install.ps1 [-Mode <String>] [-Type <String[]>] [-DryRun] [-Force] [-Restore] [-SetDevMode] [-LogFile <String>]
+.\install.ps1
+    [-DryRun]
+    [-Type <String[]>]
+    [-Mode <String>]
+    [-Force]
+    [-Rollback]
+    [-Validate]
+    [-Interactive]
+    [-BackupDir <String>]
+    [-SetDevMode]
+    [-UnsetDevMode]
+    [<CommonParameters>]
 ```
 
 #### 参数
 
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `-Mode` | String | 否 | "Copy" | 部署模式：Copy 或 Symlink |
-| `-Type` | String[] | 否 | @() | 指定要部署的配置类型 |
-| `-DryRun` | Switch | 否 | False | 预览模式，不实际部署 |
+| `-DryRun` | Switch | 否 | False | 预览模式，显示将要执行的操作 |
+| `-Type` | String[] | 否 | 自动选择 | 指定要安装的配置类型 |
+| `-Mode` | String | 否 | "Copy" | 安装模式：Copy或Symlink |
 | `-Force` | Switch | 否 | False | 强制覆盖现有配置 |
-| `-Restore` | Switch | 否 | False | 从备份恢复配置 |
-| `-SetDevMode` | Switch | 否 | False | 启用开发模式 |
-| `-LogFile` | String | 否 | null | 指定日志文件路径 |
+| `-Rollback` | Switch | 否 | False | 回滚到备份状态 |
+| `-Validate` | Switch | 否 | False | 验证现有安装的正确性 |
+| `-Interactive` | Switch | 否 | False | 交互模式，逐步确认操作 |
+| `-BackupDir` | String | 否 | "~\.dotfiles-backup" | 自定义备份目录 |
 
-#### 配置类型
 
-| 类型 | 描述 | 包含文件 |
+#### 支持的配置类型
+
+| 类型 | 说明 | 配置文件 |
 |------|------|----------|
-| `Git` | Git 配置 | gitconfig, gitignore_global, gitmessage |
-| `PowerShell` | PowerShell 配置 | Microsoft.PowerShell_profile.ps1 |
-| `Neovim` | Neovim 配置 | init.lua, 插件配置 |
-| `Starship` | 命令行提示符 | starship.toml |
-| `WindowsTerminal` | Windows Terminal | settings.json |
-
-
-#### 返回值
-- **成功**: 退出代码 0
-- **部分失败**: 退出代码 1
-- **完全失败**: 退出代码 2
+| **PowerShell** | PowerShell配置文件和模块 | Microsoft.PowerShell_profile.ps1, *.ps1 |
+| **Git** | Git全局配置和模板 | .gitconfig, .gitignore_global, .gitmessage |
+| **Starship** | 命令行提示符配置 | starship.toml |
+| **Scoop** | 包管理器配置 | config.json |
+| **Neovim** | 编辑器配置 | init.lua, lua/* |
+| **CMD** | 命令行工具脚本 | *.cmd, *.bat |
+| **WindowsTerminal** | 终端配置 | settings.json |
 
 #### 使用示例
 
 ```powershell
-# 默认部署（复制模式）
+# 默认安装（复制模式，自动选择配置）
 .\install.ps1
 
-# 符号链接模式
+# 指定配置类型安装
+.\install.ps1 -Type PowerShell,Git,Starship
+
+# 符号链接模式安装
 .\install.ps1 -Mode Symlink
 
-# 部署特定配置
-.\install.ps1 -Type Git,PowerShell,Neovim
+# 强制覆盖现有配置
+.\install.ps1 -Type Git -Force
 
-# 预览部署
-.\install.ps1 -DryRun -Type All
+# 预览安装计划
+.\install.ps1 -DryRun -Type PowerShell,Git
 
-# 强制覆盖
+# 交互模式安装
+.\install.ps1 -Interactive
+
+# 自定义备份目录
+.\install.ps1 -BackupDir "D:\Backup\dotfiles"
+
+# 强制覆盖现有配置
 .\install.ps1 -Force
 
-# 恢复备份
-.\install.ps1 -Restore -Type PowerShell
+# 回滚到备份状态
+.\install.ps1 -Rollback
 
-# 启用开发模式
-.\install.ps1 -SetDevMode
+# 验证安装结果
+.\install.ps1 -Validate
+
+# 企业环境安装
+.\install.ps1 -Type PowerShell,Git -Mode Copy -Force -BackupDir "\\server\backup\$env:USERNAME"
 ```
 
-### 4. dev-link.ps1
+#### 配置映射表
 
-**功能**: 开发者专用符号链接管理
+脚本内部维护的配置文件映射关系：
+
+```powershell
+$ConfigMappings = @{
+    "Git" = @{
+        "git\gitconfig" = "$env:USERPROFILE\.gitconfig"
+        "git\gitignore_global" = "$env:USERPROFILE\.gitignore_global"
+        "git\gitmessage" = "$env:USERPROFILE\.gitmessage"
+        "git\gitconfig.d" = "$env:USERPROFILE\.gitconfig.d"
+    }
+    "PowerShell" = @{
+        "powershell\Microsoft.PowerShell_profile.ps1" = "$env:USERPROFILE\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+        "powershell\.powershell" = "$env:USERPROFILE\.powershell"
+    }
+    # ... 其他配置类型
+}
+```
+
+#### 安装报告
+
+```powershell
+@{
+    InstallTime = [DateTime]
+    Mode = [String]           # "Copy" 或 "Symlink"
+    ConfigTypes = [String[]]  # 安装的配置类型
+    FilesProcessed = [int]    # 处理的文件总数
+    FilesSuccess = [int]      # 成功处理的文件数
+    FilesFailed = [int]       # 失败的文件数
+    BackupLocation = [String] # 备份目录路径
+    Errors = [String[]]       # 错误信息列表
+}
+```
+
+---
+
+
+#### 状态报告输出
+
+```
+符号链接状态报告
+==================================================
+总链接数: 12
+有效链接: 10
+损坏链接: 2
+缺失链接: 0
+
+PowerShell配置:
+  ✅ Microsoft.PowerShell_profile.ps1 -> D:\sync\dotfiles\powershell\Microsoft.PowerShell_profile.ps1
+  ✅ functions.ps1 -> D:\sync\dotfiles\powershell\.powershell\functions.ps1
+  ❌ aliases.ps1 -> D:\sync\dotfiles\powershell\.powershell\aliases.ps1 [损坏]
+
+Git配置:
+  ✅ .gitconfig -> D:\sync\dotfiles\git\gitconfig
+  ✅ .gitmessage -> D:\sync\dotfiles\git\gitmessage
+```
+
+---
+
+### `health-check.ps1`
+
+全面的系统健康状态检查和自动修复脚本。
 
 #### 语法
+
 ```powershell
-.\dev-link.ps1 [-Action <String>] [-Type <String[]>] [-Verify] [-List] [-Remove] [-DryRun] [-Force] [-LogFile <String>]
+.\health-check.ps1
+    [-Fix]
+    [-Detailed]
+    [-OutputFormat <String>]
+    [-Category <String>]
+    [-LogFile <String>]
+    [-ConfigOnly]
+    [-Json]
+    [<CommonParameters>]
 ```
 
 #### 参数
 
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `-Action` | String | 否 | "Create" | 操作类型：Create, Verify, List, Remove |
-| `-Type` | String[] | 否 | @() | 指定配置类型 |
-| `-Verify` | Switch | 否 | False | 验证符号链接状态 |
-| `-List` | Switch | 否 | False | 列出所有符号链接 |
-| `-Remove` | Switch | 否 | False | 删除符号链接 |
-| `-DryRun` | Switch | 否 | False | 预览模式 |
-| `-Force` | Switch | 否 | False | 强制操作 |
-| `-LogFile` | String | 否 | null | 指定日志文件路径 |
-
-#### 返回值
-- **成功**: 退出代码 0
-- **部分失败**: 退出代码 1
-- **完全失败**: 退出代码 2
-
-#### 使用示例
-
-```powershell
-# 创建所有符号链接
-.\dev-link.ps1
-
-# 验证符号链接状态
-.\dev-link.ps1 -Verify
-
-# 列出符号链接状态
-.\dev-link.ps1 -List
-
-# 删除特定符号链接
-.\dev-link.ps1 -Remove -Type Neovim
-
-# 预览创建操作
-.\dev-link.ps1 -DryRun
-
-# 强制重新创建
-.\dev-link.ps1 -Force
-```
-
-### 5. health-check.ps1
-
-**功能**: 系统健康状态检查和修复
-
-#### 语法
-```powershell
-.\health-check.ps1 [-Detailed] [-Fix] [-ConfigOnly] [-Json] [-LogFile <String>]
-```
-
-#### 参数
-
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
-|------|------|------|--------|------|
-| `-Detailed` | Switch | 否 | False | 显示详细检查报告 |
-| `-Fix` | Switch | 否 | False | 自动修复发现的问题 |
-| `-ConfigOnly` | Switch | 否 | False | 仅检查配置文件 |
-| `-Json` | Switch | 否 | False | JSON 格式输出 |
-| `-LogFile` | String | 否 | null | 指定日志文件路径 |
+| `-Fix` | Switch | 否 | False | 自动修复检测到的问题 |
+| `-Detailed` | Switch | 否 | False | 显示详细的检查信息 |
+| `-OutputFormat` | String | 否 | "Console" | 输出格式：Console, JSON, Both |
+| `-Category` | String | 否 | "All" | 检查类别：System, Applications, ConfigFiles, SymLinks, All |
+| `-LogFile` | String | 否 | "health-check.log" | 日志文件路径 |
+| `-ConfigOnly` | Switch | 否 | False | 仅检查配置文件（快速检查） |
+| `-Json` | Switch | 否 | False | JSON格式输出（等同于-OutputFormat JSON） |
 
 #### 检查类别
 
-| 类别 | 描述 | 检查项目 |
-|------|------|----------|
-| `ConfigFiles` | 配置文件完整性 | 文件存在性、语法正确性、权限检查 |
-| `SymbolicLinks` | 符号链接状态 | 链接有效性、目标正确性、孤立链接 |
-| `Applications` | 应用程序状态 | Scoop 健康、包安装状态、关键应用 |
-| `SystemCompatibility` | 系统兼容性 | PowerShell 版本、Windows 版本、执行策略 |
-| `BackupFiles` | 备份文件管理 | 备份文件数量、旧文件清理 |
-| `Templates` | 模板文件验证 | 模板语法、变量占位符 |
-
-#### 返回值
-- **健康**: 退出代码 0
-- **发现问题**: 退出代码 1
-- **检查失败**: 退出代码 2
-
-#### 输出格式
-
-**标准输出**:
-```
-============================================================
-Dotfiles 系统健康检查报告
-============================================================
-检查时间: 2025-01-08 12:00:00
-检查耗时: 2.3 秒
-总体状态: Good
-健康评分: 85 / 100 (85.0%)
-
-分类状态:
-  ✓ ConfigFiles: Healthy (10/10, 100%)
-  ⚠ SymbolicLinks: Warning (8/10, 80%)
-  ✓ Applications: Healthy (15/15, 100%)
-  ✓ SystemCompatibility: Healthy (5/5, 100%)
-  ✓ BackupFiles: Healthy (1/1, 100%)
-  ✓ Templates: Healthy (3/3, 100%)
-
-发现的问题:
-  中优先级 (2):
-    • 符号链接目标错误: C:\Users\User\.gitconfig
-    • 孤立符号链接: C:\Users\User\.old-config
-
-建议:
-  • 重新创建损坏的符号链接
-  • 清理孤立的符号链接
-============================================================
-```
+| 类别 | 检查内容 | 修复能力 |
+|------|----------|----------|
+| **System** | PowerShell版本、执行策略、系统兼容性、磁盘空间 | ✅ 自动修复配置问题 |
+| **Applications** | 必需应用安装状态、版本检查、PATH设置 | ⚠️ 提供安装建议 |
+| **ConfigFiles** | 配置文件完整性、语法验证、权限检查 | ✅ 自动修复语法错误 |
+| **SymLinks** | 符号链接状态、目标有效性、权限检查 | ✅ 自动重建链接 |
 
 #### 使用示例
 
@@ -331,106 +417,240 @@ Dotfiles 系统健康检查报告
 # 基本健康检查
 .\health-check.ps1
 
-# 详细检查
-.\health-check.ps1 -Detailed
+# 详细检查并自动修复
+.\health-check.ps1 -Detailed -Fix
 
-# 自动修复问题
-.\health-check.ps1 -Fix
+# 仅检查特定类别
+.\health-check.ps1 -Category Applications
 
-# 仅检查配置文件
+# JSON格式输出
+.\health-check.ps1 -Json
+
+# 控制台和JSON双输出
+.\health-check.ps1 -OutputFormat Both
+
+# 快速配置检查
 .\health-check.ps1 -ConfigOnly
 
-# 生成 JSON 报告
-.\health-check.ps1 -Json -LogFile "health-$(Get-Date -Format 'yyyyMMdd').log"
+# 生成健康报告
+.\health-check.ps1 -Detailed -LogFile "health-$(Get-Date -Format 'yyyyMMdd').log"
+
+# 自动化健康维护
+$result = .\health-check.ps1 -Json | ConvertFrom-Json
+if ($result.OverallStatus -ne "HEALTHY") {
+    .\health-check.ps1 -Fix
+}
 ```
+
+#### 健康评分系统
+
+```powershell
+# 健康检查结果对象
+@{
+    Timestamp = [DateTime]
+    OverallStatus = [String]        # "HEALTHY", "WARNING", "CRITICAL"
+    OverallScore = [int]            # 0-100 总分
+    Categories = @{
+        System = @{
+            Status = [String]       # "HEALTHY", "WARNING", "CRITICAL"
+            Score = [int]           # 当前得分
+            MaxScore = [int]        # 最大可能得分
+            Issues = [String[]]     # 发现的问题
+            Fixes = [String[]]      # 应用的修复
+        }
+        # ... 其他类别
+    }
+    Summary = @{
+        TotalChecks = [int]         # 总检查项数
+        PassedChecks = [int]        # 通过的检查数
+        FailedChecks = [int]        # 失败的检查数
+        FixedIssues = [int]         # 修复的问题数
+    }
+}
+```
+
+#### 控制台输出示例
+
+```
+系统健康检查报告
+==================================================
+检查时间: 2024-01-15 15:45:30
+总体状态: 良好 (85/100)
+
+各类别得分:
+  系统环境: 95/100 ✅
+  应用程序: 80/100 ⚠️ 
+  配置文件: 90/100 ✅
+  符号链接: 75/100 ⚠️
+
+发现问题:
+  • 2个应用程序未安装
+  • 1个符号链接损坏
+
+修复建议:
+  1. 运行 .\install_apps.ps1 -Category Development
+  2. 运行 .\health-check.ps1 -Fix
+```
+
+---
 
 ## 🛠️ 辅助脚本 API
 
-### 1. auto-sync.ps1
+### `auto-sync.ps1`
 
-**功能**: 自动同步配置文件
+配置文件自动同步脚本，支持增量同步和完整同步。
 
 #### 语法
+
 ```powershell
-.\auto-sync.ps1 [-Mode <String>] [-DryRun] [-Force]
+.\auto-sync.ps1
+    [-Mode <String>]
+    [-Interval <int>]
+    [-RemoteUrl <String>]
+    [-AutoCommit]
+    [-DryRun]
+    [-Force]
+    [<CommonParameters>]
 ```
 
 #### 参数
 
-| 参数 | 类型 | 必需 | 默认值 | 描述 |
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `-Mode` | String | 否 | "Incremental" | 同步模式：Incremental, Full |
-| `-DryRun` | Switch | 否 | False | 预览模式，不实际执行 |
-| `-Force` | Switch | 否 | False | 强制覆盖现有配置 |
+| `-Mode` | String | 否 | "Incremental" | 同步模式：Incremental, Full, OneTime |
+| `-Interval` | int | 否 | 300 | 同步间隔（秒） |
+| `-RemoteUrl` | String | 否 | origin | 远程仓库URL |
+| `-AutoCommit` | Switch | 否 | False | 自动提交本地更改 |
+| `-DryRun` | Switch | 否 | False | 预览模式 |
+| `-Force` | Switch | 否 | False | 强制同步，忽略冲突 |
 
-## 📚 公共函数库
-
-### 日志记录函数
-
-```powershell
-function Write-Log {
-    param(
-        [string]$Message,
-        [ValidateSet("INFO", "WARN", "ERROR", "SUCCESS", "DEBUG")]
-        [string]$Level = "INFO",
-        [string]$LogFile = $null
-    )
-}
-```
-
-### 路径检测函数
+#### 使用示例
 
 ```powershell
-function Get-ConfigPath {
-    param(
-        [string]$Application,
-        [string]$ConfigType = "Config"
-    )
-}
+# 一次性同步
+.\auto-sync.ps1 -Mode OneTime
+
+# 自动同步守护进程
+.\auto-sync.ps1 -Mode Incremental -Interval 600 -AutoCommit
+
+# 完整同步
+.\auto-sync.ps1 -Mode Full -Force
 ```
 
-### 备份管理函数
+---
+
+## 📦 PowerShell 模块 API
+
+### DotfilesUtilities
+
+共享的PowerShell工具模块，提供通用功能函数。
+
+#### 主要函数
+
+##### `Write-DotfilesMessage`
+
+统一的消息输出函数，支持颜色和图标。
 
 ```powershell
-function New-ConfigBackup {
-    param(
-        [string]$FilePath,
-        [string]$BackupSuffix = ".backup"
-    )
-}
-
-function Restore-ConfigBackup {
-    param(
-        [string]$FilePath,
-        [string]$BackupSuffix = ".backup"
-    )
-}
+Write-DotfilesMessage
+    [-Message] <String>
+    [-Type <String>]
+    [-NoNewLine]
+    [-NoIcon]
+    [-NoTimestamp]
 ```
 
-### 符号链接管理函数
+**参数**:
+- `Message`: 要显示的消息内容
+- `Type`: 消息类型 (Success, Error, Warning, Info, Debug)
+- `NoNewLine`: 不换行
+- `NoIcon`: 不显示图标
+- `NoTimestamp`: 不显示时间戳
+
+**示例**:
+```powershell
+Write-DotfilesMessage "操作成功完成" -Type Success
+Write-DotfilesMessage "发现潜在问题" -Type Warning
+Write-DotfilesMessage "详细调试信息" -Type Debug
+```
+
+##### `Test-Administrator`
+
+检查当前是否具有管理员权限。
 
 ```powershell
-function New-SymbolicLinkSafe {
-    param(
-        [string]$Path,
-        [string]$Target,
-        [switch]$Force
-    )
-}
+Test-Administrator
+```
 
-function Test-SymbolicLink {
-    param(
-        [string]$Path
-    )
+**返回值**: Boolean
+
+**示例**:
+```powershell
+if (Test-Administrator) {
+    Write-Host "具有管理员权限" -ForegroundColor Green
+} else {
+    Write-Host "需要管理员权限" -ForegroundColor Red
 }
 ```
 
-## 📄 配置文件格式
+##### `Backup-File`
 
-### 包配置文件 (scoop/packages.txt)
+安全备份文件的函数。
 
+```powershell
+Backup-File
+    [-SourcePath] <String>
+    [-BackupDir <String>]
+    [-Force]
 ```
-# 核心开发工具 (Essential)
+
+**参数**:
+- `SourcePath`: 源文件路径
+- `BackupDir`: 备份目录，默认为 `~\.dotfiles-backup`
+- `Force`: 覆盖现有备份
+
+**返回值**: 备份文件的完整路径
+
+**示例**:
+```powershell
+$backupPath = Backup-File -SourcePath "$env:USERPROFILE\.gitconfig"
+Write-Host "文件已备份到: $backupPath"
+```
+
+##### `Test-SymbolicLink`
+
+测试文件是否为有效的符号链接。
+
+```powershell
+Test-SymbolicLink
+    [-Path] <String>
+    [-Target <String>]
+```
+
+**参数**:
+- `Path`: 要测试的文件路径
+- `Target`: 可选，验证链接目标是否正确
+
+**返回值**: Boolean 或 HashTable (详细信息)
+
+**示例**:
+```powershell
+$isSymLink = Test-SymbolicLink -Path "$env:USERPROFILE\.gitconfig"
+if ($isSymLink) {
+    Write-Host "文件是符号链接" -ForegroundColor Green
+}
+```
+
+---
+
+## 📋 配置文件架构
+
+### 应用程序分类配置
+
+应用程序分类在 `scoop/packages.txt` 文件中定义：
+
+```text
+# Essential Apps (Core development tools)
 git
 ripgrep
 zoxide
@@ -445,157 +665,68 @@ sudo
 curl
 7zip
 
-# 开发辅助工具 (Development)
+# Development Apps (Additional dev tools)
 shellcheck
 gh
 
-# Git 增强工具 (GitEnhanced)
+# GitEnhanced Apps (Git workflow tools)
 lazygit
 
-# 编程语言运行时 (Programming)
+# Programming Apps (Language runtimes)
 python
 nodejs
 ```
 
-### 项目配置文件 (config/project.json)
+### Git配置模板架构
 
-```json
-{
-  "version": "1.0.0",
-  "name": "dotfiles",
-  "description": "Windows 开发环境配置管理",
-  "author": "Project Team",
-  "repository": "https://github.com/username/dotfiles",
-  "settings": {
-    "defaultMode": "Copy",
-    "backupEnabled": true,
-    "logLevel": "INFO",
-    "healthCheckInterval": "weekly"
-  },
-  "features": {
-    "autoUpdate": false,
-    "telemetry": false,
-    "experimentalFeatures": false
-  }
-}
+`.gitconfig.local.example` 的标准架构：
+
+```ini
+[user]
+    name = Your Name
+    email = your.email@example.com
+
+[http]
+    proxy = http://127.0.0.1:10808
+
+[https]
+    proxy = http://127.0.0.1:10808
+
+[includeIf "gitdir:~/work/"]
+    path = ~/.gitconfig.work
 ```
 
-### 模板变量文件 (templates/variables.json)
+### Starship配置架构
 
-```json
-{
-  "user": {
-    "name": "{{USER_NAME}}",
-    "email": "{{USER_EMAIL}}",
-    "github": "{{GITHUB_USERNAME}}"
-  },
-  "system": {
-    "hostname": "{{HOSTNAME}}",
-    "username": "{{USERNAME}}",
-    "home": "{{HOME_PATH}}"
-  },
-  "preferences": {
-    "theme": "{{THEME}}",
-    "editor": "{{EDITOR}}",
-    "shell": "{{SHELL}}"
-  }
-}
-```
+`starship.toml` 的标准结构：
 
-## 📊 返回值规范
+```toml
+[character]
+success_symbol = "[➜](bold green)"
+error_symbol = "[➜](bold red)"
 
-### 退出代码
+[directory]
+truncation_length = 3
+truncation_symbol = "…/"
 
-| 代码 | 含义 | 描述 |
-|------|------|------|
-| 0 | 成功 | 操作完全成功 |
-| 1 | 部分失败 | 部分操作失败，但主要功能正常 |
-| 2 | 完全失败 | 操作完全失败 |
-| 3 | 用户取消 | 用户主动取消操作 |
-| 4 | 权限不足 | 缺少必要的权限 |
-| 5 | 依赖缺失 | 缺少必要的依赖项 |
+[git_branch]
+symbol = "🌱 "
+truncation_length = 8
 
-### 标准输出格式
-
-#### 成功消息
-```
-✓ 操作成功: 具体描述
-```
-
-#### 警告消息
-```
-⚠ 警告: 具体描述
-```
-
-#### 错误消息
-```
-✗ 错误: 具体描述
-```
-
-#### 信息消息
-```
-ℹ 信息: 具体描述
-```
-
-### JSON 输出格式
-
-```json
-{
-  "timestamp": "2025-01-08T12:00:00Z",
-  "script": "script-name.ps1",
-  "version": "1.0.0",
-  "success": true,
-  "exitCode": 0,
-  "duration": 2.5,
-  "data": {
-    // 具体数据
-  },
-  "warnings": [
-    "警告信息1",
-    "警告信息2"
-  ],
-  "errors": [
-    "错误信息1"
-  ]
-}
-```
-
-## 🔍 错误处理
-
-### 常见错误代码
-
-| 错误代码 | 描述 | 解决方案 |
-|----------|------|----------|
-| `DOTFILES_001` | PowerShell 版本过低 | 升级 PowerShell 到 5.1+ |
-| `DOTFILES_002` | 执行策略限制 | 设置执行策略为 RemoteSigned |
-| `DOTFILES_003` | 权限不足 | 以管理员身份运行 |
-| `DOTFILES_004` | Scoop 未安装 | 运行 install_apps.ps1 安装 Scoop |
-| `DOTFILES_005` | 配置文件冲突 | 使用 -Force 参数或手动解决冲突 |
-| `DOTFILES_006` | 网络连接失败 | 检查网络连接或配置代理 |
-| `DOTFILES_007` | 磁盘空间不足 | 清理磁盘空间 |
-| `DOTFILES_008` | 符号链接创建失败 | 启用开发者模式或以管理员身份运行 |
-
-### 错误处理示例
-
-```powershell
-try {
-    $result = Invoke-SomeOperation
-    Write-Log "操作成功" "SUCCESS"
-}
-catch [System.UnauthorizedAccessException] {
-    Write-Log "权限不足 (DOTFILES_003): $($_.Exception.Message)" "ERROR"
-    exit 4
-}
-catch [System.IO.FileNotFoundException] {
-    Write-Log "文件未找到: $($_.Exception.Message)" "ERROR"
-    exit 2
-}
-catch {
-    Write-Log "未知错误: $($_.Exception.Message)" "ERROR"
-    exit 2
-}
+[time]
+disabled = false
+format = "🕙[$time]($style) "
 ```
 
 ---
 
-**📝 注意**: 本文档会随着项目更新而持续维护。如有疑问，请参考脚本内置的帮助信息：`Get-Help .\script-name.ps1 -Full`
+## ❌ 错误代码和异常处理
+
+### 标准退出代码
+
+| 退出代码 | 含义 | 适用脚本 | 处理建议 |
+|----------|------|----------|----------|
+| **0** | 操作成功 | 所有 | 无需处理 |
+| **1** | 一般错误 | 所有 | 检查错误消息和日志 |
+| **2** | 参数错误 | 所有 | 检查命令行参数语法 |
+| **3** | 权限不足 | install.ps1 | 以管理员身份运行

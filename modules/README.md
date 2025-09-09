@@ -63,13 +63,13 @@ Write-DotfilesSummary -Summary $summary
 ### 验证功能示例
 ```powershell
 # 路径验证
-$pathResult = Test-DotfilesPath -Path "C:\config\install.json" -Type File
+$pathResult = Test-DotfilesPath -Path "scoop\config.json.example" -Type File
 if ($pathResult.IsValid) {
     Write-Host "文件存在且有效"
 }
 
 # JSON 验证
-$jsonResult = Test-DotfilesJson -Path "config\install.json"
+$jsonResult = Test-DotfilesJson -Path "WindowsTerminal\settings.json"
 if ($jsonResult.IsValid) {
     Write-Host "JSON格式正确"
     $configObject = $jsonResult.Object
@@ -82,7 +82,7 @@ if ($psResult.IsValid) {
 }
 
 # 统一验证结果
-$result = Get-DotfilesValidationResult -Component "ConfigFile" -Path "config\install.json"
+$result = Get-DotfilesValidationResult -Component "ConfigFile" -Path "starship\starship.toml"
 Write-Host "验证结果: $($result.Status) - $($result.Message)"
 ```
 
@@ -237,9 +237,7 @@ Write-DotfilesMessage "调试信息" -Type Debug
 ## 🔗 相关文档
 
 - [脚本使用指南](../scripts/README.md)
-- [配置文件说明](../config/README.md)
-- [项目结构文档](../PROJECT_STRUCTURE.md)
-- [开发指南](../CONTRIBUTING.md)
+
 
 ---
 

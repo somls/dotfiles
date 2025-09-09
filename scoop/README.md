@@ -10,8 +10,7 @@ Scoop 是 Windows 下的用户级包管理器，本目录包含精心筛选的 1
 scoop/
 ├── README.md              # 本说明文档
 ├── packages.txt           # 软件包清单（按分类组织）
-├── config.json.example    # Scoop 配置模板
-└── CLAUDE.md             # 模块技术文档
+└── config.json.example    # Scoop 配置模板
 ```
 
 ## 软件包分类

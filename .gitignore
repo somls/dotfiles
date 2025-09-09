@@ -89,6 +89,9 @@ yncdotfiles'
 # Development-only content #
 ############################
 
+# Development mode marker
+.dotfiles.dev-mode
+
 # Development documentation
 DEVELOPMENT.md
 CLAUDE.md

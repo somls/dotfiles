@@ -161,7 +161,7 @@ if ($PSBoundParameters.ContainsKey('Mode')) {
         Write-Host "[INFO] Developer mode detected via environment variable" -ForegroundColor Yellow
     } else {
         # Check marker file
-        $devModeFile = Join-Path $env:USERPROFILE '.dotfiles.dev-mode'
+        $devModeFile = Join-Path $PSScriptRoot '.dotfiles.dev-mode'
         if (Test-Path $devModeFile) {
             $script:EffectiveMode = 'Symlink'
             $script:IsDevMode = $true
@@ -180,17 +180,17 @@ function Write-InstallLog {
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Message,
-        
+
         [Parameter(Position = 1)]
         [ValidateSet('INFO', 'WARN', 'ERROR', 'SUCCESS', 'DEBUG')]
         [string]$Level = "INFO",
-        
+
         [System.Exception]$Exception = $null
     )
 
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "[$timestamp] [$Level] $Message"
-    
+
     if ($Exception) {
         $logEntry += " | Exception: $($Exception.Message)"
         if ($Exception.InnerException) {
@@ -225,7 +225,7 @@ function Write-InstallLog {
 
         $color = $colorMap[$Level]
         if (-not $color) { $color = "White" }
-        
+
         $icon = $iconMap[$Level]
         if (-not $icon) { $icon = "[INFO]" }
 
@@ -236,7 +236,7 @@ function Write-InstallLog {
 # Platform compatibility check
 function Test-PlatformCompatibility {
     Write-InstallLog "Checking platform compatibility..." "INFO"
-    
+
     if ($PSVersionTable.Platform -and $PSVersionTable.Platform -ne 'Win32NT') {
         Write-InstallLog "This script is designed for Windows only. Current platform: $($PSVersionTable.Platform)" "ERROR"
         return $false
@@ -254,32 +254,32 @@ function Test-PlatformCompatibility {
 # Administrator permission check
 function Test-AdminPermission {
     Write-InstallLog "Checking administrator permissions..." "INFO"
-    
+
     try {
         $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
         $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        
+
         if ($script:EffectiveMode -eq 'Symlink') {
             if ($isAdmin) {
                 Write-InstallLog "Administrator permission check passed" "SUCCESS"
                 return $true
             } else {
                 Write-InstallLog "Symbolic link mode requires administrator permissions" "WARN"
-                
+
                 # Ask user if they want to continue with copy mode
                 $choices = @(
                     [System.Management.Automation.Host.ChoiceDescription]::new("&Yes", "Continue with copy mode")
                     [System.Management.Automation.Host.ChoiceDescription]::new("&No", "Exit script")
                 )
-                
+
                 $decision = $Host.UI.PromptForChoice(
                     "Permission Required",
                     "Symbolic link mode requires administrator permissions. Continue with copy mode instead?",
                     $choices,
                     0
                 )
-                
+
                 if ($decision -eq 0) {
                     $script:EffectiveMode = 'Copy'
                     Write-InstallLog "Switched to copy mode due to insufficient permissions" "INFO"
@@ -337,7 +337,7 @@ function Backup-ExistingFile {
 # Rollback functionality
 function Start-Rollback {
     Write-InstallLog "Starting rollback process..." "INFO"
-    
+
     if (-not (Test-Path $script:BackupDir)) {
         Write-InstallLog "Backup directory not found: $script:BackupDir" "ERROR"
         return $false
@@ -371,7 +371,7 @@ function Start-Rollback {
 # Validate symbolic links
 function Test-SymbolicLinks {
     Write-InstallLog "Validating symbolic links..." "INFO"
-    
+
     $validLinks = 0
     $invalidLinks = 0
 
@@ -386,7 +386,7 @@ function Test-SymbolicLinks {
                 if ($item.LinkType -eq 'SymbolicLink') {
                     $actualTarget = $item.Target
                     $sourcePath = (Resolve-Path $source).Path
-                    
+
                     if ($actualTarget -eq $sourcePath) {
                         Write-InstallLog "Valid link: $target -> $source" "SUCCESS"
                         $validLinks++
@@ -411,7 +411,7 @@ function Test-SymbolicLinks {
 # Get adaptive configuration paths
 function Get-AdaptiveConfigPaths {
     Write-InstallLog "Detecting adaptive configuration paths..." -Level 'DEBUG'
-    
+
     try {
         $paths = @{}
 
@@ -483,7 +483,7 @@ function Get-AdaptiveConfigPaths {
             ".config",
             "AppData\Roaming"  # Alternative location
         )
-        
+
         $starshipPath = ".config"  # Default
         foreach ($path in $starshipPaths) {
             $fullPath = Join-Path $env:USERPROFILE $path
@@ -492,7 +492,7 @@ function Get-AdaptiveConfigPaths {
                 break
             }
         }
-        
+
         $paths["Starship"] = $starshipPath
 
         # Neovim configuration path (enhanced with multiple possible locations)
@@ -500,7 +500,7 @@ function Get-AdaptiveConfigPaths {
             "AppData\Local\nvim",
             ".config\nvim"  # Unix-style path on Windows
         )
-        
+
         $nvimPath = "AppData\Local\nvim"  # Default
         foreach ($path in $nvimPaths) {
             $fullPath = Join-Path $env:USERPROFILE $path
@@ -510,7 +510,7 @@ function Get-AdaptiveConfigPaths {
                 break
             }
         }
-        
+
         $paths["Neovim"] = $nvimPath
 
         # Git configuration (always in user home)
@@ -570,7 +570,7 @@ $enhancementScripts = @{
 # Rollback functionality
 function Start-Rollback {
     Write-InstallLog "Starting rollback process..." "INFO"
-    
+
     if (-not (Test-Path $script:BackupDir)) {
         Write-InstallLog "Backup directory not found: $script:BackupDir" "ERROR"
         return $false
@@ -648,7 +648,7 @@ function Copy-FileSafe {
         } else {
             Copy-Item $SourcePath $DestinationPath -Force
         }
-        
+
         return @{ Success = $true; Message = "File copied successfully" }
     } catch {
         return @{ Success = $false; Message = $_.Exception.Message }
@@ -760,12 +760,12 @@ function Start-Installation {
     } else {
         # If no Type specified, process default components and ask about optional ones
         $defaultLinks = $links.GetEnumerator() | Where-Object { $_.Value.Type -in $script:DefaultComponents }
-        
+
         if (-not $DryRun -and -not $Interactive) {
             # Ask about optional components
             $optionalComponents = @('Neovim')
             $optionalLinks = $links.GetEnumerator() | Where-Object { $_.Value.Type -in $optionalComponents }
-            
+
             if ($optionalLinks) {
                 Write-Host "`nOptional components available:" -ForegroundColor Yellow
                 foreach ($component in $optionalComponents) {
@@ -775,19 +775,19 @@ function Start-Installation {
                     }
                     Write-Host "  - $description" -ForegroundColor Gray
                 }
-                
+
                 $choices = @(
                     [System.Management.Automation.Host.ChoiceDescription]::new("&Yes", "Install optional components")
                     [System.Management.Automation.Host.ChoiceDescription]::new("&No", "Skip optional components")
                 )
-                
+
                 $decision = $Host.UI.PromptForChoice(
                     "Optional Components",
                     "Do you want to install optional components?",
                     $choices,
                     1  # Default to No
                 )
-                
+
                 if ($decision -eq 0) {
                     $defaultLinks + $optionalLinks
                 } else {
@@ -819,14 +819,14 @@ function Start-Installation {
                 [System.Management.Automation.Host.ChoiceDescription]::new("&No", "Skip this component")
                 [System.Management.Automation.Host.ChoiceDescription]::new("&All", "Install all remaining components")
             )
-            
+
             $decision = $Host.UI.PromptForChoice(
                 "Install Component",
                 "Install $componentType configuration?",
                 $choices,
                 0
             )
-            
+
             switch ($decision) {
                 0 { # Yes
                     Install-Configuration -SourcePath $sourcePath -TargetPath $targetPath -ComponentType $componentType -Config $config
@@ -871,9 +871,9 @@ function Start-Installation {
 # Developer mode management
 function Set-DeveloperMode {
     param([bool]$Enable)
-    
-    $devModeFile = Join-Path $env:USERPROFILE '.dotfiles.dev-mode'
-    
+
+    $devModeFile = Join-Path $PSScriptRoot '.dotfiles.dev-mode'
+
     if ($Enable) {
         try {
             "# Dotfiles developer mode enabled`n# This file enables symbolic link mode by default`n# Created: $(Get-Date)" | Out-File $devModeFile -Encoding UTF8
@@ -897,7 +897,7 @@ function Set-DeveloperMode {
             return $false
         }
     }
-    
+
     return $true
 }
 
@@ -908,7 +908,7 @@ try {
         $result = Set-DeveloperMode $true
         if ($result) { exit 0 } else { exit 1 }
     }
-    
+
     if ($UnsetDevMode) {
         $result = Set-DeveloperMode $false
         if ($result) { exit 0 } else { exit 1 }

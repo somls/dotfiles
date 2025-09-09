@@ -1,51 +1,59 @@
 <#
 .SYNOPSIS
     System Health Check Script for Dotfiles Configuration
-    
+
 .DESCRIPTION
     This script performs comprehensive health checks on the dotfiles configuration,
     including system requirements, application installations, configuration files,
     and symbolic links status.
-    
+
 .PARAMETER Fix
     Attempt to automatically fix detected issues
-    
+
 .PARAMETER Detailed
     Show detailed output including debug information
-    
+
+.PARAMETER CheckSymLinks
+    Force checking of symbolic links even if not in developer mode
+
 .PARAMETER OutputFormat
     Output format: Console, JSON, or Both
-    
+
 .PARAMETER Category
     Specific category to check: System, Applications, ConfigFiles, SymLinks, All
-    
+
 .EXAMPLE
     .\health-check.ps1
     Performs basic health check with console output
-    
+
 .EXAMPLE
     .\health-check.ps1 -Fix -Detailed
     Performs detailed health check and attempts to fix issues
-    
+
 .EXAMPLE
     .\health-check.ps1 -Category Applications -OutputFormat JSON
     Checks only applications and outputs results in JSON format
+
+.EXAMPLE
+    .\health-check.ps1 -CheckSymLinks
+    Performs health check and forces symbolic links validation
 #>
 
 param(
     [switch]$Fix,
     [switch]$Detailed,
-    
+    [switch]$CheckSymLinks,
+
     [ValidateSet('Console', 'JSON', 'Both')]
     [string]$OutputFormat = 'Console',
-    
+
     [ValidateSet('System', 'Applications', 'ConfigFiles', 'SymLinks', 'All')]
     [string]$Category = 'All'
 )
 
 # Script configuration
 $script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$script:LogFile = Join-Path $script:SourceRoot "health-check.log"
+$script:LogFile = Join-Path $script:SourceRoot "health-check-$(Get-Date -Format 'yyyyMMddHHmmss')-$($PID).log"
 $script:HealthResults = @{}
 
 # Initialize health check results
@@ -73,15 +81,15 @@ function Write-HealthLog {
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Message,
-        
+
         [Parameter(Position = 1)]
         [ValidateSet('INFO', 'SUCCESS', 'WARN', 'ERROR', 'DEBUG')]
         [string]$Level = "INFO"
     )
-    
+
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logMessage = "[$timestamp] [$Level] $Message"
-    
+
     # Console output with colors
     if ($OutputFormat -eq 'Console' -or $OutputFormat -eq 'Both') {
         switch ($Level) {
@@ -89,21 +97,35 @@ function Write-HealthLog {
             "SUCCESS" { Write-Host $logMessage -ForegroundColor Green }
             "WARN" { Write-Host $logMessage -ForegroundColor Yellow }
             "ERROR" { Write-Host $logMessage -ForegroundColor Red }
-            "DEBUG" { 
-                if ($Detailed) { 
-                    Write-Host $logMessage -ForegroundColor Gray 
-                } 
+            "DEBUG" {
+                if ($Detailed) {
+                    Write-Host $logMessage -ForegroundColor Gray
+                }
             }
             default { Write-Host $logMessage }
         }
     }
-    
-    # File logging
-    try {
-        Add-Content -Path $script:LogFile -Value $logMessage -Encoding UTF8
-    }
-    catch {
-        # Continue if logging fails
+
+    # File logging with retry mechanism
+    $maxRetries = 3
+    $retryCount = 0
+    $logged = $false
+
+    while (-not $logged -and $retryCount -lt $maxRetries) {
+        try {
+            Add-Content -Path $script:LogFile -Value $logMessage -Encoding UTF8 -ErrorAction Stop
+            $logged = $true
+        }
+        catch [System.IO.IOException] {
+            $retryCount++
+            if ($retryCount -lt $maxRetries) {
+                Start-Sleep -Milliseconds (100 * $retryCount)
+            }
+        }
+        catch {
+            # Other logging errors - break retry loop
+            break
+        }
     }
 }
 
@@ -114,10 +136,10 @@ function Update-CategoryScore {
         [int]$Score,
         [int]$MaxScore = 1
     )
-    
+
     $script:HealthResults.Categories[$Category].Score += $Score
     $script:HealthResults.Categories[$Category].MaxScore += $MaxScore
-    
+
     # Update summary
     $script:HealthResults.Summary.TotalChecks += $MaxScore
     $script:HealthResults.Summary.PassedChecks += $Score
@@ -131,7 +153,7 @@ function Add-CategoryIssue {
         [string]$Issue,
         [string]$Fix = $null
     )
-    
+
     $script:HealthResults.Categories[$Category].Issues += $Issue
     if ($Fix) {
         $script:HealthResults.Categories[$Category].Fixes += $Fix
@@ -141,7 +163,7 @@ function Add-CategoryIssue {
 # Check system requirements
 function Test-SystemRequirements {
     Write-HealthLog "Checking system requirements..." "INFO"
-    
+
     # Check Windows version
     $osVersion = [System.Environment]::OSVersion.Version
     if ($osVersion.Major -ge 10) {
@@ -152,7 +174,7 @@ function Test-SystemRequirements {
         Add-CategoryIssue -Category "System" -Issue "Windows version is outdated" -Fix "Upgrade to Windows 10 or later"
         Update-CategoryScore -Category "System" -Score 0
     }
-    
+
     # Check PowerShell version
     $psVersion = $PSVersionTable.PSVersion
     if ($psVersion.Major -ge 5) {
@@ -163,7 +185,7 @@ function Test-SystemRequirements {
         Add-CategoryIssue -Category "System" -Issue "PowerShell version is outdated" -Fix "Upgrade to PowerShell 5.1 or later"
         Update-CategoryScore -Category "System" -Score 0
     }
-    
+
     # Check execution policy
     $executionPolicy = Get-ExecutionPolicy -Scope CurrentUser
     if ($executionPolicy -eq 'RemoteSigned' -or $executionPolicy -eq 'Unrestricted') {
@@ -173,7 +195,7 @@ function Test-SystemRequirements {
         Write-HealthLog "Execution policy: $executionPolicy - Restrictive" "WARN"
         Add-CategoryIssue -Category "System" -Issue "PowerShell execution policy is too restrictive" -Fix "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser"
         Update-CategoryScore -Category "System" -Score 0
-        
+
         if ($Fix) {
             try {
                 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
@@ -187,7 +209,7 @@ function Test-SystemRequirements {
             }
         }
     }
-    
+
     # Enhanced environment compatibility checks
     Test-EnvironmentCompatibility
 }
@@ -195,7 +217,7 @@ function Test-SystemRequirements {
 # Enhanced environment compatibility check
 function Test-EnvironmentCompatibility {
     Write-HealthLog "Checking environment compatibility..." "INFO"
-    
+
     # Check available disk space
     try {
         $drive = Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq $env:SystemDrive }
@@ -211,7 +233,7 @@ function Test-EnvironmentCompatibility {
     } catch {
         Write-HealthLog "Could not check disk space: $($_.Exception.Message)" "WARN"
     }
-    
+
     # Check internet connectivity
     try {
         $testUrls = @(
@@ -219,7 +241,7 @@ function Test-EnvironmentCompatibility {
             "https://github.com",
             "https://raw.githubusercontent.com"
         )
-        
+
         $connectivityOK = $false
         foreach ($url in $testUrls) {
             try {
@@ -230,7 +252,7 @@ function Test-EnvironmentCompatibility {
                 continue
             }
         }
-        
+
         if ($connectivityOK) {
             Write-HealthLog "Internet connectivity - OK" "SUCCESS"
             Update-CategoryScore -Category "System" -Score 1
@@ -242,13 +264,13 @@ function Test-EnvironmentCompatibility {
     } catch {
         Write-HealthLog "Could not test internet connectivity: $($_.Exception.Message)" "WARN"
     }
-    
+
     # Check user permissions
     try {
         $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
         $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        
+
         if ($isAdmin) {
             Write-HealthLog "User permissions: Administrator - OK" "SUCCESS"
             Update-CategoryScore -Category "System" -Score 1
@@ -260,7 +282,7 @@ function Test-EnvironmentCompatibility {
     } catch {
         Write-HealthLog "Could not check user permissions: $($_.Exception.Message)" "WARN"
     }
-    
+
     # Check Windows features (Developer Mode for symbolic links)
     try {
         $devMode = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" -Name "AllowDevelopmentWithoutDevLicense" -ErrorAction SilentlyContinue
@@ -280,13 +302,13 @@ function Test-EnvironmentCompatibility {
 # Check application installations
 function Test-Applications {
     Write-HealthLog "Checking application installations..." "INFO"
-    
+
     $requiredApps = @{
         'git' = 'Git version control system'
         'scoop' = 'Scoop package manager'
         'starship' = 'Starship prompt'
     }
-    
+
     foreach ($app in $requiredApps.Keys) {
         try {
             $null = Get-Command $app -ErrorAction Stop
@@ -299,14 +321,14 @@ function Test-Applications {
             Update-CategoryScore -Category "Applications" -Score 0
         }
     }
-    
+
     # Check optional applications
     $optionalApps = @{
         'nvim' = 'Neovim editor'
         'code' = 'Visual Studio Code'
         'wt' = 'Windows Terminal'
     }
-    
+
     foreach ($app in $optionalApps.Keys) {
         try {
             $null = Get-Command $app -ErrorAction Stop
@@ -321,18 +343,18 @@ function Test-Applications {
 # Check configuration files
 function Test-ConfigurationFiles {
     Write-HealthLog "Checking configuration files..." "INFO"
-    
+
     $configFiles = @{
         'powershell\Microsoft.PowerShell_profile.ps1' = 'PowerShell profile'
         'git\gitconfig' = 'Git configuration'
         'starship\starship.toml' = 'Starship configuration'
         'neovim\init.lua' = 'Neovim configuration'
     }
-    
+
     foreach ($file in $configFiles.Keys) {
         $filePath = Join-Path $script:SourceRoot $file
         $exists = Test-Path $filePath
-        
+
         if ($exists) {
             Write-HealthLog "$($configFiles[$file]): Found" "SUCCESS"
             $score = 1
@@ -341,7 +363,7 @@ function Test-ConfigurationFiles {
             Add-CategoryIssue -Category "ConfigFiles" -Issue "$($configFiles[$file]) is missing" -Fix "Create or restore $file"
             $score = 0
         }
-        
+
         Update-CategoryScore -Category "ConfigFiles" -Score $score
     }
 }
@@ -349,15 +371,20 @@ function Test-ConfigurationFiles {
 # Check symbolic links
 function Test-SymbolicLinks {
     Write-HealthLog "Checking symbolic links..." "INFO"
-    
-    # Check if developer mode is enabled
-    $devModeFile = Join-Path $env:USERPROFILE ".dotfiles.dev-mode"
-    if (-not (Test-Path $devModeFile)) {
-        Write-HealthLog "Developer mode not enabled - skipping symbolic link checks" "DEBUG"
-        Update-CategoryScore -Category "SymLinks" -Score 1 -MaxScore 1
-        return
+
+    # This function is only called when symbolic link checking is appropriate
+    # Provide informational message about the checking context
+    $devModeFile = Join-Path $script:SourceRoot ".dotfiles.dev-mode"
+    $inDevMode = Test-Path $devModeFile
+
+    if ($CheckSymLinks -and -not $inDevMode) {
+        Write-HealthLog "Checking symbolic links as explicitly requested (developer mode not enabled)" "INFO"
+    } elseif ($Category -eq 'SymLinks' -and -not $inDevMode) {
+        Write-HealthLog "Checking symbolic links for SymLinks category (developer mode not enabled)" "INFO"
+    } elseif ($inDevMode) {
+        Write-HealthLog "Checking symbolic links in developer mode" "DEBUG"
     }
-    
+
     # Define expected symbolic links based on actual project configuration
     $documentsPath = [Environment]::GetFolderPath('MyDocuments')
     $psProfilePath = if ($PSVersionTable.PSVersion.Major -ge 6) {
@@ -365,23 +392,23 @@ function Test-SymbolicLinks {
     } else {
         "$documentsPath\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
     }
-    
+
     $expectedLinks = @{
         # Git 配置
         "$env:USERPROFILE\.gitconfig" = 'Git configuration'
         "$env:USERPROFILE\.gitignore_global" = 'Git global ignore'
         "$env:USERPROFILE\.gitmessage" = 'Git commit message template'
-        
+
         # PowerShell 配置
         $psProfilePath = 'PowerShell profile'
         "$env:USERPROFILE\.powershell" = 'PowerShell extras'
-        
+
         # 应用配置
         "$env:LOCALAPPDATA\nvim" = 'Neovim configuration'
         "$env:USERPROFILE\.config\starship.toml" = 'Starship configuration'
         "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json" = 'Windows Terminal settings'
     }
-    
+
     # 检查Scoop配置 (动态检测路径)
     $scoopPath = $env:SCOOP
     if (-not $scoopPath) {
@@ -396,7 +423,7 @@ function Test-SymbolicLinks {
     if ($scoopPath) {
         $expectedLinks["$scoopPath\config.json"] = 'Scoop configuration'
     }
-    
+
     # 检查PowerShell模块
     $psModulePath = if ($PSVersionTable.PSVersion.Major -ge 6) {
         "$documentsPath\PowerShell\Modules\DotfilesUtilities\DotfilesUtilities.psm1"
@@ -404,7 +431,7 @@ function Test-SymbolicLinks {
         "$documentsPath\WindowsPowerShell\Modules\DotfilesUtilities\DotfilesUtilities.psm1"
     }
     $expectedLinks[$psModulePath] = 'PowerShell DotfilesUtilities module'
-    
+
     foreach ($link in $expectedLinks.Keys) {
         if (Test-Path $link) {
             $item = Get-Item $link
@@ -428,11 +455,11 @@ function Test-SymbolicLinks {
 function Update-OverallStatus {
     $totalScore = 0
     $maxTotalScore = 0
-    
+
     foreach ($category in $script:HealthResults.Categories.Values) {
         $totalScore += $category.Score
         $maxTotalScore += $category.MaxScore
-        
+
         # Calculate category status
         if ($category.MaxScore -eq 0) {
             $category.Status = 'SKIPPED'
@@ -444,7 +471,7 @@ function Update-OverallStatus {
             $category.Status = 'ERROR'
         }
     }
-    
+
     # Calculate overall status
     if ($maxTotalScore -eq 0) {
         $script:HealthResults.OverallStatus = 'UNKNOWN'
@@ -461,7 +488,7 @@ function Update-OverallStatus {
 function Write-Results {
     if ($OutputFormat -eq 'JSON' -or $OutputFormat -eq 'Both') {
         $jsonOutput = $script:HealthResults | ConvertTo-Json -Depth 10
-        
+
         if ($OutputFormat -eq 'JSON') {
             Write-Output $jsonOutput
         } else {
@@ -470,62 +497,95 @@ function Write-Results {
             Write-HealthLog "Results saved to: $jsonFile" "INFO"
         }
     }
-    
+
     if ($OutputFormat -eq 'Console' -or $OutputFormat -eq 'Both') {
         Write-HealthLog "=== HEALTH CHECK SUMMARY ===" "INFO"
         Write-HealthLog "Overall Status: $($script:HealthResults.OverallStatus)" "INFO"
         Write-HealthLog "Total Checks: $($script:HealthResults.Summary.TotalChecks)" "INFO"
         Write-HealthLog "Passed: $($script:HealthResults.Summary.PassedChecks)" "SUCCESS"
         Write-HealthLog "Failed: $($script:HealthResults.Summary.FailedChecks)" "ERROR"
-        
-        if ($Fix) {
-            Write-HealthLog "Fixed Issues: $($script:HealthResults.Summary.FixedIssues)" "SUCCESS"
+
+        if ($script:HealthResults.Summary.FixedIssues -gt 0) {
+            Write-HealthLog "Fixed: $($script:HealthResults.Summary.FixedIssues)" "SUCCESS"
         }
-        
+
         Write-HealthLog "Category Details:" "INFO"
         foreach ($categoryName in $script:HealthResults.Categories.Keys) {
             $category = $script:HealthResults.Categories[$categoryName]
-            Write-HealthLog "  $categoryName`: $($category.Status) ($($category.Score)/$($category.MaxScore))" "INFO"
-            
-            if ($category.Issues.Count -gt 0 -and $Detailed) {
-                Write-HealthLog "    Issues:" "WARN"
+            if ($category.MaxScore -gt 0) {
+                Write-HealthLog "  $categoryName`: $($category.Status) ($($category.Score)/$($category.MaxScore))" "INFO"
+            }
+        }
+
+        # Show issues if any
+        $hasIssues = $false
+        foreach ($categoryName in $script:HealthResults.Categories.Keys) {
+            $category = $script:HealthResults.Categories[$categoryName]
+            if ($category.Issues.Count -gt 0) {
+                if (-not $hasIssues) {
+                    Write-HealthLog "=== ISSUES FOUND ===" "WARN"
+                    $hasIssues = $true
+                }
+                Write-HealthLog "$categoryName Issues:" "WARN"
                 foreach ($issue in $category.Issues) {
-                    Write-HealthLog "      - $issue" "WARN"
+                    Write-HealthLog "  - $issue" "WARN"
+                }
+            }
+        }
+
+        # Show fixes if any
+        $hasFixes = $false
+        foreach ($categoryName in $script:HealthResults.Categories.Keys) {
+            $category = $script:HealthResults.Categories[$categoryName]
+            if ($category.Fixes.Count -gt 0) {
+                if (-not $hasFixes) {
+                    Write-HealthLog "=== SUGGESTED FIXES ===" "INFO"
+                    $hasFixes = $true
+                }
+                Write-HealthLog "$categoryName Fixes:" "INFO"
+                foreach ($fix in $category.Fixes) {
+                    Write-HealthLog "  - $fix" "INFO"
                 }
             }
         }
     }
 }
 
-# Main execution
+# Main execution function
 function Main {
-    Write-HealthLog "Starting dotfiles health check..." "INFO"
-    
+    # Initialize results
     Initialize-HealthResults
-    
-    # Run checks based on category parameter
+
+    Write-HealthLog "Starting health check..." "INFO"
+    Write-HealthLog "Script location: $script:SourceRoot" "DEBUG"
+    Write-HealthLog "Log file: $script:LogFile" "DEBUG"
+
+    # Execute checks based on category
     if ($Category -eq 'All' -or $Category -eq 'System') {
         Test-SystemRequirements
     }
-    
+
     if ($Category -eq 'All' -or $Category -eq 'Applications') {
         Test-Applications
     }
-    
+
     if ($Category -eq 'All' -or $Category -eq 'ConfigFiles') {
         Test-ConfigurationFiles
     }
-    
-    if ($Category -eq 'All' -or $Category -eq 'SymLinks') {
+
+    # Check symbolic links only if explicitly requested, in dev mode, or when SymLinks category is specified
+    # Skip symbolic links for regular users doing general health checks (including Category 'All')
+    $devModeEnabled = Test-Path (Join-Path $script:SourceRoot ".dotfiles.dev-mode")
+    if ($Category -eq 'SymLinks' -or $CheckSymLinks -or $devModeEnabled) {
         Test-SymbolicLinks
     }
-    
+
     # Calculate final status
     Update-OverallStatus
-    
+
     # Output results
     Write-Results
-    
+
     # Exit with appropriate code
     switch ($script:HealthResults.OverallStatus) {
         'HEALTHY' { exit 0 }
