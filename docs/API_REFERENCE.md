@@ -244,8 +244,6 @@ if (.\detect-environment.ps1 -Json | ConvertFrom-Json | Select-Object -ExpandPro
     [-Validate]
     [-Interactive]
     [-BackupDir <String>]
-    [-SetDevMode]
-    [-UnsetDevMode]
     [<CommonParameters>]
 ```
 

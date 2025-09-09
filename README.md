@@ -79,83 +79,41 @@ dotfiles/
 
 ## 🚀 快速开始
 
-## 🔄 双模式系统
+## ✅ 系统验证
 
-本系统支持两种使用模式，满足不同用户需求：
+经过完整测试验证，系统在各项功能上表现优秀：
 
-### 📊 模式对比
-
-| 特性对比 | 🏠 **普通用户模式** | 🔧 **开发者模式** |
-|----------|-------------------|-------------------|
-| **配置方式** | 文件复制到目标位置 | 创建符号链接 |
-| **权限需求** | ✅ 普通用户权限 | 🔒 需要管理员权限 |
-| **稳定性** | ✅ 高（文件独立） | ⚠️ 依赖源文件完整性 |
-| **实时编辑** | ❌ 需重新部署 | ✅ 编辑源文件即时生效 |
-| **健康检查** | 基础检查 (13项) | 完整检查 (23项) |
-| **适用场景** | 日常使用、生产环境 | 开发调试、配置测试 |
-| **测试验证** | ✅ 完全通过 | ✅ 完全通过 |
-
-### ✅ 系统测试验证
-
-| 测试类别 | 普通用户模式 | 开发者模式 | 验证项目 |
-|----------|-------------|-----------|----------|
-| **环境检测** | ✅ 通过 | ✅ 通过 | 15/15 应用程序检测 |
-| **健康检查** | ✅ 通过 (13项) | ✅ 通过 (23项) | 包含符号链接验证 |
-| **应用安装** | ✅ 通过 | ✅ 通过 | Essential工具集验证 |
-| **配置部署** | ✅ 通过 | ✅ 通过 | 智能路径映射 |
-| **错误恢复** | ✅ 通过 | ✅ 通过 | 自动修复机制 |
+| 测试类别 | 验证状态 | 验证项目 |
+|----------|----------|----------|
+| **环境检测** | ✅ 通过 | 15/15 应用程序自动识别 |
+| **健康检查** | ✅ 通过 | 完整的系统状态检查 |
+| **应用安装** | ✅ 通过 | Essential工具集验证 |
+| **配置部署** | ✅ 通过 | 智能路径映射和备份 |
 
 **🎯 性能指标**: 环境检测 < 2秒，健康检查 < 5秒，错误率 0%，功能覆盖 100%
 
-### 🆕 新用户标准流程
-
-#### 🏠 普通用户模式（推荐新手）
+### 🆕 标准安装流程
 
 ```powershell
 # 1. 克隆项目
 git clone https://github.com/somls/dotfiles.git
 cd dotfiles
 
-# 2. 四步完整安装
+# 2. 四步完整安装（推荐）
 .\detect-environment.ps1           # 🔍 分析系统环境 (15+应用检测)
 .\install_apps.ps1                 # 📦 安装开发工具 (18+精选应用)  
-.\install.ps1                      # ⚙️ 部署配置文件 (文件复制模式)
-.\health-check.ps1                 # 🏥 验证安装结果 (13项基础检查)
-```
-
-#### 🔧 开发者模式（推荐开发者）
-
-```powershell
-# 1. 基础安装
-git clone https://github.com/somls/dotfiles.git
-cd dotfiles
-.\detect-environment.ps1           # 环境检测
-.\install_apps.ps1 -Category Essential  # 安装核心工具
-
-# 2. 启用开发者模式
-.\install.ps1 -SetDevMode          # 启用开发者模式
-# 或手动创建: New-Item ".dotfiles.dev-mode" -ItemType File
-
-# 3. 符号链接部署
-.\install.ps1 -Mode Symlink -Force # 创建符号链接
-.\health-check.ps1 -CheckSymLinks  # 完整验证 (23项检查)
-
-# 4. 符号链接管理
-.\dev-link.ps1 -Action Status      # 查看链接状态
+.\install.ps1                      # ⚙️ 部署配置文件 (智能路径映射)
+.\health-check.ps1                 # 🏥 验证安装结果 (完整性检查)
 ```
 
 ### 🏃‍♂️ 快速体验流程
 
 ```powershell
-# 普通用户快速配置
+# 仅部署配置文件（适合已有开发环境的用户）
 .\install.ps1 -Type PowerShell,Git,Starship
 
-# 开发者快速配置
-.\install.ps1 -SetDevMode && .\install.ps1 -Mode Symlink -Type PowerShell,Git,Starship
-
 # 健康检查验证
-.\health-check.ps1                 # 普通模式检查
-.\health-check.ps1 -CheckSymLinks  # 开发者模式完整检查
+.\health-check.ps1
 ```
 
 ---
@@ -243,15 +201,14 @@ cd dotfiles
 # 详细兼容性报告
 .\detect-environment.ps1 -Detailed
 
-# 系统健康检查 - 普通用户模式（跳过符号链接检查）
-.\health-check.ps1 -Category System
-
-# 开发者模式健康检查（包含符号链接检查）
-New-Item ".dotfiles.dev-mode" -ItemType File  # 启用开发模式
+# 系统健康检查
 .\health-check.ps1
 
-# 强制检查符号链接（无需开发模式）
-.\health-check.ps1 -CheckSymLinks
+# 分类检查系统状态
+.\health-check.ps1 -Category System
+
+# 详细健康检查报告
+.\health-check.ps1 -Detailed
 ```
 
 ---

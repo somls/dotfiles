@@ -101,6 +101,7 @@ TODO.md
 CODING_STANDARDS.md
 SCRIPTS_GUIDE.md
 PRIVACY_AUDIT_REPORT.md
+docs/TEST_REPORT.md
 
 # Development scripts
 clean-git-history.ps1

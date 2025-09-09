@@ -5,35 +5,15 @@
 
 > 💡 **提示**: 本文档面向日常用户，提供简洁实用的使用指南。技术细节请查看 [docs/](docs/) 目录下的详细文档。
 
-## 📚 双模式系统说明
+## 🎯 系统特性
 
-本系统支持两种使用模式，适应不同用户需求：
+本系统采用文件复制方式部署配置，具有以下特点：
 
-### 🔄 模式对比
-
-| 特性对比 | 🏠 **普通用户模式** | 🔧 **开发者模式** |
-|----------|-------------------|-------------------|
-| **配置方式** | 文件复制到目标位置 | 创建符号链接 |
-| **权限需求** | ✅ 普通用户权限 | 🔒 需要管理员权限 |
-| **稳定性** | ✅ 高（文件独立） | ⚠️ 依赖源文件完整性 |
-| **实时编辑** | ❌ 需重新部署 | ✅ 编辑源文件即时生效 |
-| **健康检查** | 基础检查 (13项) | 完整检查 (23项) |
-| **适用场景** | 日常使用、生产环境 | 开发调试、配置测试 |
-| **源码依赖** | 安装后可删除源码 | 必须保持源码完整 |
-
-### 🎯 模式选择建议
-
-- **选择普通用户模式** 如果您：
-  - 是日常用户，不经常修改配置文件
-  - 希望系统稳定，不受源码变动影响
-  - 不想使用管理员权限
-  - 配置完成后可能删除源码
-
-- **选择开发者模式** 如果您：
-  - 是开发者，经常调试和修改配置
-  - 希望配置修改立即生效
-  - 可以接受管理员权限要求
-  - 需要保持源码目录完整
+- ✅ **稳定可靠**: 配置文件独立存在，不依赖源码
+- ✅ **权限友好**: 无需管理员权限，普通用户即可使用
+- ✅ **智能适配**: 自动检测应用程序路径和版本差异
+- ✅ **安全备份**: 自动备份现有配置，支持一键回滚
+- ✅ **广泛兼容**: 支持 Windows 10/11 和 PowerShell 5.1+
 
 ## 🚀 快速开始
 
@@ -51,65 +31,17 @@
 git clone https://github.com/somls/dotfiles.git
 cd dotfiles
 
-# 2. 四步完整安装
+# 2. 四步完整安装（推荐）
 .\detect-environment.ps1    # 🔍 检测系统环境 (检测15+应用)
 .\install_apps.ps1          # 📦 安装开发工具 (18+精选应用)
 .\install.ps1               # ⚙️ 部署配置文件 (智能路径映射)
 .\health-check.ps1          # 🏥 验证安装结果 (完整性检查)
 ```
 
-### 场景4: 配置更新和维护
+### 🏃‍♂️ 快速安装（适合有经验的用户）
 
 ```powershell
-# 普通用户更新配置
-git pull                              # 更新源码
-.\install.ps1 -Force                 # 强制重新部署
-.\health-check.ps1                   # 验证更新结果
-
-# 开发者更新配置
-git pull                              # 更新源码
-# 符号链接模式下配置自动同步，无需重新部署
-.\health-check.ps1 -CheckSymLinks    # 验证符号链接完整性
-
-# 模式切换
-.\install.ps1 -UnsetDevMode          # 切换到普通模式
-.\install.ps1 -SetDevMode            # 切换到开发模式
-```
-
-## 📊 系统测试验证
-
-### ✅ 测试覆盖率
-
-| 测试类别 | 普通用户模式 | 开发者模式 | 验证项目 |
-|----------|-------------|-----------|----------|
-| **环境检测** | ✅ 通过 | ✅ 通过 | 15/15 应用程序检测 |
-| **健康检查** | ✅ 通过 (13项) | ✅ 通过 (23项) | 包含符号链接验证 |
-| **应用安装** | ✅ 通过 | ✅ 通过 | Essential工具集验证 |
-| **配置部署** | ✅ 通过 | ✅ 通过 | 智能路径映射 |
-| **错误恢复** | ✅ 通过 | ✅ 通过 | 自动修复机制 |
-
-### 🎯 性能指标
-
-- **环境检测**: < 2秒 (15个应用程序)
-- **健康检查**: < 5秒 (完整系统扫描)
-- **符号链接操作**: < 1秒 (单个组件)
-- **错误率**: 0% (完整测试流程)
-- **功能覆盖**: 100% (所有核心功能)
-
-### 🔧 已验证的修复能力
-
-- ✅ 缺失符号链接自动创建
-- ✅ 配置文件冲突智能处理
-- ✅ 路径检测和自动适配
-- ✅ 权限问题诊断和建议
-- ✅ 版本兼容性自动检查
-```
-
-
-### 🏠 普通用户模式安装
-
-```powershell
-# 标准安装（默认使用复制模式）
+# 仅部署配置文件
 .\install.ps1
 
 # 指定组件安装
@@ -117,86 +49,44 @@ git pull                              # 更新源码
 
 # 交互式安装，逐个确认
 .\install.ps1 -Interactive
-
-# 验证安装结果（基础检查13项）
-.\health-check.ps1
-```
-
-### 🔧 开发者模式安装
-
-```powershell
-# 启用开发者模式
-.\install.ps1 -SetDevMode
-
-# 或者直接创建开发模式标记文件
-New-Item ".dotfiles.dev-mode" -ItemType File
-
-# 使用符号链接模式安装
-.\install.ps1 -Mode Symlink
-
-# 验证安装结果（完整检查23项，包含符号链接）
-.\health-check.ps1 -CheckSymLinks
-
-# 管理符号链接
-.\dev-link.ps1 -Action Status    # 查看状态
-.\dev-link.ps1 -Action Create    # 创建链接
-.\dev-link.ps1 -Action Remove    # 删除链接
-```
-
-### 🏃‍♂️ 快速安装（适合有经验的用户）
-
-```powershell
-# 普通用户快速安装
-.\install.ps1
-
-# 开发者快速安装
-.\install.ps1 -SetDevMode && .\install.ps1 -Mode Symlink
 ```
 
 ## 🎯 常用场景
 
-### 场景1: 新电脑环境搭建（普通用户）
+### 场景1: 新电脑环境搭建
 
 ```powershell
 # 完整的开发环境搭建
 .\detect-environment.ps1 -Detailed    # 详细环境分析（检测15+应用）
 .\install_apps.ps1 -Category All      # 安装所有应用（18+精选应用）
-.\install.ps1 -Interactive           # 交互式配置部署（复制模式）
-.\health-check.ps1 -Fix              # 自动修复问题（13项检查）
+.\install.ps1 -Interactive           # 交互式配置部署
+.\health-check.ps1 -Fix              # 自动修复问题
 
 # 验证结果
 .\health-check.ps1 -Detailed         # 查看详细报告
 ```
 
-### 场景2: 开发环境搭建（开发者）
+### 场景2: 配置问题诊断
 
 ```powershell
-# 开发者完整环境搭建
-.\detect-environment.ps1              # 环境分析
-.\install_apps.ps1 -Category Essential # 安装核心工具
-.\install.ps1 -SetDevMode            # 启用开发者模式
-.\install.ps1 -Mode Symlink -Force   # 符号链接部署
-.\health-check.ps1 -CheckSymLinks    # 完整验证（23项检查）
-
-# 开发者专用工具
-.\dev-link.ps1 -Action Status        # 检查符号链接状态
-```
-
-### 场景3: 配置问题诊断
-
-```powershell
-# 普通用户诊断
-.\health-check.ps1 -Fix              # 基础诊断和修复
-
-# 开发者诊断
-.\health-check.ps1 -CheckSymLinks -Fix -Detailed  # 完整诊断
-.\dev-link.ps1 -Action Status        # 符号链接专项检查
+# 系统诊断和修复
+.\health-check.ps1 -Fix              # 基础诊断和自动修复
+.\health-check.ps1 -Detailed         # 查看详细诊断信息
 
 # JSON格式报告（用于自动化）
 .\health-check.ps1 -OutputFormat JSON -Category System
 ```
 
-### 场景2: 仅配置管理
+### 场景3: 配置更新和维护
+
+```powershell
+# 更新配置
+git pull                              # 更新源码
+.\install.ps1 -Force                 # 强制重新部署
+.\health-check.ps1                   # 验证更新结果
+```
+
+### 场景4: 仅配置管理
 
 ```powershell
 # 只想使用配置文件，不安装应用

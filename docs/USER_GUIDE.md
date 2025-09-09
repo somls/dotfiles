@@ -258,31 +258,26 @@ Installed Applications:
 
 ```powershell
 # 创建所有符号链接
-.\dev-link.ps1
+# 重新部署配置文件
+.\install.ps1 -Force
 
-# 创建特定配置的链接
-.\dev-link.ps1 -Type PowerShell,Git
+# 验证配置状态
+.\health-check.ps1
 
-# 验证链接状态
-.\dev-link.ps1 -Verify
+# 交互式重新配置
+.\install.ps1 -Interactive
 
-# 列出链接状态
-.\dev-link.ps1 -List
-
-# 删除符号链接
-.\dev-link.ps1 -Remove
-
-# 修复损坏的链接
-.\dev-link.ps1 -Fix
+# 修复配置问题
+.\health-check.ps1 -Fix
 
 # 预览模式
-.\dev-link.ps1 -DryRun
+.\install.ps1 -DryRun
 
-# 强制模式
-.\dev-link.ps1 -Force
+# 强制重新部署特定组件
+.\install.ps1 -Type PowerShell,Git -Force
 
 # 生成详细报告
-.\dev-link.ps1 -Report
+.\health-check.ps1 -Detailed
 ```
 
 **状态输出示例**：
@@ -364,7 +359,7 @@ Git配置:
 
 修复建议:
   1. 运行 .\install_apps.ps1 -Category Development
-  2. 运行 .\dev-link.ps1 -Fix
+  2. 运行 .\health-check.ps1 -Fix
 ```
 
 ---
