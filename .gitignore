@@ -24,6 +24,10 @@ project-status.json
 error.log
 debug.log
 
+# New structure logs directory
+.dotfiles/logs/
+.dotfiles/cache/
+
 # Cache files
 .cache/
 **/*.cache
@@ -116,6 +120,21 @@ backup/
 *_backup/
 *-backup/
 .dotfiles-backup-old
+.dotfiles/backups/
 
 # Project-specific local state
 .kiro/
+
+##########################
+# Optimized Structure    #
+##########################
+
+# Internal dotfiles management
+.dotfiles/
+!.dotfiles/config-mapping.json  # Exception for configuration mapping
+
+# Compiled binaries and executables
+bin/Release/
+bin/Debug/
+bin/*.exe
+bin/*.dll

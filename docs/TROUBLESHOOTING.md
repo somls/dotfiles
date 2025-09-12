@@ -1,6 +1,6 @@
 # 🔧 故障排除指南
 
-本指南提供了Windows Dotfiles管理系统常见问题的详细诊断和解决方案。按问题类型分类，每个问题都包含症状识别、诊断方法和解决方案。
+本指南提供了Windows Dotfiles管理系统v2.0常见问题的详细诊断和解决方案。按问题类型分类，每个问题都包含症状识别、诊断方法和解决方案。
 
 ## 📋 目录
 
@@ -26,14 +26,17 @@
 
 **快速恢复**:
 ```powershell
-# 1. 紧急回滚到备份状态
+# 1. 使用统一管理接口进行紧急恢复
 cd dotfiles
-.\install.ps1 -Rollback
+.\manage.ps1 health -Fix
 
-# 2. 如果回滚失败，手动恢复关键配置
-Copy-Item "$env:USERPROFILE\.dotfiles-backup\*" "$env:USERPROFILE\" -Recurse -Force
+# 2. 如果自动修复失败，手动恢复关键配置
+Copy-Item "$env:USERPROFILE\.dotfiles\backups\*" "$env:USERPROFILE\" -Recurse -Force
 
-# 3. 重启PowerShell并重新加载配置
+# 3. 重新部署配置
+.\manage.ps1 deploy -Force
+
+# 4. 重启PowerShell并重新加载配置
 exit  # 然后重新打开PowerShell
 . $PROFILE
 ```
@@ -47,6 +50,9 @@ exit  # 然后重新打开PowerShell
 # 使用CMD临时修复
 # 1. 重命名问题配置文件
 ren "%USERPROFILE%\Documents\PowerShell\Microsoft.PowerShell_profile.ps1" "Microsoft.PowerShell_profile.ps1.broken"
+
+# 2. 检查备份文件
+dir "%USERPROFILE%\.dotfiles\backups\"
 
 # 2. 使用无配置模式启动PowerShell
 pwsh -NoProfile
@@ -70,7 +76,7 @@ refreshenv  # 如果安装了Chocolatey
 # 或重启PowerShell
 
 # 3. 重新安装核心应用
-.\install_apps.ps1 -Category Essential -Force
+.\manage.ps1 install-apps -Category Essential -Force
 ```
 
 ---
@@ -82,16 +88,19 @@ refreshenv  # 如果安装了Chocolatey
 **完整系统诊断**:
 ```powershell
 # 1. 环境状态检查
-.\detect-environment.ps1 -Detailed
+.\manage.ps1 detect -Detailed
 
 # 2. 健康状况检查
-.\health-check.ps1 -Detailed
+.\manage.ps1 health -Detailed
 
 # 3. 配置文件完整性检查
-.\health-check.ps1 -Category ConfigFiles
+.\manage.ps1 health -Category ConfigFiles
 
 # 4. 自动修复配置问题
-.\health-check.ps1 -Fix
+.\manage.ps1 health -Fix
+
+# 5. 查看系统状态
+.\manage.ps1 status
 ```
 
 **生成详细诊断报告**:
@@ -104,13 +113,21 @@ function New-DiagnosticReport {
     Get-ComputerInfo | ConvertTo-Json | Out-File "$reportDir\system-info.json"
     
     # 环境检测
-    .\detect-environment.ps1 -Json | Out-File "$reportDir\environment.json"
+    .\manage.ps1 detect -Detailed | Out-File "$reportDir\environment.txt"
     
     # 健康检查
-    .\health-check.ps1 -OutputFormat JSON | Out-File "$reportDir\health-check.json"
+    .\manage.ps1 health -Detailed | Out-File "$reportDir\health-check.txt"
+    
+    # 系统状态
+    .\manage.ps1 status | Out-File "$reportDir\system-status.txt"
     
     # PowerShell信息
     $PSVersionTable | ConvertTo-Json | Out-File "$reportDir\powershell-info.json"
+    
+    # 日志文件复制
+    if (Test-Path ".dotfiles\logs") {
+        Copy-Item ".dotfiles\logs\*" "$reportDir\logs\" -Recurse -ErrorAction SilentlyContinue
+    }
     
     # 环境变量
     Get-ChildItem Env: | ConvertTo-Json | Out-File "$reportDir\environment-vars.json"

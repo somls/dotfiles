@@ -1,6 +1,6 @@
 # ❓ 常见问题解答 (FAQ)
 
-欢迎查看Windows Dotfiles管理系统的常见问题解答！本文档汇总了用户在使用过程中最常遇到的问题及其解决方案。
+欢迎查看Windows Dotfiles管理系统v2.0的常见问题解答！本文档汇总了用户在使用过程中最常遇到的问题及其解决方案。
 
 ## 📋 目录
 
@@ -32,11 +32,12 @@
 
 **A**: 本项目的核心优势：
 
-| 特性 | 本项目 | 一般dotfiles |
-|------|--------|--------------|
+| 特性 | 本项目v2.0 | 一般dotfiles |
+|------|-----------|--------------|
+| **统一界面** | 单一入口点(`manage.ps1`)，75%命令简化 | 多个分散脚本 |
 | **环境适应性** | 智能检测22+应用，自适应路径 | 通常硬编码路径 |
 | **Windows优化** | 专为Windows设计，完美集成 | 多为Linux/macOS移植 |
-| **用户友好性** | 图形化向导，详细文档 | 通常需要较强技术背景 |
+| **基础设施** | 集中日志、自动备份、智能缓存 | 通常缺乏系统管理 |
 | **企业级特性** | 健康检查，自动修复，审计日志 | 多为个人使用项目 |
 | **部署模式** | 双模式：复制+符号链接 | 通常只有符号链接 |
 
@@ -44,9 +45,9 @@
 
 **A**: **零基础也可以使用**！项目设计了不同技能水平的使用方式：
 
-- 🟢 **新手**: 使用一键安装脚本，跟随图形化向导
-- 🟡 **进阶**: 选择性安装，自定义配置文件  
-- 🔴 **专家**: 符号链接模式，深度定制化
+- 🟢 **新手**: 使用统一管理接口 `.\manage.ps1 setup`
+- 🟡 **进阶**: 选择性部署 `.\manage.ps1 deploy -Type PowerShell,Git`  
+- 🔴 **专家**: 开发者模式，符号链接管理，深度定制化
 
 ---
 
@@ -118,6 +119,10 @@ scoop install pwsh
 
 **验证检测效果**：
 ```powershell
+# 使用统一管理接口
+.\manage.ps1 detect -Detailed
+
+# 或直接调用核心脚本
 .\detect-environment.ps1 -Detailed
 ```
 
@@ -132,7 +137,7 @@ scoop install pwsh
 
 **手动配置示例**：
 ```powershell
-# 配置Git代理（在.gitconfig.local中）
+# 配置Git代理（在configs/git/gitconfig.local中）
 [http]
     proxy = http://proxy.company.com:8080
 [https] 
@@ -144,6 +149,9 @@ scoop config proxy proxy.company.com:8080
 # 配置PowerShell代理
 $env:HTTP_PROXY = "http://proxy.company.com:8080"
 $env:HTTPS_PROXY = "http://proxy.company.com:8080"
+
+# 验证网络连接
+.\manage.ps1 status
 ```
 
 ---
@@ -156,11 +164,11 @@ $env:HTTPS_PROXY = "http://proxy.company.com:8080"
 
 **1️⃣ 检查系统环境**：
 ```powershell
-# 运行环境检查
-.\detect-environment.ps1 -Detailed
+# 使用统一管理接口检查环境
+.\manage.ps1 detect -Detailed
 
 # 检查具体问题
-.\health-check.ps1 -Category System
+.\manage.ps1 health -Category System
 ```
 
 **2️⃣ 检查网络连接**：
@@ -182,7 +190,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 **4️⃣ 使用修复模式**：
 ```powershell
 # 自动修复检测到的问题
-.\health-check.ps1 -Fix
+.\manage.ps1 health -Fix
 ```
 
 ### Q: 可以只安装某些配置吗？
@@ -191,44 +199,47 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 **按配置类型选择**：
 ```powershell
-# 只安装PowerShell配置
-.\install.ps1 -Type PowerShell
+# 只部署PowerShell配置
+.\manage.ps1 deploy -Type PowerShell
 
-# 安装多个类型
-.\install.ps1 -Type Git,PowerShell,Starship
+# 部署多个类型
+.\manage.ps1 deploy -Type Git,PowerShell,Starship
 
-# 查看所有可用类型
-.\install.ps1 -Type ?
+# 交互式选择配置类型
+.\manage.ps1 deploy -Interactive
 ```
 
 **按应用程序分类选择**：
 ```powershell
 # 只安装基础工具
-.\install_apps.ps1 -Category Essential
+.\manage.ps1 install-apps -Category Essential
 
 # 只安装开发工具
-.\install_apps.ps1 -Category Development
+.\manage.ps1 install-apps -Category Development
 
-# 查看所有分类
-.\install_apps.ps1 -ListCategories
+# 安装所有应用程序
+.\manage.ps1 install-apps -Category All
 ```
 
 **自定义安装组合**：
 ```powershell
-# 创建自定义安装脚本
+# 使用统一管理接口的自定义安装
 function Install-MySetup {
     # 基础环境检测
-    .\detect-environment.ps1
+    .\manage.ps1 detect
     
     # 安装核心工具
-    .\install_apps.ps1 -Category Essential
+    .\manage.ps1 install-apps -Category Essential
     
     # 只配置PowerShell和Git
-    .\install.ps1 -Type PowerShell,Git
+    .\manage.ps1 deploy -Type PowerShell,Git
     
     # 验证安装
-    .\health-check.ps1
+    .\manage.ps1 health
 }
+
+# 或者使用一键完整安装
+.\manage.ps1 setup
 ```
 
 ### Q: 安装会覆盖我现有的配置吗？
@@ -236,10 +247,11 @@ function Install-MySetup {
 **A**: **不会直接覆盖，始终安全第一！**
 
 **安全机制**：
-1. **自动备份**: 安装前自动备份现有配置
+1. **自动备份**: 安装前自动备份到 `.dotfiles/backups/`
 2. **冲突检测**: 检测到冲突时会提示用户选择
 3. **预览模式**: 使用`-DryRun`参数预览将要进行的操作
 4. **交互模式**: 使用`-Interactive`参数逐步确认每个操作
+5. **统一日志**: 所有操作记录在 `.dotfiles/logs/` 目录
 
 **备份文件位置**：
 ```powershell

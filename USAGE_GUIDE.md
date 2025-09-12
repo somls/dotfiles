@@ -31,24 +31,30 @@
 git clone https://github.com/somls/dotfiles.git
 cd dotfiles
 
-# 2. 四步完整安装（推荐）
-.\detect-environment.ps1    # 🔍 检测系统环境 (检测15+应用)
-.\install_apps.ps1          # 📦 安装开发工具 (18+精选应用)
-.\install.ps1               # ⚙️ 部署配置文件 (智能路径映射)
-.\health-check.ps1          # 🏥 验证安装结果 (完整性检查)
+# 2. 统一管理界面 - 一键完整安装（推荐）
+.\manage.ps1 setup          # 🚀 完整安装流程 (检测+安装+部署+验证)
+
+# 或者分步骤执行
+.\manage.ps1 detect         # 🔍 检测系统环境 (检测22+应用)
+.\manage.ps1 install-apps   # 📦 安装开发工具 (18+精选应用)
+.\manage.ps1 deploy         # ⚙️ 部署配置文件 (智能路径映射)
+.\manage.ps1 health -Fix    # 🏥 验证安装结果 (完整性检查)
 ```
 
 ### 🏃‍♂️ 快速安装（适合有经验的用户）
 
 ```powershell
 # 仅部署配置文件
-.\install.ps1
+.\manage.ps1 deploy
 
 # 指定组件安装
-.\install.ps1 -Type PowerShell,Git,Starship
+.\manage.ps1 deploy -Type PowerShell,Git,Starship
 
 # 交互式安装，逐个确认
-.\install.ps1 -Interactive
+.\manage.ps1 deploy -Interactive
+
+# 检查当前状态
+.\manage.ps1 status
 ```
 
 ## 🎯 常用场景
@@ -57,24 +63,31 @@ cd dotfiles
 
 ```powershell
 # 完整的开发环境搭建
-.\detect-environment.ps1 -Detailed    # 详细环境分析（检测15+应用）
-.\install_apps.ps1 -Category All      # 安装所有应用（18+精选应用）
-.\install.ps1 -Interactive           # 交互式配置部署
-.\health-check.ps1 -Fix              # 自动修复问题
+.\manage.ps1 setup -Detailed         # 完整安装流程（详细模式）
+
+# 或者分步骤执行
+.\manage.ps1 detect -Detailed        # 详细环境分析（检测22+应用）
+.\manage.ps1 install-apps -Category All  # 安装所有应用（18+精选应用）
+.\manage.ps1 deploy -Interactive     # 交互式配置部署
+.\manage.ps1 health -Fix             # 自动修复问题
 
 # 验证结果
-.\health-check.ps1 -Detailed         # 查看详细报告
+.\manage.ps1 health -Detailed        # 查看详细报告
+.\manage.ps1 status                  # 查看系统状态
 ```
 
 ### 场景2: 配置问题诊断
 
 ```powershell
 # 系统诊断和修复
-.\health-check.ps1 -Fix              # 基础诊断和自动修复
-.\health-check.ps1 -Detailed         # 查看详细诊断信息
+.\manage.ps1 health -Fix             # 基础诊断和自动修复
+.\manage.ps1 health -Detailed        # 查看详细诊断信息
 
-# JSON格式报告（用于自动化）
-.\health-check.ps1 -OutputFormat JSON -Category System
+# 查看当前状态
+.\manage.ps1 status                  # 快速状态检查
+
+# 清理日志和缓存
+.\manage.ps1 clean                   # 清理旧日志和临时文件
 ```
 
 ### 场景3: 配置更新和维护
@@ -82,16 +95,16 @@ cd dotfiles
 ```powershell
 # 更新配置
 git pull                              # 更新源码
-.\install.ps1 -Force                 # 强制重新部署
-.\health-check.ps1                   # 验证更新结果
+.\manage.ps1 deploy -Force           # 强制重新部署
+.\manage.ps1 health                  # 验证更新结果
 ```
 
 ### 场景4: 仅配置管理
 
 ```powershell
 # 只想使用配置文件，不安装应用
-.\install.ps1 -Type PowerShell,Git,Starship
-.\health-check.ps1
+.\manage.ps1 deploy -Type PowerShell,Git,Starship
+.\manage.ps1 health
 ```
 
 ### 场景3: 企业环境部署

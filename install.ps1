@@ -110,36 +110,38 @@ param(
 # Define default installation applications (core tools)
 $script:DefaultComponents = @('Scoop', 'CMD', 'PowerShell', 'Starship', 'Git', 'WindowsTerminal')
 
-# Read user configuration file first (takes effect when parameters not explicitly passed)
-# Note: Configuration file reading is temporarily disabled due to JSON format issues
-# The script will use built-in defaults instead
+# Read configuration mapping from new structure
 try {
-    $configPath = Join-Path $PSScriptRoot 'config/install.json'
-    if ($false -and (Test-Path $configPath)) {  # Temporarily disabled
-        $cfg = Get-Content $configPath -Raw | ConvertFrom-Json
-        # Only apply configuration defaults when not specified via CLI
-        if (-not $PSBoundParameters.ContainsKey('Mode') -and $cfg.DefaultMode) {
-            $Mode = $cfg.DefaultMode
-        }
-        if (-not $PSBoundParameters.ContainsKey('Type') -and $cfg.DefaultComponents) {
-            $Type = $cfg.DefaultComponents
-        }
+    $configMappingPath = Join-Path $PSScriptRoot '.dotfiles/config-mapping.json'
+    if (Test-Path $configMappingPath) {
+        $script:ConfigMapping = Get-Content $configMappingPath -Raw | ConvertFrom-Json
+        Write-Verbose "Loaded configuration mapping from $configMappingPath"
+    } else {
+        Write-Verbose "Configuration mapping not found, using built-in defaults"
     }
 } catch {
-    Write-Warning "Failed to read configuration file: $($_.Exception.Message)"
+    Write-Warning "Failed to read configuration mapping: $($_.Exception.Message)"
 }
 
 # Global variables
 $script:SourceDir = $PSScriptRoot
+$script:ConfigsDir = Join-Path $PSScriptRoot "configs"
 $script:BackupDir = $BackupDir
+$script:LogsDir = Join-Path $PSScriptRoot ".dotfiles/logs"
 $script:InstallResults = @{
     Success = @()
     Failed = @()
     Skipped = @()
 }
 
-# Initialize log file
-$script:LogFile = Join-Path $script:SourceDir "install.log"
+# Ensure logs directory exists
+if (-not (Test-Path $script:LogsDir)) {
+    New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+}
+
+# Initialize log file with timestamp
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$script:LogFile = Join-Path $script:LogsDir "install-$timestamp.log"
 
 # Installation mode parsing (default copy, developers can choose symbolic links)
 # Rules:
@@ -540,27 +542,27 @@ $adaptivePaths = Get-AdaptiveConfigPaths
 # Use adaptive path configuration
 $links = @{
     # Git - Force symbolic links to maintain repository configuration sync
-    "git\gitconfig"        = @{ Target = ".gitconfig";        Type = "Git"; ForceSymlink = $true };
-    "git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git"; ForceSymlink = $true };
-    "git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git"; ForceSymlink = $true };
-    "git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git"; ForceSymlink = $true };
+    "configs\git\gitconfig"        = @{ Target = ".gitconfig";        Type = "Git"; ForceSymlink = $true };
+    "configs\git\gitignore_global" = @{ Target = ".gitignore_global"; Type = "Git"; ForceSymlink = $true };
+    "configs\git\gitmessage"       = @{ Target = ".gitmessage";       Type = "Git"; ForceSymlink = $true };
+    "configs\git\gitconfig.d"      = @{ Target = ".gitconfig.d";      Type = "Git"; ForceSymlink = $true };
 
     # PowerShell
-    "powershell\Microsoft.PowerShell_profile.ps1" = @{ Target = "$($adaptivePaths['PowerShell'])\Microsoft.PowerShell_profile.ps1"; Type = "PowerShell" };
+    "configs\powershell\Microsoft.PowerShell_profile.ps1" = @{ Target = "$($adaptivePaths['PowerShell'])\Microsoft.PowerShell_profile.ps1"; Type = "PowerShell" };
 
     # Scoop (users need to copy from config.json.example and customize)
-    # "scoop\config.json" = @{ Target = "$($adaptivePaths['Scoop'])\config.json"; Type = "Scoop"; ForceCopy = $true };
+    # "configs\scoop\config.json" = @{ Target = "$($adaptivePaths['Scoop'])\config.json"; Type = "Scoop"; ForceCopy = $true };
 
     # CMD aliases 已移除 - 简化项目结构
 
     # Windows Terminal
-    "WindowsTerminal\settings.json" = @{ Target = "$($adaptivePaths['WindowsTerminal'])\settings.json"; Type = "WindowsTerminal" };
+    "configs\WindowsTerminal\settings.json" = @{ Target = "$($adaptivePaths['WindowsTerminal'])\settings.json"; Type = "WindowsTerminal" };
 
     # Starship
-    "starship\starship.toml" = @{ Target = "$($adaptivePaths['Starship'])\starship.toml"; Type = "Starship" };
+    "configs\starship\starship.toml" = @{ Target = "$($adaptivePaths['Starship'])\starship.toml"; Type = "Starship" };
 
     # Neovim (Force symbolic link for entire configuration directory)
-    "neovim" = @{ Target = "$($adaptivePaths['Neovim'])"; Type = "Neovim"; ForceSymlink = $true };
+    "configs\neovim" = @{ Target = "$($adaptivePaths['Neovim'])"; Type = "Neovim"; ForceSymlink = $true };
 }
 
 # Enhancement scripts list

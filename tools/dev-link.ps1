@@ -1,32 +1,32 @@
 <#
 .SYNOPSIS
     Developer Symbolic Link Management Script
-    
+
 .DESCRIPTION
     This script manages symbolic links for development mode.
     It can create, remove, or check the status of symbolic links
     between the dotfiles repository and application configuration directories.
-    
+
 .PARAMETER Action
     The action to perform: Create, Remove, or Status
-    
+
 .PARAMETER Component
     Specific component to manage. If not specified, manages all components.
-    
+
 .PARAMETER Force
     Force operation without confirmation prompts
-    
+
 .PARAMETER Quiet
     Suppress non-essential output
-    
+
 .EXAMPLE
     .\dev-link.ps1 -Action Create
     Creates symbolic links for all components
-    
+
 .EXAMPLE
     .\dev-link.ps1 -Action Status -Component PowerShell
     Shows status of PowerShell symbolic links
-    
+
 .EXAMPLE
     .\dev-link.ps1 -Action Remove -Force
     Removes all symbolic links without confirmation
@@ -36,32 +36,38 @@ param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('Create', 'Remove', 'Status')]
     [string]$Action,
-    
+
     [ValidateSet('Git', 'GitExtras', 'PowerShell', 'PowerShellExtras', 'PowerShellModule', 'Neovim', 'Starship', 'WindowsTerminal', 'Scoop')]
     [string]$Component,
-    
+
     [switch]$Force,
     [switch]$Quiet
 )
 
 # Script configuration
-$script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$script:LogFile = Join-Path $script:SourceRoot "dev-link.log"
+$script:SourceRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$script:LogsDir = Join-Path $script:SourceRoot ".dotfiles\logs"
+$script:LogFile = Join-Path $script:LogsDir "dev-link-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+
+# Ensure logs directory exists
+if (-not (Test-Path $script:LogsDir)) {
+    New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+}
 
 # Logging function
 function Write-DevLog {
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Message,
-        
+
         [Parameter(Position = 1)]
         [ValidateSet('INFO', 'WARN', 'ERROR', 'SUCCESS', 'DEBUG')]
         [string]$Level = "INFO"
     )
-    
+
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "[$timestamp] [$Level] $Message"
-    
+
     # Console output with colors
     if (-not $Quiet) {
         $color = switch ($Level) {
@@ -72,7 +78,7 @@ function Write-DevLog {
             'DEBUG'   { 'Gray' }
             default   { 'White' }
         }
-        
+
         $icon = switch ($Level) {
             'INFO'    { '[i]' }
             'SUCCESS' { '[+]' }
@@ -81,168 +87,15 @@ function Write-DevLog {
             'DEBUG'   { '[d]' }
             default   { '[?]' }
         }
-        
+
         Write-Host "$icon $Message" -ForegroundColor $color
     }
-    
+
     # File logging
     try {
         Add-Content -Path $script:LogFile -Value $logEntry -Encoding UTF8
-    }
-    catch {
-        # Continue if logging fails
-    }
-}
-
-# Get target paths for each component
-function Get-ComponentPaths {
-    $paths = @{}
-    
-    # PowerShell configuration paths
-    $documentsPath = [Environment]::GetFolderPath('MyDocuments')
-    if ($PSVersionTable.PSVersion.Major -ge 6) {
-        $paths['PowerShell'] = "$documentsPath\PowerShell"
-        $paths['PowerShellModule'] = "$documentsPath\PowerShell\Modules"
-    } else {
-        $paths['PowerShell'] = "$documentsPath\WindowsPowerShell"
-        $paths['PowerShellModule'] = "$documentsPath\WindowsPowerShell\Modules"
-    }
-    
-    # Git configuration paths
-    $paths['Git'] = "$env:USERPROFILE"
-    $paths['GitExtras'] = "$env:USERPROFILE"
-    
-    # PowerShell extras
-    $paths['PowerShellExtras'] = "$env:USERPROFILE"
-    
-    # Application configuration paths
-    $paths['Neovim'] = "$env:LOCALAPPDATA\nvim"
-    $paths['Starship'] = "$env:USERPROFILE\.config"
-    # Windows Terminal 路径 - 动态检测包名
-    $wtPath = $null
-    $possibleWTPaths = @(
-        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState",
-        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState"
-    )
-    
-    # 动态搜索 Windows Terminal 包
-    $wtPackages = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue | 
-                  Where-Object { $_.Name -like "Microsoft.WindowsTerminal*" }
-    
-    foreach ($package in $wtPackages) {
-        $localStatePath = Join-Path $package.FullName "LocalState"
-        if (Test-Path $localStatePath) {
-            $wtPath = $localStatePath
-            break
-        }
-    }
-    
-    # 如果动态检测失败，使用默认路径
-    if (-not $wtPath) {
-        foreach ($path in $possibleWTPaths) {
-            if (Test-Path (Split-Path $path -Parent)) {
-                $wtPath = $path
-                break
-            }
-        }
-    }
-    
-    $paths['WindowsTerminal'] = if ($wtPath) { $wtPath } else { $possibleWTPaths[0] }
-    
-    # Package manager paths - 动态检测Scoop安装位置
-    $scoopPath = $env:SCOOP
-    if (-not $scoopPath) {
-        # 检查常见的Scoop安装位置（使用环境变量，避免硬编码驱动器）
-        $possibleScoopPaths = @(
-            "$env:USERPROFILE\scoop",
-            "$env:SCOOP_GLOBAL",
-            "$env:SystemDrive\Scoop",
-            "$env:ProgramData\scoop"
-        )
-        
-        # 如果环境变量不存在，检查常见位置
-        if (-not $env:SCOOP_GLOBAL) {
-            $possibleScoopPaths += @(
-                "$env:SystemDrive\ProgramData\scoop",
-                "$env:SystemDrive\scoop"
-            )
-        }
-        
-        foreach ($path in $possibleScoopPaths) {
-            if ($path -and (Test-Path $path)) {
-                $scoopPath = $path
-                break
-            }
-        }
-    }
-    $paths['Scoop'] = if ($scoopPath) { $scoopPath } else { "$env:USERPROFILE\scoop" }
-    
-    # CMD scripts 已移除
-    
-    return $paths
-}
-
-# Validate and create target directories if needed
-function Initialize-TargetDirectories {
-    param([hashtable]$Paths)
-    
-    foreach ($component in $Paths.Keys) {
-        $targetPath = $Paths[$component]
-        $parentDir = Split-Path $targetPath -Parent
-        
-        if ($parentDir -and -not (Test-Path $parentDir)) {
-            try {
-                New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
-                Write-DevLog "Created parent directory for $component`: $parentDir" "INFO"
-            }
-            catch {
-                Write-DevLog "Failed to create parent directory for $component`: $parentDir - $($_.Exception.Message)" "WARN"
-            }
-        }
-    }
-}
-
-# Define source to target mappings
-function Get-ComponentMappings {
-    return @{
-        # Git 配置 - 主要配置
-        'Git' = @(
-            @{ Source = "git\gitconfig"; Target = ".gitconfig" }
-        )
-        # Git 配置 - 扩展文件
-        'GitExtras' = @(
-            @{ Source = "git\gitignore_global"; Target = ".gitignore_global" },
-            @{ Source = "git\gitmessage"; Target = ".gitmessage" }
-        )
-        # PowerShell 配置 - 主配置文件
-        'PowerShell' = @(
-            @{ Source = "powershell\Microsoft.PowerShell_profile.ps1"; Target = "Microsoft.PowerShell_profile.ps1" }
-        )
-        # PowerShell 配置 - 扩展文件夹
-        'PowerShellExtras' = @(
-            @{ Source = "powershell\.powershell"; Target = ".powershell" }
-        )
-        # PowerShell 模块
-        'PowerShellModule' = @(
-            @{ Source = "modules\DotfilesUtilities.psm1"; Target = "DotfilesUtilities\DotfilesUtilities.psm1"; IsModule = $true }
-        )
-        # Neovim 配置
-        'Neovim' = @(
-            @{ Source = "neovim"; Target = "." }
-        )
-        # Starship 提示符配置
-        'Starship' = @(
-            @{ Source = "starship\starship.toml"; Target = "starship.toml" }
-        )
-        # Windows Terminal 配置
-        'WindowsTerminal' = @(
-            @{ Source = "WindowsTerminal\settings.json"; Target = "settings.json" }
-        )
-        # Scoop 包管理器配置
-        'Scoop' = @(
-            @{ Source = "scoop\config.json"; Target = "config.json" }
-        )
-        # CMD 脚本已移除 - 简化项目结构
+    } catch {
+        # Continue if unable to write to log file
     }
 }
 
@@ -253,6 +106,132 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+# Get target paths for each component
+function Get-ComponentPaths {
+    $paths = @{}
+
+    # PowerShell configuration paths
+    $documentsPath = [Environment]::GetFolderPath('MyDocuments')
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        $paths['PowerShell'] = "$documentsPath\PowerShell"
+        $paths['PowerShellModule'] = "$documentsPath\PowerShell\Modules"
+    } else {
+        $paths['PowerShell'] = "$documentsPath\WindowsPowerShell"
+        $paths['PowerShellModule'] = "$documentsPath\WindowsPowerShell\Modules"
+    }
+
+    # Git configuration paths
+    $paths['Git'] = "$env:USERPROFILE"
+    $paths['GitExtras'] = "$env:USERPROFILE"
+
+    # PowerShell extras
+    $paths['PowerShellExtras'] = "$env:USERPROFILE"
+
+    # Application configuration paths
+    $paths['Neovim'] = "$env:LOCALAPPDATA\nvim"
+    $paths['Starship'] = "$env:USERPROFILE\.config"
+
+    # Windows Terminal - Dynamic detection
+    $possibleWTPaths = @(
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState",
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState"
+    )
+
+    $wtPath = $null
+    $wtPackages = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue |
+                  Where-Object { $_.Name -like "Microsoft.WindowsTerminal*" }
+
+    foreach ($package in $wtPackages) {
+        $localStatePath = Join-Path $package.FullName "LocalState"
+        if (Test-Path $localStatePath) {
+            $wtPath = $localStatePath
+            break
+        }
+    }
+
+    if (-not $wtPath) {
+        foreach ($path in $possibleWTPaths) {
+            if (Test-Path $path) {
+                $wtPath = $path
+                break
+            }
+        }
+    }
+
+    $paths['WindowsTerminal'] = if ($wtPath) { $wtPath } else { $possibleWTPaths[0] }
+
+    # Scoop - Dynamic detection
+    $scoopPath = $env:SCOOP
+    if (-not $scoopPath) {
+        $possibleScoopPaths = @(
+            "$env:USERPROFILE\scoop",
+            "$env:SystemDrive\Scoop",
+            "$env:ProgramData\scoop"
+        )
+
+        if (-not $env:SCOOP_GLOBAL) {
+            $possibleScoopPaths += @(
+                "$env:USERPROFILE\AppData\Local\scoop",
+                "$env:SystemDrive\scoop"
+            )
+        }
+
+        foreach ($path in $possibleScoopPaths) {
+            if ($path -and (Test-Path $path)) {
+                $scoopPath = $path
+                break
+            }
+        }
+    }
+    $paths['Scoop'] = if ($scoopPath) { $scoopPath } else { "$env:USERPROFILE\scoop" }
+
+    return $paths
+}
+
+# Define source to target mappings
+function Get-ComponentMappings {
+    return @{
+        # Git configuration - main config
+        'Git' = @(
+            @{ Source = "configs\git\gitconfig"; Target = ".gitconfig" }
+        )
+        # Git configuration - additional files
+        'GitExtras' = @(
+            @{ Source = "configs\git\gitignore_global"; Target = ".gitignore_global" },
+            @{ Source = "configs\git\gitmessage"; Target = ".gitmessage" }
+        )
+        # PowerShell configuration - main profile
+        'PowerShell' = @(
+            @{ Source = "configs\powershell\Microsoft.PowerShell_profile.ps1"; Target = "Microsoft.PowerShell_profile.ps1" }
+        )
+        # PowerShell configuration - additional folders
+        'PowerShellExtras' = @(
+            @{ Source = "configs\powershell\.powershell"; Target = ".powershell" }
+        )
+        # PowerShell modules
+        'PowerShellModule' = @(
+            @{ Source = "modules\DotfilesUtilities.psm1"; Target = "DotfilesUtilities\DotfilesUtilities.psm1"; IsModule = $true },
+            @{ Source = "modules\EnvironmentAdapter.psm1"; Target = "EnvironmentAdapter\EnvironmentAdapter.psm1"; IsModule = $true }
+        )
+        # Neovim configuration
+        'Neovim' = @(
+            @{ Source = "configs\neovim"; Target = "." }
+        )
+        # Starship prompt configuration
+        'Starship' = @(
+            @{ Source = "configs\starship\starship.toml"; Target = "starship.toml" }
+        )
+        # Windows Terminal configuration
+        'WindowsTerminal' = @(
+            @{ Source = "configs\WindowsTerminal\settings.json"; Target = "settings.json" }
+        )
+        # Scoop package manager configuration
+        'Scoop' = @(
+            @{ Source = "configs\scoop\config.json"; Target = "config.json" }
+        )
+    }
+}
+
 # Create symbolic link
 function New-SymbolicLink {
     param(
@@ -260,59 +239,56 @@ function New-SymbolicLink {
         [string]$Target,
         [string]$ComponentName
     )
-    
+
     $sourcePath = Join-Path $script:SourceRoot $Source
-    
+
     if (-not (Test-Path $sourcePath)) {
         Write-DevLog "Source path does not exist: $sourcePath" "ERROR"
         return $false
     }
-    
+
     # Create target directory if it doesn't exist
     $targetDir = Split-Path $Target -Parent
     if ($targetDir -and -not (Test-Path $targetDir)) {
         try {
-            New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+            New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
             Write-DevLog "Created target directory: $targetDir" "INFO"
-        }
-        catch {
+        } catch {
             Write-DevLog "Failed to create target directory: $targetDir - $($_.Exception.Message)" "ERROR"
             return $false
         }
     }
-    
+
     # Remove existing target if it exists
     if (Test-Path $Target) {
         if (-not $Force) {
             $response = Read-Host "Target exists: $Target. Replace? (y/N)"
-            if ($response -ne 'y' -and $response -ne 'Y') {
-                Write-DevLog "Skipped: $Target" "WARN"
+            if ($response -notmatch '^[Yy]$') {
                 return $false
             }
         }
-        
+
         try {
             Remove-Item $Target -Force -Recurse
             Write-DevLog "Removed existing target: $Target" "INFO"
-        }
-        catch {
+        } catch {
             Write-DevLog "Failed to remove existing target: $Target - $($_.Exception.Message)" "ERROR"
             return $false
         }
     }
-    
+
     # Create symbolic link
     try {
         $item = Get-Item $sourcePath
         if ($item.PSIsContainer) {
-            New-Item -Path $Target -ItemType SymbolicLink -Value $sourcePath | Out-Null
+            New-Item -ItemType SymbolicLink -Path $Target -Target $sourcePath -Force | Out-Null
         } else {
-            New-Item -Path $Target -ItemType SymbolicLink -Value $sourcePath | Out-Null
+            New-Item -ItemType SymbolicLink -Path $Target -Target $sourcePath -Force | Out-Null
         }
+
         Write-DevLog "Created symbolic link: $Target -> $sourcePath" "SUCCESS"
         return $true
-    }
-    catch {
+    } catch {
         Write-DevLog "Failed to create symbolic link: $Target -> $sourcePath - $($_.Exception.Message)" "ERROR"
         return $false
     }
@@ -321,65 +297,66 @@ function New-SymbolicLink {
 # Remove symbolic link
 function Remove-SymbolicLink {
     param(
+        [string]$Source,
         [string]$Target,
         [string]$ComponentName
     )
-    
+
     if (-not (Test-Path $Target)) {
         Write-DevLog "Target does not exist: $Target" "WARN"
         return $true
     }
-    
+
     $item = Get-Item $Target
     if ($item.LinkType -ne "SymbolicLink") {
         Write-DevLog "Target is not a symbolic link: $Target" "WARN"
         return $false
     }
-    
+
     try {
         Remove-Item $Target -Force
         Write-DevLog "Removed symbolic link: $Target" "SUCCESS"
         return $true
-    }
-    catch {
+    } catch {
         Write-DevLog "Failed to remove symbolic link: $Target - $($_.Exception.Message)" "ERROR"
         return $false
     }
 }
 
-# Check symbolic link status
+# Get symbolic link status
 function Get-SymbolicLinkStatus {
     param(
         [string]$Source,
         [string]$Target,
         [string]$ComponentName
     )
-    
+
     $sourcePath = Join-Path $script:SourceRoot $Source
     $status = @{
         Component = $ComponentName
-        Source = $sourcePath
+        Source = $Source
         Target = $Target
+        SourcePath = $sourcePath
         Exists = $false
         IsSymbolicLink = $false
         IsValid = $false
         TargetPath = $null
     }
-    
+
     if (Test-Path $Target) {
         $status.Exists = $true
         $item = Get-Item $Target
-        
+
         if ($item.LinkType -eq "SymbolicLink") {
             $status.IsSymbolicLink = $true
             $status.TargetPath = $item.Target
-            
+
             if ($item.Target -eq $sourcePath) {
                 $status.IsValid = $true
             }
         }
     }
-    
+
     return $status
 }
 
@@ -389,58 +366,55 @@ function Invoke-ComponentAction {
         [string]$ComponentName,
         [string]$Action
     )
-    
+
     $paths = Get-ComponentPaths
     $mappings = Get-ComponentMappings
-    
+
     if (-not $paths.ContainsKey($ComponentName)) {
         Write-DevLog "Unknown component: $ComponentName" "ERROR"
         return $false
     }
-    
+
     if (-not $mappings.ContainsKey($ComponentName)) {
         Write-DevLog "No mappings defined for component: $ComponentName" "ERROR"
         return $false
     }
-    
+
     $basePath = $paths[$ComponentName]
     $componentMappings = $mappings[$ComponentName]
     $success = $true
-    
+
     Write-DevLog "Processing component: $ComponentName" "INFO"
-    
+
     foreach ($mapping in $componentMappings) {
-        # 特殊处理PowerShell模块
+        # Handle PowerShell modules specially
         if ($mapping.IsModule -and $ComponentName -eq 'PowerShellModule') {
             $targetPath = Join-Path $basePath $mapping.Target
-            # 确保模块目录存在
-            $moduleDir = Split-Path $targetPath -Parent
-            if (-not (Test-Path $moduleDir)) {
-                New-Item -Path $moduleDir -ItemType Directory -Force | Out-Null
-                Write-DevLog "Created module directory: $moduleDir" "INFO"
-            }
+        } elseif ($mapping.Target -eq ".") {
+            # Handle directory mappings (like Neovim)
+            $targetPath = $basePath
         } else {
             $targetPath = Join-Path $basePath $mapping.Target
         }
-        
+
         switch ($Action) {
             'Create' {
                 $result = New-SymbolicLink -Source $mapping.Source -Target $targetPath -ComponentName $ComponentName
                 if (-not $result) { $success = $false }
             }
             'Remove' {
-                $result = Remove-SymbolicLink -Target $targetPath -ComponentName $ComponentName
+                $result = Remove-SymbolicLink -Source $mapping.Source -Target $targetPath -ComponentName $ComponentName
                 if (-not $result) { $success = $false }
             }
             'Status' {
                 $status = Get-SymbolicLinkStatus -Source $mapping.Source -Target $targetPath -ComponentName $ComponentName
-                
+
                 $statusText = if ($status.Exists) {
                     if ($status.IsSymbolicLink) {
                         if ($status.IsValid) {
                             "Valid symbolic link"
                         } else {
-                            "Invalid symbolic link (points to: $($status.TargetPath))"
+                            "Invalid symbolic link (wrong target)"
                         }
                     } else {
                         "Exists but not a symbolic link"
@@ -448,121 +422,92 @@ function Invoke-ComponentAction {
                 } else {
                     "Does not exist"
                 }
-                
+
                 Write-DevLog "$ComponentName -> $($mapping.Target): $statusText" "INFO"
             }
         }
     }
-    
+
     return $success
 }
 
 # Environment detection and reporting
 function Show-EnvironmentInfo {
     Write-DevLog "=== Environment Detection Report ===" "INFO"
-    
+
     # System info
     Write-DevLog "OS: $($env:OS) $($env:PROCESSOR_ARCHITECTURE)" "INFO"
     Write-DevLog "User: $($env:USERNAME)" "INFO"
     Write-DevLog "Home: $($env:USERPROFILE)" "INFO"
-    
+
     # PowerShell info
     Write-DevLog "PowerShell: $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))" "INFO"
-    
+
     # Path detection results
     $paths = Get-ComponentPaths
     Write-DevLog "=== Detected Paths ===" "INFO"
-    foreach ($component in $paths.Keys | Sort-Object) {
+    foreach ($component in $paths.Keys) {
         $path = $paths[$component]
         $exists = Test-Path $path
         $status = if ($exists) { "EXISTS" } else { "MISSING" }
         Write-DevLog "$component`: $path [$status]" "INFO"
     }
-    
+
     # Application detection
     Write-DevLog "=== Application Detection ===" "INFO"
-    
-    # PowerShell versions
-    $pwsh7 = Get-Command pwsh -ErrorAction SilentlyContinue
-    if ($pwsh7) {
-        Write-DevLog "PowerShell 7: $($pwsh7.Source)" "SUCCESS"
-    } else {
-        Write-DevLog "PowerShell 7: Not found" "WARN"
+
+    $apps = @{
+        'PowerShell 7' = 'pwsh'
+        'Windows PowerShell 5' = 'powershell'
+        'Git' = 'git'
+        'Starship' = 'starship'
+        'Scoop' = 'scoop'
     }
-    
-    $pwsh5 = Get-Command powershell -ErrorAction SilentlyContinue
-    if ($pwsh5) {
-        Write-DevLog "Windows PowerShell 5: $($pwsh5.Source)" "SUCCESS"
-    } else {
-        Write-DevLog "Windows PowerShell 5: Not found" "WARN"
-    }
-    
-    # Scoop detection
-    $scoop = Get-Command scoop -ErrorAction SilentlyContinue
-    if ($scoop) {
-        Write-DevLog "Scoop: $($scoop.Source)" "SUCCESS"
-        if ($env:SCOOP) {
-            Write-DevLog "SCOOP env: $($env:SCOOP)" "INFO"
+
+    foreach ($appName in $apps.Keys) {
+        $command = Get-Command $apps[$appName] -ErrorAction SilentlyContinue
+        if ($command) {
+            Write-DevLog "$appName`: $($command.Source)" "SUCCESS"
+        } else {
+            Write-DevLog "$appName`: Not found" "WARN"
         }
-    } else {
-        Write-DevLog "Scoop: Not found" "WARN"
     }
-    
-    # Git detection
-    $git = Get-Command git -ErrorAction SilentlyContinue
-    if ($git) {
-        Write-DevLog "Git: $($git.Source)" "SUCCESS"
-    } else {
-        Write-DevLog "Git: Not found" "WARN"
-    }
-    
-    # Starship detection
-    $starship = Get-Command starship -ErrorAction SilentlyContinue
-    if ($starship) {
-        Write-DevLog "Starship: $($starship.Source)" "SUCCESS"
-    } else {
-        Write-DevLog "Starship: Not found" "WARN"
-    }
-    
+
     Write-DevLog "=== End Environment Report ===" "INFO"
 }
 
 # Main execution
 function Main {
     Write-DevLog "Starting dev-link.ps1 - Action: $Action" "INFO"
-    
+
     # Show environment info for debugging
     if ($Action -eq 'Status' -and -not $Component) {
         Show-EnvironmentInfo
     }
-    
+
     # Check administrator privileges for symbolic link creation
     if ($Action -eq 'Create' -and -not (Test-Administrator)) {
         Write-DevLog "Administrator privileges required for creating symbolic links" "ERROR"
         Write-DevLog "Please run PowerShell as Administrator and try again" "ERROR"
         exit 1
     }
-    
-    # Initialize target directories
-    $allPaths = Get-ComponentPaths
-    Initialize-TargetDirectories -Paths $allPaths
-    
+
     $components = if ($Component) {
         @($Component)
     } else {
-        # 默认处理所有主要组件
+        # Default components to process
         @('Git', 'GitExtras', 'PowerShell', 'PowerShellExtras', 'PowerShellModule', 'Neovim', 'Starship', 'WindowsTerminal', 'Scoop')
     }
-    
+
     $overallSuccess = $true
-    
+
     foreach ($comp in $components) {
         $result = Invoke-ComponentAction -ComponentName $comp -Action $Action
         if (-not $result) {
             $overallSuccess = $false
         }
     }
-    
+
     if ($overallSuccess) {
         Write-DevLog "Operation completed successfully" "SUCCESS"
         exit 0

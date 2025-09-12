@@ -1,34 +1,34 @@
 <#
 .SYNOPSIS
     Application Installation Script via Scoop
-    
+
 .DESCRIPTION
     This script installs applications using Scoop package manager.
     It can install predefined application sets or individual applications.
-    
+
 .PARAMETER Category
     Application category to install (loaded from scoop/packages.txt): Essential, Development, GitEnhanced, Programming, All
-    
+
 .PARAMETER Apps
     Specific applications to install (comma-separated)
-    
+
 .PARAMETER Force
     Force installation without confirmation
-    
+
 .PARAMETER Quiet
     Suppress non-essential output
-    
+
 .PARAMETER DryRun
     Show what would be installed without actually installing
-    
+
 .EXAMPLE
     .\install_apps.ps1 -Category Essential
     Installs essential applications
-    
+
 .EXAMPLE
     .\install_apps.ps1 -Apps "git,nodejs,python"
     Installs specific applications
-    
+
 .EXAMPLE
     .\install_apps.ps1 -Category All -Force
     Installs all applications without confirmation
@@ -36,9 +36,9 @@
 
 param(
     [string]$Category,
-    
+
     [string[]]$Apps,
-    
+
     [switch]$All,
     [switch]$Force,
     [switch]$Quiet,
@@ -48,17 +48,26 @@ param(
 
 # Script configuration
 $script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$script:LogFile = Join-Path $script:SourceRoot "install_apps.log"
+$script:LogsDir = Join-Path $script:SourceRoot ".dotfiles\logs"
+
+# Ensure logs directory exists
+if (-not (Test-Path $script:LogsDir)) {
+    New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+}
+
+# Initialize log file with timestamp
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$script:LogFile = Join-Path $script:LogsDir "install-apps-$timestamp.log"
 
 # Load application definitions from packages.txt
 function Get-AppCategories {
     $packagesFile = Join-Path $script:SourceRoot "scoop\packages.txt"
-    
+
     if (-not (Test-Path $packagesFile)) {
         Write-AppLog "Packages file not found: $packagesFile" "ERROR"
         return @{}
     }
-    
+
     $categories = @{
         Essential = @{
             Description = "Essential Tools"
@@ -73,35 +82,35 @@ function Get-AppCategories {
             Apps = @()
         }
     }
-    
+
     $currentCategory = $null
     $content = Get-Content $packagesFile -Encoding UTF8
-    
+
     foreach ($line in $content) {
         $line = $line.Trim()
-        
+
         # Skip empty lines
         if ([string]::IsNullOrWhiteSpace($line)) {
             continue
         }
-        
+
         # Parse category headers
         if ($line -match '^#\s*.*\((\w+)\)') {
             $currentCategory = $matches[1]
             continue
         }
-        
+
         # Skip other comments
         if ($line.StartsWith('#')) {
             continue
         }
-        
+
         # Add app to current category
         if ($currentCategory -and $categories.ContainsKey($currentCategory)) {
             $categories[$currentCategory].Apps += $line
         }
     }
-    
+
     return $categories
 }
 
@@ -113,15 +122,15 @@ function Write-AppLog {
     param(
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Message,
-        
+
         [Parameter(Position = 1)]
         [ValidateSet('INFO', 'WARN', 'ERROR', 'SUCCESS', 'DEBUG')]
         [string]$Level = "INFO"
     )
-    
+
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "[$timestamp] [$Level] $Message"
-    
+
     # Console output with colors
     if (-not $Quiet) {
         $color = switch ($Level) {
@@ -132,7 +141,7 @@ function Write-AppLog {
             'DEBUG'   { 'Gray' }
             default   { 'White' }
         }
-        
+
         $icon = switch ($Level) {
             'INFO'    { '[i]' }
             'SUCCESS' { '[+]' }
@@ -141,10 +150,10 @@ function Write-AppLog {
             'DEBUG'   { '[d]' }
             default   { '[?]' }
         }
-        
+
         Write-Host "$icon $Message" -ForegroundColor $color
     }
-    
+
     # File logging
     try {
         Add-Content -Path $script:LogFile -Value $logEntry -Encoding UTF8
@@ -168,20 +177,20 @@ function Test-ScoopInstalled {
 # Enhanced environment compatibility check
 function Test-InstallEnvironment {
     Write-AppLog "Checking installation environment compatibility..." "INFO"
-    
+
     $issues = @()
-    
+
     # Check PowerShell version
     if ($PSVersionTable.PSVersion.Major -lt 5) {
         $issues += "PowerShell 5.0+ required, current: $($PSVersionTable.PSVersion)"
     }
-    
+
     # Check execution policy
     $policy = Get-ExecutionPolicy
     if ($policy -eq 'Restricted') {
         $issues += "Execution policy is Restricted, may prevent script execution"
     }
-    
+
     # Check internet connectivity
     try {
         $null = Invoke-WebRequest -Uri "https://get.scoop.sh" -Method Head -TimeoutSec 10 -ErrorAction Stop
@@ -189,7 +198,7 @@ function Test-InstallEnvironment {
     } catch {
         $issues += "Internet connectivity issue - may affect package downloads"
     }
-    
+
     # Check available disk space (minimum 2GB)
     try {
         $drive = Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq $env:SystemDrive }
@@ -201,29 +210,29 @@ function Test-InstallEnvironment {
     } catch {
         Write-AppLog "Could not check disk space" "WARN"
     }
-    
+
     if ($issues.Count -gt 0) {
         Write-AppLog "Environment compatibility issues found:" "WARN"
         foreach ($issue in $issues) {
             Write-AppLog "  - $issue" "WARN"
         }
-        
+
         # Ask user if they want to continue
         $choices = @(
             [System.Management.Automation.Host.ChoiceDescription]::new("&Continue", "Continue despite issues")
             [System.Management.Automation.Host.ChoiceDescription]::new("&Exit", "Exit and fix issues first")
         )
-        
+
         $decision = $Host.UI.PromptForChoice(
             "Environment Issues Detected",
             "Some environment issues were detected. Do you want to continue anyway?",
             $choices,
             1  # Default to Exit
         )
-        
+
         return $decision -eq 0
     }
-    
+
     Write-AppLog "Environment compatibility check passed" "SUCCESS"
     return $true
 }
@@ -231,14 +240,14 @@ function Test-InstallEnvironment {
 # Install Scoop if not present
 function Install-Scoop {
     Write-AppLog "Scoop not found. Installing Scoop..." "INFO"
-    
+
     try {
         # Set execution policy for current user
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-        
+
         # Download and install Scoop
         Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
-        
+
         # Verify installation
         if (Test-ScoopInstalled) {
             Write-AppLog "Scoop installed successfully" "SUCCESS"
@@ -257,7 +266,7 @@ function Install-Scoop {
 # Add Scoop buckets
 function Add-ScoopBuckets {
     $buckets = @('extras', 'versions', 'nerd-fonts')
-    
+
     foreach ($bucket in $buckets) {
         try {
             # Check if bucket already exists
@@ -284,7 +293,7 @@ function Add-ScoopBuckets {
 # Check if application is installed
 function Test-AppInstalled {
     param([string]$AppName)
-    
+
     try {
         $listCommand = "scoop list `"$AppName`""
         $installed = Invoke-Expression $listCommand 2>$null
@@ -298,16 +307,16 @@ function Test-AppInstalled {
 # Update all installed packages
 function Update-InstalledPackages {
     Write-AppLog "Updating all installed packages..." "INFO"
-    
+
     if ($DryRun) {
         Write-AppLog "Would update all installed packages" "INFO"
         return $true
     }
-    
+
     try {
         $updateCommand = "scoop update *"
         Invoke-Expression $updateCommand
-        
+
         if ($LASTEXITCODE -eq 0) {
             Write-AppLog "Successfully updated all packages" "SUCCESS"
             return $true
@@ -328,26 +337,26 @@ function Install-Application {
         [string]$AppName,
         [int]$MaxRetries = 3
     )
-    
+
     if (Test-AppInstalled -AppName $AppName) {
         Write-AppLog "Already installed: $AppName" "DEBUG"
         return $true
     }
-    
+
     if ($DryRun) {
         Write-AppLog "Would install: $AppName" "INFO"
         return $true
     }
-    
+
     $retryCount = 0
     while ($retryCount -lt $MaxRetries) {
         try {
             Write-AppLog "Installing: $AppName (attempt $($retryCount + 1)/$MaxRetries)" "INFO"
-            
+
             # Use Invoke-Expression to avoid parameter binding issues
             $installCommand = "scoop install `"$AppName`""
             Invoke-Expression $installCommand
-            
+
             if ($LASTEXITCODE -eq 0) {
                 Write-AppLog "Successfully installed: $AppName" "SUCCESS"
                 return $true
@@ -373,31 +382,31 @@ function Install-Application {
             }
         }
     }
-    
+
     return $false
 }
 
 # Install applications from category
 function Install-CategoryApps {
     param([string]$CategoryName)
-    
+
     if (-not $script:AppCategories.ContainsKey($CategoryName)) {
         Write-AppLog "Unknown category: $CategoryName" "ERROR"
         return $false
     }
-    
+
     $category = $script:AppCategories[$CategoryName]
     Write-AppLog "Installing category: $($category.Description)" "INFO"
-    
+
     $successCount = 0
     $totalCount = $category.Apps.Count
-    
+
     foreach ($app in $category.Apps) {
         if (Install-Application -AppName $app) {
             $successCount++
         }
     }
-    
+
     Write-AppLog "Category $CategoryName`: $successCount/$totalCount applications installed successfully" "INFO"
     return $successCount -eq $totalCount
 }
@@ -405,30 +414,30 @@ function Install-CategoryApps {
 # Install all categories
 function Install-AllApps {
     $overallSuccess = $true
-    
+
     foreach ($categoryName in $script:AppCategories.Keys) {
         $result = Install-CategoryApps -CategoryName $categoryName
         if (-not $result) {
             $overallSuccess = $false
         }
     }
-    
+
     return $overallSuccess
 }
 
 # Install specific applications
 function Install-SpecificApps {
     param([string[]]$AppList)
-    
+
     $successCount = 0
     $totalCount = $AppList.Count
-    
+
     foreach ($app in $AppList) {
         if (Install-Application -AppName $app.Trim()) {
             $successCount++
         }
     }
-    
+
     Write-AppLog "Specific apps: $successCount/$totalCount applications installed successfully" "INFO"
     return $successCount -eq $totalCount
 }
@@ -436,11 +445,11 @@ function Install-SpecificApps {
 # Validate category parameter
 function Test-ValidCategory {
     param([string]$CategoryName)
-    
+
     if ([string]::IsNullOrWhiteSpace($CategoryName)) {
         return $false
     }
-    
+
     $validCategories = @($script:AppCategories.Keys) + @('All')
     return $CategoryName -in $validCategories
 }
@@ -448,7 +457,7 @@ function Test-ValidCategory {
 # Show available categories and applications
 function Show-AvailableApps {
     Write-AppLog "Available application categories:" "INFO"
-    
+
     foreach ($categoryName in $script:AppCategories.Keys) {
         $category = $script:AppCategories[$categoryName]
         Write-AppLog "  $categoryName`: $($category.Description)" "INFO"
@@ -459,32 +468,32 @@ function Show-AvailableApps {
 # Main execution
 function Main {
     Write-AppLog "Starting install_apps.ps1" "INFO"
-    
+
     # Handle -All switch
     if ($All) {
         $Category = 'All'
     }
-    
+
     # Validate parameters
     if (-not $Category -and -not $Apps) {
         Write-AppLog "No category or specific apps specified. Use -Category, -All, or -Apps parameter." "ERROR"
         Show-AvailableApps
         exit 1
     }
-    
+
     # Validate category if specified
     if ($Category -and -not (Test-ValidCategory -CategoryName $Category)) {
         Write-AppLog "Invalid category: $Category" "ERROR"
         Show-AvailableApps
         exit 1
     }
-    
+
     # Enhanced environment check before proceeding
     if (-not (Test-InstallEnvironment)) {
         Write-AppLog "Environment check failed, aborting installation" "ERROR"
         exit 1
     }
-    
+
     # Check and install Scoop if needed
     if (-not (Test-ScoopInstalled)) {
         if (-not (Install-Scoop)) {
@@ -494,10 +503,10 @@ function Main {
     } else {
         Write-AppLog "Scoop is already installed" "DEBUG"
     }
-    
+
     # Add essential buckets
     Add-ScoopBuckets
-    
+
     # Handle update mode
     if ($Update) {
         $success = Update-InstalledPackages
@@ -505,7 +514,7 @@ function Main {
     else {
         # Perform installation based on parameters
         $success = $true
-        
+
         if ($Apps) {
             # Install specific applications
             $appList = $Apps -split ',' | ForEach-Object { $_.Trim() }
@@ -527,7 +536,7 @@ function Main {
             $success = Install-CategoryApps -CategoryName $Category
         }
     }
-    
+
     # Final status
     if ($success) {
         Write-AppLog "Application installation completed successfully" "SUCCESS"

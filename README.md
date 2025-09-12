@@ -55,24 +55,32 @@
 
 ```
 dotfiles/
+├── 📋 统一管理界面
+│   └── manage.ps1                # 🎮 统一管理入口 (新增)
 ├── 📄 核心管理脚本 (4个)
 │   ├── detect-environment.ps1    # 🧠 智能环境检测
 │   ├── install_apps.ps1          # 📦 应用程序安装管理  
 │   ├── install.ps1               # ⚙️ 配置文件智能部署
 │   └── health-check.ps1          # 🏥 系统健康状态检查
-├── 🛠️ 工具配置模块 (6个核心 + 1个可选)
-│   ├── git/                      # Git 全局配置和模板
-│   ├── powershell/               # PowerShell 配置文件和模块
-│   ├── starship/                 # Starship 提示符主题
-│   ├── scoop/                    # Scoop 包管理器配置
-│   ├── WindowsTerminal/          # Windows Terminal 配置
-│   ├── scripts/                  # CMD 命令行工具
-│   └── neovim/                   # Neovim 编辑器配置 (可选)
-├── 🧩 基础设施模块
-│   ├── modules/                  # PowerShell 共享模块
-│   └── docs/                     # 完整文档体系
-└── 📋 配置模板系统
-    └── *.example                 # 敏感信息配置模板
+├── 🗂️ 配置文件模块
+│   └── configs/                  # 📝 应用配置目录 (重组)
+│       ├── git/                  #     Git 全局配置和模板
+│       ├── powershell/           #     PowerShell 配置文件和模块
+│       ├── starship/             #     Starship 提示符主题
+│       ├── scoop/                #     Scoop 包管理器配置
+│       ├── WindowsTerminal/      #     Windows Terminal 配置
+│       └── neovim/               #     Neovim 编辑器配置 (可选)
+├── 🔧 工具和模块
+│   ├── tools/                    # 🛠️ 实用工具脚本 (重组)
+│   ├── modules/                  # 🧩 PowerShell 共享模块
+│   ├── docs/                     # 📚 完整文档体系
+│   └── bin/                      # 🔗 二进制快捷方式 (新增)
+└── 🏗️ 基础设施
+    └── .dotfiles/                # 📊 系统管理 (新增)
+        ├── config-mapping.json   #     配置映射文件
+        ├── logs/                 #     集中日志管理
+        ├── backups/             #     自动备份系统
+        └── cache/               #     临时缓存文件
 ```
 
 ---
@@ -99,21 +107,27 @@ dotfiles/
 git clone https://github.com/somls/dotfiles.git
 cd dotfiles
 
-# 2. 四步完整安装（推荐）
-.\detect-environment.ps1           # 🔍 分析系统环境 (15+应用检测)
-.\install_apps.ps1                 # 📦 安装开发工具 (18+精选应用)  
-.\install.ps1                      # ⚙️ 部署配置文件 (智能路径映射)
-.\health-check.ps1                 # 🏥 验证安装结果 (完整性检查)
+# 2. 统一管理界面 - 一键完整安装（推荐）
+.\manage.ps1 setup                 # 🚀 完整安装流程 (检测+安装+部署+验证)
+
+# 或者分步骤执行
+.\manage.ps1 detect                # 🔍 分析系统环境 (22+应用检测)
+.\manage.ps1 install-apps          # 📦 安装开发工具 (18+精选应用)  
+.\manage.ps1 deploy                # ⚙️ 部署配置文件 (智能路径映射)
+.\manage.ps1 health -Fix           # 🏥 验证和修复 (完整性检查)
 ```
 
 ### 🏃‍♂️ 快速体验流程
 
 ```powershell
 # 仅部署配置文件（适合已有开发环境的用户）
-.\install.ps1 -Type PowerShell,Git,Starship
+.\manage.ps1 deploy -Type PowerShell,Git,Starship
+
+# 检查系统状态
+.\manage.ps1 status
 
 # 健康检查验证
-.\health-check.ps1
+.\manage.ps1 health
 ```
 
 ---
@@ -196,19 +210,22 @@ cd dotfiles
 
 ```powershell
 # 快速环境评估
-.\detect-environment.ps1
+.\manage.ps1 detect
 
 # 详细兼容性报告
-.\detect-environment.ps1 -Detailed
+.\manage.ps1 detect -Detailed
 
 # 系统健康检查
-.\health-check.ps1
+.\manage.ps1 health
 
-# 分类检查系统状态
-.\health-check.ps1 -Category System
+# 系统健康检查并自动修复
+.\manage.ps1 health -Fix
 
-# 详细健康检查报告
-.\health-check.ps1 -Detailed
+# 查看当前状态
+.\manage.ps1 status
+
+# 清理日志和缓存
+.\manage.ps1 clean
 ```
 
 ---
@@ -252,7 +269,7 @@ cd dotfiles
 - **📊 健康监控** - 全面的配置验证和自动修复
 
 ### 📈 使用统计
-- **🎯 4个核心脚本** - 覆盖完整配置管理流程
+**🎯 1个统一入口 + 4个核心脚本** - 覆盖完整配置管理流程
 - **📦 18+精选应用** - Essential、Development、Programming全覆盖  
 - **⚙️ 6个核心配置模块** - 主流开发工具完整配置
 - **🌍 22+应用检测** - 智能环境分析和路径适应
@@ -271,6 +288,7 @@ cd dotfiles
    - **开发者模式**: 额外检查符号链接状态 (创建 `.dotfiles.dev-mode` 文件启用)
 
 ### 💬 社区支持
+- **自助诊断**: `.\manage.ps1 health -Detailed` - 自动问题检测和修复
 - **问题报告**: [GitHub Issues](https://github.com/somls/dotfiles/issues)
 - **功能讨论**: [GitHub Discussions](https://github.com/somls/dotfiles/discussions)  
 - **实时讨论**: [项目Wiki](https://github.com/somls/dotfiles/wiki)
@@ -304,6 +322,6 @@ cd dotfiles
 [![GitHub stars](https://img.shields.io/github/stars/somls/dotfiles?style=social)](https://github.com/somls/dotfiles)
 [![GitHub forks](https://img.shields.io/github/forks/somls/dotfiles?style=social)](https://github.com/somls/dotfiles)
 
-**[🚀 立即开始](#-快速开始)** • **[📚 查看文档](docs/README.md)** • **[💬 加入讨论](https://github.com/somls/dotfiles/discussions)**
+**[🚀 立即开始](#-快速开始)** • **[🎮 统一管理](manage.ps1)** • **[📚 查看文档](docs/README.md)** • **[💬 加入讨论](https://github.com/somls/dotfiles/discussions)**
 
 </div>

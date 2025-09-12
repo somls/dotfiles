@@ -1,20 +1,101 @@
 # 📚 API 参考文档
 
-本文档提供了Windows Dotfiles管理系统所有脚本的详细API接口说明，包括参数、返回值、使用示例和错误处理。
+本文档提供了Windows Dotfiles管理系统v2.0所有脚本的详细API接口说明，包括参数、返回值、使用示例和错误处理。
 
 ## 📋 目录
 
+- [统一管理接口](#统一管理接口)
+  - [manage.ps1](#manageps1)
 - [核心脚本 API](#核心脚本-api)
   - [detect-environment.ps1](#detect-environmentps1)
   - [install_apps.ps1](#install_appsps1)
   - [install.ps1](#installps1)
   - [health-check.ps1](#health-checkps1)
-- [辅助脚本 API](#辅助脚本-api)
-  - [auto-sync.ps1](#auto-syncps1)
+- [辅助工具 API](#辅助工具-api)
+  - [tools/auto-sync.ps1](#toolsauto-syncps1)
+  - [tools/dev-link.ps1](#toolsdev-linkps1)
+  - [tools/validate-structure.ps1](#toolsvalidate-structureps1)
 - [PowerShell 模块 API](#powershell-模块-api)
   - [DotfilesUtilities](#dotfilesutilities)
+  - [EnvironmentAdapter](#environmentadapter)
+  - [EnvironmentAdapter](#environmentadapter)
 - [配置文件架构](#配置文件架构)
+- [新架构说明](#新架构说明)
 - [错误代码和异常处理](#错误代码和异常处理)
+
+---
+
+## 🎮 统一管理接口
+
+### `manage.ps1`
+
+**新增功能** - 统一管理接口，提供所有dotfiles操作的单一入口点。
+
+#### 语法
+
+```powershell
+.\manage.ps1 <Command>
+    [-Type <String[]>]
+    [-Category <String>]
+    [-Fix]
+    [-Force]
+    [-Detailed]
+    [-DryRun]
+    [-Interactive]
+    [<CommonParameters>]
+```
+
+#### 参数
+
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `Command` | String | 是 | - | 操作命令: detect, install-apps, deploy, health, status, setup, clean, help |
+| `-Type` | String[] | 否 | - | 配置类型 (deploy命令使用) |
+| `-Category` | String | 否 | - | 应用程序类别 (install-apps命令使用) |
+| `-Fix` | Switch | 否 | False | 自动修复问题 (health命令使用) |
+| `-Force` | Switch | 否 | False | 强制执行操作 |
+| `-Detailed` | Switch | 否 | False | 显示详细输出 |
+| `-DryRun` | Switch | 否 | False | 预览操作 |
+| `-Interactive` | Switch | 否 | False | 交互式模式 |
+
+#### 命令说明
+
+| 命令 | 功能 | 等价操作 |
+|------|------|----------|
+| `detect` | 环境检测 | `.\detect-environment.ps1` |
+| `install-apps` | 应用安装 | `.\install_apps.ps1` |
+| `deploy` | 配置部署 | `.\install.ps1` |
+| `health` | 健康检查 | `.\health-check.ps1` |
+| `status` | 系统状态 | 新功能 |
+| `setup` | 完整安装 | 所有脚本的组合 |
+| `clean` | 清理维护 | 新功能 |
+| `help` | 帮助信息 | 新功能 |
+
+#### 使用示例
+
+```powershell
+# 完整安装流程
+.\manage.ps1 setup
+
+# 仅部署特定配置
+.\manage.ps1 deploy -Type PowerShell,Git,Starship
+
+# 健康检查并自动修复
+.\manage.ps1 health -Fix
+
+# 检查系统状态
+.\manage.ps1 status
+
+# 清理日志和缓存
+.\manage.ps1 clean
+```
+
+#### 日志记录
+
+统一管理接口的日志存储在新的集中化目录：
+- **日志目录**: `.dotfiles/logs/`
+- **日志格式**: `{operation}-{timestamp}.log`
+- **自动清理**: 保留最近20个日志文件
 
 ---
 
@@ -41,7 +122,7 @@
 |------|------|------|--------|------|
 | `-Json` | Switch | 否 | False | 以JSON格式输出结果 |
 | `-Detailed` | Switch | 否 | False | 显示详细信息，包括应用程序版本和路径 |
-| `-LogFile` | String | 否 | "detect-environment.log" | 日志文件路径 |
+| `-LogFile` | String | 否 | ".dotfiles/logs/detect-environment-{timestamp}.log" | 日志文件路径 |
 | `-Quiet` | Switch | 否 | False | 静默模式，仅输出到日志文件 |
 
 #### 返回值
@@ -494,7 +575,9 @@ if ($result.OverallStatus -ne "HEALTHY") {
 
 ## 🛠️ 辅助脚本 API
 
-### `auto-sync.ps1`
+### `tools/auto-sync.ps1`
+
+**路径更新** - 现位于 `tools/` 目录下。
 
 配置文件自动同步脚本，支持增量同步和完整同步。
 
@@ -641,7 +724,102 @@ if ($isSymLink) {
 
 ---
 
-## 📋 配置文件架构
+### `tools/dev-link.ps1`
+
+开发者模式符号链接管理工具。
+
+#### 语法
+
+```powershell
+.\tools\dev-link.ps1 -Action <String>
+    [-Component <String>]
+    [-Force]
+    [-Quiet]
+    [<CommonParameters>]
+```
+
+#### 参数
+
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `-Action` | String | 是 | - | 操作类型: Create, Remove, Status |
+| `-Component` | String | 否 | - | 特定组件名称 |
+| `-Force` | Switch | 否 | False | 强制操作 |
+| `-Quiet` | Switch | 否 | False | 静默模式 |
+
+### `tools/validate-structure.ps1`
+
+**新增工具** - 项目结构验证脚本。
+
+#### 语法
+
+```powershell
+.\tools\validate-structure.ps1
+    [-Fix]
+    [-Detailed]
+    [-OutputFormat <String>]
+    [<CommonParameters>]
+```
+
+#### 参数
+
+| 参数 | 类型 | 必需 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| `-Fix` | Switch | 否 | False | 自动修复结构问题 |
+| `-Detailed` | Switch | 否 | False | 详细验证输出 |
+| `-OutputFormat` | String | 否 | "Console" | 输出格式: Console, JSON, Both |
+
+---
+
+### `EnvironmentAdapter`
+
+**新增模块** - 环境适应性功能模块。
+
+#### 主要功能
+
+- 自动路径检测和适配
+- 多版本应用程序支持
+- 环境变量管理
+- 配置路径映射
+
+---
+
+## 🏗️ 新架构说明
+
+### v2.0 架构变更
+
+#### 目录结构
+
+```
+dotfiles/
+├── manage.ps1              # 🎮 统一管理入口
+├── [核心脚本]               # 原有4个核心脚本
+├── configs/                # 📁 配置文件 (原根目录配置)
+│   ├── git/
+│   ├── powershell/
+│   └── ...
+├── tools/                  # 🔧 工具脚本 (原 scripts/ + 新工具)
+├── .dotfiles/              # 🏗️ 基础设施
+│   ├── logs/               # 📝 集中日志
+│   ├── backups/           # 💾 备份目录
+│   ├── cache/             # ⚡ 缓存目录
+│   └── config-mapping.json # 📋 配置映射
+└── docs/                   # 📚 精简文档
+```
+
+#### 主要变更
+
+| 组件 | v1.x | v2.0 | 变更说明 |
+|------|------|------|----------|
+| **入口点** | 4个独立脚本 | `manage.ps1` + 4个核心脚本 | 统一界面 |
+| **配置目录** | 根目录 | `configs/` | 逻辑分组 |
+| **工具脚本** | `scripts/` | `tools/` | 重命名 + 扩展 |
+| **日志系统** | 分散 | `.dotfiles/logs/` | 集中管理 |
+| **基础设施** | 无 | `.dotfiles/` | 新增 |
+
+---
+
+## 📁 配置文件架构
 
 ### 应用程序分类配置
 

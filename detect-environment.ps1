@@ -2,20 +2,35 @@
 param(
     [switch]$Json,
     [switch]$Detailed,
-    [string]$LogFile = "detect-environment.log",
+    [string]$LogFile,
     [switch]$Quiet
 )
 
 # Set error handling
 $ErrorActionPreference = 'Continue'
 
+# Set up logging directory and file
+$script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$script:LogsDir = Join-Path $script:SourceRoot ".dotfiles\logs"
+
+# Ensure logs directory exists
+if (-not (Test-Path $script:LogsDir)) {
+    New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+}
+
+# Set default log file if not specified
+if (-not $LogFile) {
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $LogFile = Join-Path $script:LogsDir "detect-environment-$timestamp.log"
+}
+
 # Simple logging function
 function Write-Log {
     param([string]$Message, [string]$Level = 'Info')
-    
+
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "[$timestamp] [$Level] $Message"
-    
+
     try {
         Add-Content -Path $LogFile -Value $logEntry -Encoding UTF8 -ErrorAction SilentlyContinue
     } catch {}
@@ -56,7 +71,7 @@ function Get-SystemInfo {
 # Test application installation
 function Test-App {
     param([string]$AppName, [string[]]$Commands)
-    
+
     $result = @{
         Name = $AppName
         Installed = $false
@@ -71,7 +86,7 @@ function Test-App {
             if ($command) {
                 $result.Installed = $true
                 $result.Path = $command.Source
-                
+
                 # Determine install type
                 if ($command.Source -like "*scoop*") {
                     $result.InstallType = "Scoop"
@@ -192,20 +207,20 @@ if ($Json) {
         Write-Host ("=" * 50) -ForegroundColor Cyan
         Write-Host "Detection Time: $($detection.DetectionTime.ToString('yyyy-MM-dd HH:mm:ss'))"
         Write-Host "PowerShell Version: $($detection.PowerShellVersion)"
-        
+
         Write-Host "`nSystem Information:" -ForegroundColor Yellow
         Write-Host "  OS: $($detection.System.Name)"
         Write-Host "  Version: $($detection.System.Version) (Build $($detection.System.Build))"
         Write-Host "  Architecture: $($detection.System.Architecture)"
-        
+
         $installedApps = $detection.Applications.Values | Where-Object { $_.Installed }
         $missingApps = $detection.Applications.Values | Where-Object { -not $_.Installed }
-        
+
         Write-Host "`nApplication Statistics:" -ForegroundColor Yellow
         Write-Host "  Total: $($detection.Applications.Count)"
         Write-Host "  Installed: $($installedApps.Count)" -ForegroundColor Green
         Write-Host "  Not Installed: $($missingApps.Count)" -ForegroundColor Red
-        
+
         if ($Detailed) {
             Write-Host "`nInstalled Applications:" -ForegroundColor Green
             foreach ($app in ($installedApps | Sort-Object Name)) {
@@ -214,7 +229,7 @@ if ($Json) {
                     Write-Host "    Version: $($app.Version)" -ForegroundColor Gray
                 }
             }
-            
+
             if ($missingApps.Count -gt 0) {
                 Write-Host "`nNot Installed:" -ForegroundColor Red
                 foreach ($app in ($missingApps | Sort-Object Name)) {
@@ -222,12 +237,12 @@ if ($Json) {
                 }
             }
         }
-        
+
         Write-Host "`nRecommendations:" -ForegroundColor Yellow
         for ($i = 0; $i -lt $detection.Recommendations.Count; $i++) {
             Write-Host "  $($i + 1). $($detection.Recommendations[$i])"
         }
-        
+
         Write-Host "`nDetection completed!" -ForegroundColor Green
     }
 }

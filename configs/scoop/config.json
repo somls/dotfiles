@@ -1,0 +1,30 @@
+{
+  "global": false,
+  "notify_upgrade": true,
+  "7zip": true,
+  "auto_update": true,
+  "allow_override": true,
+  "show_update_log": true,
+  "git_config": {
+    "core.autocrlf": "input"
+  },
+  "max_parallel_downloads": 6,
+  "aria2-enabled": true,
+  "aria2-warning-enabled": true,
+  "aria2-options": {
+    "split": 8,
+    "max-connection-per-server": 8,
+    "min-split-size": "1M",
+    "continue": true,
+    "max-concurrent-downloads": 5
+  },
+  "scoop_repo": "https://github.com/ScoopInstaller/Scoop",
+  "debug": false,
+  "force_update": false,
+  "show_manifest": false,
+  "cat_style": "full",
+  "use_lessmsi": true,
+  "no_junction": false,
+  "last_update": "2025-09-12T12:39:13.3904059+08:00",
+  "scoop_branch": "master"
+}

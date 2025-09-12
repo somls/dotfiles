@@ -53,7 +53,15 @@ param(
 
 # Script configuration
 $script:SourceRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$script:LogFile = Join-Path $script:SourceRoot "health-check-$(Get-Date -Format 'yyyyMMddHHmmss')-$($PID).log"
+$script:ConfigsDir = Join-Path $script:SourceRoot "configs"
+$script:LogsDir = Join-Path $script:SourceRoot ".dotfiles\logs"
+
+# Ensure logs directory exists
+if (-not (Test-Path $script:LogsDir)) {
+    New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+}
+
+$script:LogFile = Join-Path $script:LogsDir "health-check-$(Get-Date -Format 'yyyyMMddHHmmss')-$($PID).log"
 $script:HealthResults = @{}
 
 # Initialize health check results
@@ -345,10 +353,10 @@ function Test-ConfigurationFiles {
     Write-HealthLog "Checking configuration files..." "INFO"
 
     $configFiles = @{
-        'powershell\Microsoft.PowerShell_profile.ps1' = 'PowerShell profile'
-        'git\gitconfig' = 'Git configuration'
-        'starship\starship.toml' = 'Starship configuration'
-        'neovim\init.lua' = 'Neovim configuration'
+        'configs\powershell\Microsoft.PowerShell_profile.ps1' = 'PowerShell profile'
+        'configs\git\gitconfig' = 'Git configuration'
+        'configs\starship\starship.toml' = 'Starship configuration'
+        'configs\neovim\init.lua' = 'Neovim configuration'
     }
 
     foreach ($file in $configFiles.Keys) {
