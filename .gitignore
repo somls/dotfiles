@@ -78,6 +78,7 @@ powershell/.powershell/pshistory.txt
 scoop/config.json
 configs/scoop/config.json
 personal-settings.json
+configs/WindowsTerminal/settings.local.json
 
 # Network and proxy settings
 **/proxy.conf

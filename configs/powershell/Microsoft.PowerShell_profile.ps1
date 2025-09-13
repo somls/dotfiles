@@ -11,8 +11,23 @@ $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersio
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-# Configuration directory - 直接指向dotfiles配置目录（处理符号链接情况）
-$ProfileDir = "G:\Sync\dotfiles\configs\powershell\.powershell"
+# Configuration directory - 动态检测配置目录路径
+$ProfileDir = if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
+    # 如果通过符号链接运行，从实际profile路径获取配置目录
+    Join-Path (Split-Path $PSCommandPath -Parent) ".powershell"
+} elseif (Test-Path (Join-Path (Split-Path $PROFILE -Parent) ".powershell")) {
+    # 标准位置检测
+    Join-Path (Split-Path $PROFILE -Parent) ".powershell"
+} elseif (Test-Path ".\configs\powershell\.powershell") {
+    # dotfiles仓库内检测
+    Resolve-Path ".\configs\powershell\.powershell"
+} elseif ($env:DOTFILES_DIR -and (Test-Path (Join-Path $env:DOTFILES_DIR "configs\powershell\.powershell"))) {
+    # 环境变量指定的dotfiles目录
+    Join-Path $env:DOTFILES_DIR "configs\powershell\.powershell"
+} else {
+    # 回退到profile同目录下的.powershell
+    Join-Path (Split-Path $PROFILE -Parent) ".powershell"
+}
 
 # Quick initialization
 if (-not (Test-Path $ProfileDir)) {

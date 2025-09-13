@@ -29,16 +29,16 @@ powershell/
 # 从项目根目录运行：
 
 # 安装所有配置（包括 PowerShell）
-.\install.ps1
+.\dotfiles.ps1 deploy -ConfigType powershell
 
 # 只安装 PowerShell 配置
-.\install.ps1 -Type PowerShell
+.\dotfiles.ps1 deploy -ConfigType powershell
 
 # 预览安装效果（不实际更改）
-.\install.ps1 -Type PowerShell -DryRun
+.\dotfiles.ps1 deploy -ConfigType powershell -DryRun
 
 # 强制覆盖现有配置
-.\install.ps1 -Type PowerShell -Force
+.\dotfiles.ps1 deploy -ConfigType powershell -Force
 ```
 
 ### 手动安装
