@@ -1,25 +1,33 @@
 # =============================================================================
-# 开发用符号链接脚本 (dev-symlink.ps1)
-# 实时同步展现配置修改效果 - 仅供开发使用
+# Development Symbolic Link Script (dev-symlink.ps1)
+# Real-time configuration sync for development - Developer use only
 # =============================================================================
 
 param(
-    [ValidateSet("create", "remove", "status", "refresh")]
-    [string]$Action = "create",
+    [ValidateSet("create", "remove", "status", "refresh", "diagnose")]
+    [string]$Action = "status",
+
     [string[]]$ConfigType = @(),
     [switch]$Force,
     [switch]$DryRun,
-    [switch]$All
+    [switch]$All,
+    [switch]$Verbose
 )
 
-# 检查管理员权限
+# Color output functions
+function Write-Success { param($Message) Write-Host $Message -ForegroundColor Green }
+function Write-Error { param($Message) Write-Host $Message -ForegroundColor Red }
+function Write-Info { param($Message) Write-Host $Message -ForegroundColor Yellow }
+function Write-Status { param($Message) Write-Host $Message -ForegroundColor Cyan }
+
+# Check administrator privileges
 function Test-Administrator {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# 检查开发者模式
+# Check developer mode
 function Test-DeveloperMode {
     try {
         $regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock"
@@ -30,401 +38,500 @@ function Test-DeveloperMode {
     }
 }
 
-# 脚本配置
-$ConfigsDir = Join-Path $PSScriptRoot "configs"
-$BackupDir = Join-Path $PSScriptRoot ".dev-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+# Adaptive path detection functions
+function Find-WindowsTerminalPath {
+    $possiblePaths = @(
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState",
+        "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState"
+    )
 
-# 符号链接映射表 - 开发用实时同步配置
-$SymlinkMappings = @{
-    "powershell" = @{
-        Source = "powershell"
-        Links = @(
-            @{
-                SourceFile = "Microsoft.PowerShell_profile.ps1"
-                Target = $PROFILE
-                Type = "File"
-                Description = "PowerShell 7 Profile"
-            },
-            @{
-                SourceFile = "Microsoft.PowerShell_profile.ps1"
-                Target = "$env:USERPROFILE\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1"
-                Type = "File"
-                Description = "PowerShell 5.1 Profile"
-            },
-            @{
-                SourceFile = ".powershell"
-                Target = Join-Path (Split-Path $PROFILE) ".powershell"
-                Type = "Directory"
-                Description = "PowerShell Modules"
-            }
-        )
+    # Find all Windows Terminal packages
+    $terminalPackages = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory |
+        Where-Object { $_.Name -like "Microsoft.WindowsTerminal*" }
+
+    foreach ($package in $terminalPackages) {
+        $localStatePath = Join-Path $package.FullName "LocalState"
+        if (Test-Path $localStatePath) {
+            $possiblePaths += $localStatePath
+        }
     }
-    "git" = @{
-        Source = "git"
-        Links = @(
-            @{
-                SourceFile = "gitconfig"
-                Target = "$env:USERPROFILE\.gitconfig"
-                Type = "File"
-                Description = "Git Global Config"
-            },
-            @{
-                SourceFile = "gitignore_global"
-                Target = "$env:USERPROFILE\.gitignore_global"
-                Type = "File"
-                Description = "Git Global Ignore"
-            },
-            @{
-                SourceFile = "gitmessage"
-                Target = "$env:USERPROFILE\.gitmessage"
-                Type = "File"
-                Description = "Git Commit Template"
-            }
-        )
-    }
-    "starship" = @{
-        Source = "starship"
-        Links = @(
-            @{
-                SourceFile = "starship.toml"
-                Target = "$env:USERPROFILE\.config\starship.toml"
-                Type = "File"
-                Description = "Starship Config"
-            }
-        )
-    }
-    "terminal" = @{
-        Source = "WindowsTerminal"
-        Links = @(
-            @{
-                SourceFile = "settings.json"
-                Target = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-                Type = "File"
-                Description = "Windows Terminal Config"
-            }
-        )
-    }
-    "neovim" = @{
-        Source = "neovim"
-        Links = @(
-            @{
-                SourceFile = "."  # 整个目录
-                Target = "$env:LOCALAPPDATA\nvim"
-                Type = "Directory"
-                Description = "Neovim Config Directory"
-            }
-        )
-    }
+
+    return $possiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 }
 
-# 颜色输出函数
-function Write-Status { param($Message, $Color = "White") Write-Host $Message -ForegroundColor $Color }
-function Write-Success { param($Message) Write-Host "✅ $Message" -ForegroundColor Green }
-function Write-Warning { param($Message) Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-function Write-Error { param($Message) Write-Host "❌ $Message" -ForegroundColor Red }
-function Write-Info { param($Message) Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
+function Find-ScoopPath {
+    # Check common Scoop installation paths
+    $possiblePaths = @(
+        "$env:USERPROFILE\scoop",
+        "$env:SCOOP",
+        "C:\scoop"
+    )
 
-Write-Status "🔗 开发用符号链接管理" "Cyan"
-Write-Status "===================" "Cyan"
-
-# 权限检查
-$isAdmin = Test-Administrator
-$isDeveloperMode = Test-DeveloperMode
-
-Write-Status ""
-Write-Status "🛡️ 权限检查" "Yellow"
-Write-Status "管理员权限: $(if ($isAdmin) { '✅' } else { '❌' })" $(if ($isAdmin) { "Green" } else { "Red" })
-Write-Status "开发者模式: $(if ($isDeveloperMode) { '✅' } else { '❌' })" $(if ($isDeveloperMode) { "Green" } else { "Yellow" })
-
-if (-not $isAdmin -and -not $isDeveloperMode) {
-    Write-Error ""
-    Write-Error "需要管理员权限或开发者模式才能创建符号链接！"
-    Write-Error ""
-    Write-Error "解决方案："
-    Write-Error "1. 以管理员身份运行PowerShell"
-    Write-Error "2. 或者启用开发者模式：设置 > 更新和安全 > 开发者选项 > 开发人员模式"
-    exit 1
-}
-
-# 确定要处理的配置类型
-$ConfigsToProcess = if ($All) {
-    $SymlinkMappings.Keys
-} elseif ($ConfigType.Count -gt 0) {
-    $ConfigType | Where-Object { $SymlinkMappings.ContainsKey($_) }
-} else {
-    $SymlinkMappings.Keys
-}
-
-if ($ConfigsToProcess.Count -eq 0) {
-    Write-Error "没有有效的配置类型。可用选项: $($SymlinkMappings.Keys -join ', ')"
-    exit 1
-}
-
-# 检查符号链接状态
-function Get-SymlinkStatus {
-    param($TargetPath)
-
-    if (-not (Test-Path $TargetPath)) {
-        return "不存在"
+    # Try to detect from PATH
+    $scoopCommand = Get-Command scoop -ErrorAction SilentlyContinue
+    if ($scoopCommand) {
+        $scoopFromPath = $scoopCommand.Source
+        $scoopRoot = Split-Path (Split-Path $scoopFromPath -Parent) -Parent
+        $possiblePaths += $scoopRoot
     }
 
+    return $possiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
+function Find-NeovimConfigPath {
+    # Standard paths for different Neovim installations
+    $possiblePaths = @(
+        "$env:LOCALAPPDATA\nvim",
+        "$env:APPDATA\nvim"
+    )
+
+    # Check if nvim is available and get config path
     try {
-        $item = Get-Item $TargetPath -Force
-        if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
-            return "符号链接"
-        } else {
-            return "普通文件"
+        $nvimConfigPath = & nvim --headless -c "lua print(vim.fn.stdpath('config'))" -c "qa" 2>$null
+        if ($nvimConfigPath -and (Test-Path (Split-Path $nvimConfigPath -Parent))) {
+            $possiblePaths += $nvimConfigPath
         }
     } catch {
-        return "未知"
+        # Neovim not installed or not in PATH
     }
+
+    return $possiblePaths | Where-Object { Test-Path (Split-Path $_ -Parent) } | Select-Object -First 1
 }
 
-# 创建符号链接
-function New-Symlink {
-    param($SourcePath, $TargetPath, $Type)
+function Find-PowerShellPaths {
+    $paths = @()
 
-    # 确保源存在
-    if (-not (Test-Path $SourcePath)) {
-        Write-Error "源路径不存在: $SourcePath"
-        return $false
+    # PowerShell 7+ path
+    if (Test-Path "$env:USERPROFILE\Documents\PowerShell") {
+        $paths += "$env:USERPROFILE\Documents\PowerShell"
     }
 
-    # 确保目标目录存在
-    $targetDir = Split-Path $TargetPath
-    if ($targetDir -and -not (Test-Path $targetDir)) {
-        New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+    # Windows PowerShell 5.1 path
+    if (Test-Path "$env:USERPROFILE\Documents\WindowsPowerShell") {
+        $paths += "$env:USERPROFILE\Documents\WindowsPowerShell"
     }
 
-    # 备份现有文件
-    if (Test-Path $TargetPath) {
-        $status = Get-SymlinkStatus $TargetPath
-        if ($status -ne "符号链接") {
-            if (-not (Test-Path $BackupDir)) {
-                New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
-            }
-            $backupName = "$(Split-Path $TargetPath -Leaf)_$(Get-Date -Format 'HHmmss')"
-            $backupPath = Join-Path $BackupDir $backupName
+    return $paths
+}
 
-            if ($Type -eq "Directory") {
-                Copy-Item $TargetPath $backupPath -Recurse -Force
-            } else {
-                Copy-Item $TargetPath $backupPath -Force
-            }
-            Write-Info "    已备份到: $backupPath"
-        }
+function Find-StarshipConfigPath {
+    # Standard config locations
+    $possiblePaths = @(
+        "$env:USERPROFILE\.config",
+        "$env:APPDATA"
+    )
 
-        Remove-Item $TargetPath -Recurse -Force
-    }
-
-    # 创建符号链接
+    # Check if starship is available and supports config path detection
     try {
-        if ($Type -eq "Directory") {
-            $result = cmd /c "mklink /D `"$TargetPath`" `"$SourcePath`"" 2>&1
-        } else {
-            $result = cmd /c "mklink `"$TargetPath`" `"$SourcePath`"" 2>&1
-        }
-
-        if ($LASTEXITCODE -eq 0) {
-            return $true
-        } else {
-            Write-Error "    创建失败: $result"
-            return $false
+        # Starship stores config in STARSHIP_CONFIG env var or ~/.config/starship.toml
+        if ($env:STARSHIP_CONFIG) {
+            $starshipDir = Split-Path $env:STARSHIP_CONFIG -Parent
+            $possiblePaths += $starshipDir
         }
     } catch {
-        Write-Error "    创建失败: $($_.Exception.Message)"
-        return $false
+        # Starship not available
     }
+
+    return $possiblePaths | Where-Object {
+        if (-not (Test-Path $_)) {
+            try { New-Item -Path $_ -ItemType Directory -Force | Out-Null; $true }
+            catch { $false }
+        } else { $true }
+    } | Select-Object -First 1
 }
 
-# 移除符号链接
-function Remove-Symlink {
-    param($TargetPath, $Type)
+# Configuration mapping with adaptive path detection
+function Get-ConfigMappings {
+    $dotfilesDir = $PSScriptRoot
+    $mappings = @{}
 
-    if (-not (Test-Path $TargetPath)) {
-        Write-Warning "    目标不存在: $TargetPath"
-        return $true
+    # PowerShell - detect available PowerShell installations
+    $powershellPaths = Find-PowerShellPaths
+    if ($powershellPaths.Count -gt 0) {
+        $mappings["powershell"] = @{
+            Source = "$dotfilesDir\configs\powershell"
+            Targets = $powershellPaths
+            Files = @(
+                @{ File = "Microsoft.PowerShell_profile.ps1"; Target = "Microsoft.PowerShell_profile.ps1"; IsDirectory = $false }
+                @{ File = ".powershell"; Target = ".powershell"; IsDirectory = $true }
+            )
+        }
     }
 
-    $status = Get-SymlinkStatus $TargetPath
-    if ($status -ne "符号链接") {
-        Write-Warning "    不是符号链接，跳过: $TargetPath"
-        return $false
+    # Git - universal user profile location
+    $mappings["git"] = @{
+        Source = "$dotfilesDir\configs\git"
+        Targets = @("$env:USERPROFILE")
+        Files = @(
+            @{ File = "gitconfig"; Target = ".gitconfig"; IsDirectory = $false }
+            @{ File = "gitconfig.local"; Target = ".gitconfig.local"; IsDirectory = $false }
+            @{ File = "gitignore_global"; Target = ".gitignore_global"; IsDirectory = $false }
+            @{ File = "gitmessage"; Target = ".gitmessage"; IsDirectory = $false }
+        )
     }
+
+    # Starship - adaptive config path
+    $starshipPath = Find-StarshipConfigPath
+    if ($starshipPath) {
+        $mappings["starship"] = @{
+            Source = "$dotfilesDir\configs\starship"
+            Targets = @($starshipPath)
+            Files = @(
+                @{ File = "starship.toml"; Target = "starship.toml"; IsDirectory = $false }
+            )
+        }
+    }
+
+    # Neovim - adaptive config detection
+    $neovimPath = Find-NeovimConfigPath
+    if ($neovimPath) {
+        $mappings["neovim"] = @{
+            Source = "$dotfilesDir\configs\neovim"
+            Targets = @($neovimPath)
+            Files = @(
+                @{ File = "init.lua"; Target = "init.lua"; IsDirectory = $false }
+                @{ File = "lazy-lock.json"; Target = "lazy-lock.json"; IsDirectory = $false }
+                @{ File = "lua"; Target = "lua"; IsDirectory = $true }
+            )
+        }
+    }
+
+    # Windows Terminal - adaptive package detection
+    $terminalPath = Find-WindowsTerminalPath
+    if ($terminalPath) {
+        $mappings["WindowsTerminal"] = @{
+            Source = "$dotfilesDir\configs\WindowsTerminal"
+            Targets = @($terminalPath)
+            Files = @(
+                @{ File = "settings.json"; Target = "settings.json"; IsDirectory = $false }
+            )
+        }
+    }
+
+    # Scoop - adaptive installation detection
+    $scoopPath = Find-ScoopPath
+    if ($scoopPath) {
+        $mappings["scoop"] = @{
+            Source = "$dotfilesDir\configs\scoop"
+            Targets = @($scoopPath)
+            Files = @(
+                @{ File = "config.json"; Target = "config.json"; IsDirectory = $false }
+            )
+        }
+    }
+
+    return $mappings
+}
+
+# Create symbolic link
+function New-SymbolicLink {
+    param(
+        [string]$LinkPath,
+        [string]$TargetPath,
+        [bool]$IsDirectory = $false
+    )
 
     try {
-        Remove-Item $TargetPath -Force
+        $itemType = if ($IsDirectory) { "SymbolicLink" } else { "SymbolicLink" }
+
+        # Ensure parent directory exists
+        $parentDir = Split-Path $LinkPath -Parent
+        if (-not (Test-Path $parentDir)) {
+            New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+        }
+
+        # Remove existing item if it exists
+        if (Test-Path $LinkPath) {
+            Remove-Item $LinkPath -Force -Recurse
+        }
+
+        # Create symbolic link
+        New-Item -ItemType $itemType -Path $LinkPath -Target $TargetPath -Force | Out-Null
         return $true
     } catch {
-        Write-Error "    移除失败: $($_.Exception.Message)"
+        Write-Error "Failed to create link: $($_.Exception.Message)"
         return $false
     }
 }
 
-# 主要操作函数
-switch ($Action) {
-    "status" {
-        Write-Status ""
-        Write-Status "📊 符号链接状态" "Yellow"
+# Check if path is symbolic link
+function Test-SymbolicLink {
+    param([string]$Path)
 
-        foreach ($configName in $ConfigsToProcess) {
-            $mapping = $SymlinkMappings[$configName]
-            $sourceDir = Join-Path $ConfigsDir $mapping.Source
-
-            Write-Status ""
-            Write-Status "配置: $configName" "Green"
-
-            foreach ($link in $mapping.Links) {
-                $sourcePath = if ($link.SourceFile -eq ".") {
-                    $sourceDir
-                } else {
-                    Join-Path $sourceDir $link.SourceFile
-                }
-                $targetPath = $link.Target
-                $status = Get-SymlinkStatus $targetPath
-
-                $statusColor = switch ($status) {
-                    "符号链接" { "Green" }
-                    "普通文件" { "Yellow" }
-                    "不存在" { "Red" }
-                    default { "Gray" }
-                }
-
-                Write-Status "  $($link.Description)" "Gray"
-                Write-Status "    状态: $status" $statusColor
-                Write-Status "    目标: $targetPath" "DarkGray"
-                if ($status -eq "符号链接") {
-                    Write-Status "    源: $sourcePath" "DarkGray"
-                }
-            }
-        }
+    if (-not (Test-Path $Path)) {
+        return $false
     }
 
-    "create" {
-        Write-Status ""
-        Write-Status "🔗 创建符号链接" "Yellow"
+    $item = Get-Item $Path -Force
+    return ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
+}
 
-        $created = 0
-        $failed = 0
+# Get symbolic link target
+function Get-SymbolicLinkTarget {
+    param([string]$Path)
 
-        foreach ($configName in $ConfigsToProcess) {
-            $mapping = $SymlinkMappings[$configName]
-            $sourceDir = Join-Path $ConfigsDir $mapping.Source
+    if (Test-SymbolicLink $Path) {
+        $item = Get-Item $Path -Force
+        return $item.Target
+    }
+    return $null
+}
 
-            Write-Status ""
-            Write-Status "配置: $configName" "Green"
+# Process configuration
+function Process-Configuration {
+    param(
+        [string]$ConfigName,
+        [hashtable]$Config,
+        [string]$Action
+    )
 
-            if (-not (Test-Path $sourceDir)) {
-                Write-Error "  源目录不存在: $sourceDir"
+    Write-Status "Processing $ConfigName configuration..."
+
+    foreach ($target in $Config.Targets) {
+        foreach ($fileMapping in $Config.Files) {
+            $sourcePath = Join-Path $Config.Source $fileMapping.File
+            $targetPath = Join-Path $target $fileMapping.Target
+
+            # Skip if source doesn't exist
+            if (-not (Test-Path $sourcePath)) {
+                Write-Info "  Source not found: $sourcePath"
                 continue
             }
 
-            foreach ($link in $mapping.Links) {
-                $sourcePath = if ($link.SourceFile -eq ".") {
-                    $sourceDir
-                } else {
-                    Join-Path $sourceDir $link.SourceFile
-                }
-                $targetPath = $link.Target
-                $description = $link.Description
-
-                Write-Status "  → $description" "Gray"
-
-                if ($DryRun) {
-                    Write-Info "    [预览] 将创建符号链接: $targetPath → $sourcePath"
-                } else {
-                    $currentStatus = Get-SymlinkStatus $targetPath
-                    if ($currentStatus -eq "符号链接" -and -not $Force) {
-                        Write-Info "    已存在符号链接，跳过"
-                        $created++
-                    } else {
-                        if (New-Symlink $sourcePath $targetPath $link.Type) {
-                            Write-Success "    符号链接创建成功"
-                            $created++
+            switch ($Action) {
+                "status" {
+                    if (Test-Path $targetPath) {
+                        if (Test-SymbolicLink $targetPath) {
+                            $linkTarget = Get-SymbolicLinkTarget $targetPath
+                            if ($linkTarget -eq $sourcePath) {
+                                Write-Success "  [OK] $targetPath -> $sourcePath"
+                            } else {
+                                Write-Error "  [ERROR] $targetPath -> $linkTarget (wrong target)"
+                            }
                         } else {
-                            $failed++
+                            Write-Info "  [WARNING] $targetPath (not a symbolic link)"
+                        }
+                    } else {
+                        Write-Info "  [MISSING] $targetPath (not exists)"
+                    }
+                }
+
+                "create" {
+                    if ($DryRun) {
+                        Write-Info "  [DRY RUN] Would create: $targetPath -> $sourcePath"
+                    } else {
+                        if (New-SymbolicLink $targetPath $sourcePath $fileMapping.IsDirectory) {
+                            Write-Success "  [CREATED] $targetPath -> $sourcePath"
+                        } else {
+                            Write-Error "  [FAILED] Failed to create: $targetPath"
+                        }
+                    }
+                }
+
+                "remove" {
+                    if (Test-Path $targetPath -and (Test-SymbolicLink $targetPath)) {
+                        if ($DryRun) {
+                            Write-Info "  [DRY RUN] Would remove: $targetPath"
+                        } else {
+                            Remove-Item $targetPath -Force -Recurse
+                            Write-Success "  [REMOVED] $targetPath"
+                        }
+                    }
+                }
+
+                "refresh" {
+                    if (Test-Path $targetPath) {
+                        if (Test-SymbolicLink $targetPath) {
+                            $linkTarget = Get-SymbolicLinkTarget $targetPath
+                            if ($linkTarget -ne $sourcePath) {
+                                if ($DryRun) {
+                                    Write-Info "  [DRY RUN] Would refresh: $targetPath"
+                                } else {
+                                    Remove-Item $targetPath -Force -Recurse
+                                    if (New-SymbolicLink $targetPath $sourcePath $fileMapping.IsDirectory) {
+                                        Write-Success "  [REFRESHED] $targetPath -> $sourcePath"
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-
-        if (-not $DryRun) {
-            Write-Status ""
-            Write-Status "结果: 成功 $created, 失败 $failed" "Cyan"
-            if ($created -gt 0) {
-                Write-Success "符号链接创建完成！配置文件修改将实时同步。"
-            }
-        }
-    }
-
-    "remove" {
-        Write-Status ""
-        Write-Status "🗑️ 移除符号链接" "Yellow"
-
-        $removed = 0
-        $failed = 0
-
-        foreach ($configName in $ConfigsToProcess) {
-            $mapping = $SymlinkMappings[$configName]
-
-            Write-Status ""
-            Write-Status "配置: $configName" "Green"
-
-            foreach ($link in $mapping.Links) {
-                $targetPath = $link.Target
-                $description = $link.Description
-
-                Write-Status "  → $description" "Gray"
-
-                if ($DryRun) {
-                    Write-Info "    [预览] 将移除符号链接: $targetPath"
-                } else {
-                    if (Remove-Symlink $targetPath $link.Type) {
-                        Write-Success "    符号链接已移除"
-                        $removed++
-                    } else {
-                        $failed++
-                    }
-                }
-            }
-        }
-
-        if (-not $DryRun) {
-            Write-Status ""
-            Write-Status "结果: 移除 $removed, 失败 $failed" "Cyan"
-        }
-    }
-
-    "refresh" {
-        Write-Status ""
-        Write-Status "🔄 刷新符号链接" "Yellow"
-
-        # 先移除，再创建
-        $oldAction = $Action
-        $script:Action = "remove"
-        & {
-            param($ConfigsToProcess, $SymlinkMappings, $ConfigsDir)
-            # 移除逻辑...
-        } $ConfigsToProcess $SymlinkMappings $ConfigsDir
-
-        $script:Action = "create"
-        & {
-            param($ConfigsToProcess, $SymlinkMappings, $ConfigsDir)
-            # 创建逻辑...
-        } $ConfigsToProcess $SymlinkMappings $ConfigsDir
     }
 }
 
-Write-Status ""
-Write-Status "💡 开发使用提示:" "Yellow"
-Write-Status "• 符号链接模式下，修改configs中的文件会立即影响系统配置" "Gray"
-Write-Status "• 使用前请确保已备份重要配置文件" "Gray"
-Write-Status "• 开发完成后建议使用 .\deploy-config.ps1 进行普通部署" "Gray"
-Write-Status "• 使用 -Action status 查看当前链接状态" "Gray"
-Write-Status "• 使用 -Action remove 移除所有开发符号链接" "Gray"
+# Main execution
+Write-Status "Development Symbolic Link Manager"
+Write-Status "================================="
 
-if (Test-Path $BackupDir) {
-    Write-Status ""
-    Write-Info "备份文件已保存到: $BackupDir"
+# Check permissions
+$isAdmin = Test-Administrator
+$isDeveloperMode = Test-DeveloperMode
+
+if (-not $isAdmin -and -not $isDeveloperMode) {
+    Write-Error "This script requires either:"
+    Write-Error "  1. Administrator privileges, OR"
+    Write-Error "  2. Developer Mode enabled in Windows Settings"
+    Write-Error ""
+    Write-Error "To enable Developer Mode:"
+    Write-Error "  Settings > Update & Security > For developers > Developer mode"
+    exit 1
+}
+
+if ($isDeveloperMode) {
+    Write-Info "Developer Mode detected - symbolic links can be created without admin privileges"
+} elseif ($isAdmin) {
+    Write-Info "Administrator privileges detected"
+}
+
+# Get configuration mappings and show detection results
+Write-Status "Detecting application installations..."
+$mappings = Get-ConfigMappings
+
+# Show detection summary
+$detectedApps = $mappings.Keys -join ", "
+if ($detectedApps) {
+    Write-Success "Detected applications: $detectedApps"
+} else {
+    Write-Error "No supported applications detected on this system"
+    exit 1
+}
+
+# Show specific path detections for troubleshooting
+Write-Host ""
+Write-Status "Path Detection Results:"
+foreach ($configName in $mappings.Keys) {
+    $config = $mappings[$configName]
+    Write-Host "  $configName -> $($config.Targets -join ', ')" -ForegroundColor Cyan
+}
+Write-Host ""
+
+# Determine which configurations to process
+$configsToProcess = @()
+if ($All -or $ConfigType.Count -eq 0) {
+    $configsToProcess = $mappings.Keys
+} else {
+    $configsToProcess = $ConfigType | Where-Object { $mappings.ContainsKey($_) }
+}
+
+# Process each configuration
+if ($Action -eq "diagnose") {
+    Write-Status "=== DIAGNOSTIC INFORMATION ==="
+    Write-Host ""
+
+    Write-Status "Environment Variables:"
+    Write-Host "  USERPROFILE: $env:USERPROFILE"
+    Write-Host "  LOCALAPPDATA: $env:LOCALAPPDATA"
+    Write-Host "  APPDATA: $env:APPDATA"
+    Write-Host "  SCOOP: $env:SCOOP"
+    Write-Host "  STARSHIP_CONFIG: $env:STARSHIP_CONFIG"
+    Write-Host ""
+
+    Write-Status "Application Detection Details:"
+
+    # Windows Terminal detection
+    Write-Host "Windows Terminal:"
+    $terminalPackages = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "Microsoft.WindowsTerminal*" }
+    if ($terminalPackages) {
+        foreach ($pkg in $terminalPackages) {
+            $localState = Join-Path $pkg.FullName "LocalState"
+            $exists = Test-Path $localState
+            $status = if ($exists) { "EXISTS" } else { "NOT FOUND" }
+            Write-Host "  - $($pkg.Name): $localState [$status]"
+        }
+    } else {
+        Write-Host "  - No Windows Terminal packages found"
+    }
+
+    # Scoop detection
+    Write-Host "Scoop:"
+    $scoopCmd = Get-Command scoop -ErrorAction SilentlyContinue
+    if ($scoopCmd) {
+        Write-Host "  - Command found: $($scoopCmd.Source)"
+        $scoopRoot = Split-Path (Split-Path $scoopCmd.Source -Parent) -Parent
+        Write-Host "  - Detected root: $scoopRoot"
+    } else {
+        Write-Host "  - Scoop command not found in PATH"
+    }
+
+    # Neovim detection
+    Write-Host "Neovim:"
+    $nvimCmd = Get-Command nvim -ErrorAction SilentlyContinue
+    if ($nvimCmd) {
+        Write-Host "  - Command found: $($nvimCmd.Source)"
+        try {
+            $nvimConfig = & nvim --headless -c "lua print(vim.fn.stdpath('config'))" -c "qa" 2>$null | Out-String
+            $nvimConfig = $nvimConfig.Trim()
+            Write-Host "  - Config path: $nvimConfig"
+        } catch {
+            Write-Host "  - Could not determine config path"
+        }
+    } else {
+        Write-Host "  - Neovim command not found in PATH"
+    }
+
+    # PowerShell paths
+    Write-Host "PowerShell:"
+    $ps7Path = "$env:USERPROFILE\Documents\PowerShell"
+    $ps51Path = "$env:USERPROFILE\Documents\WindowsPowerShell"
+    $ps7Status = if (Test-Path $ps7Path) { "EXISTS" } else { "NOT FOUND" }
+    $ps51Status = if (Test-Path $ps51Path) { "EXISTS" } else { "NOT FOUND" }
+    Write-Host "  - PowerShell 7+: $ps7Path [$ps7Status]"
+    Write-Host "  - Windows PowerShell 5.1: $ps51Path [$ps51Status]"
+
+    Write-Host ""
+    Write-Status "Available configurations for this system:"
+    foreach ($configName in $mappings.Keys) {
+        Write-Success "  ✓ $configName"
+    }
+
+    if ($mappings.Keys.Count -eq 0) {
+        Write-Error "  No configurations available - applications may not be installed"
+    }
+
+    return
+}
+
+foreach ($configName in $configsToProcess) {
+    Process-Configuration $configName $mappings[$configName] $Action
+    Write-Host ""
+}
+
+# Summary
+switch ($Action) {
+    "status" {
+        Write-Status "Status check completed. Use other actions to manage symbolic links:"
+        Write-Host "  .\dev-symlink.ps1 -Action create    # Create symbolic links"
+        Write-Host "  .\dev-symlink.ps1 -Action remove    # Remove symbolic links"
+        Write-Host "  .\dev-symlink.ps1 -Action refresh   # Refresh symbolic links"
+        Write-Host "  .\dev-symlink.ps1 -Action diagnose  # Show detailed detection info"
+        Write-Host "  .\dev-symlink.ps1 -Action status    # Check status"
+        Write-Host ""
+        Write-Host "Additional options:"
+        Write-Host "  -ConfigType powershell,git    # Process specific config types only"
+        Write-Host "  -All                          # Process all detected configurations"
+        Write-Host "  -DryRun                       # Preview changes without applying"
+        Write-Host "  -Verbose                      # Show detailed output"
+    }
+    "create" {
+        if (-not $DryRun) {
+            Write-Success "Symbolic link creation completed!"
+        }
+    }
+    "remove" {
+        if (-not $DryRun) {
+            Write-Success "Symbolic link removal completed!"
+        }
+    }
+    "refresh" {
+        if (-not $DryRun) {
+            Write-Success "Symbolic link refresh completed!"
+        }
+    }
+}
+
+if ($DryRun) {
+    Write-Info "This was a dry run. Use without -DryRun to perform actual operations."
 }

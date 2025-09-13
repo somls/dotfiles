@@ -2,53 +2,59 @@
 
 <#
 .SYNOPSIS
-    智能自动提交和同步脚本
+    Intelligent auto-commit and sync script
 
 .DESCRIPTION
-    提供智能的 Git 配置同步功能，自动处理本地和远程的差异：
-    1. 检测本地未提交更改，自动提交
-    2. 对比本地和远程分支状态
-    3. 根据情况执行推送、拉取或合并操作
-    4. 保持配置在多设备间同步
+    Provides intelligent Git configuration sync functionality, automatically handling local and remote differences:
+    1. Detect local uncommitted changes and auto-commit
+    2. Compare local and remote branch status
+    3. Execute push, pull, or merge operations based on situation
+    4. Keep configurations synchronized across multiple devices
 
 .PARAMETER Push
-    是否推送到远程仓库（仅在非 Auto 模式下有效）
+    Whether to push to remote repository (only effective in non-Auto mode)
 
 .PARAMETER DryRun
-    预览模式，显示将要执行的操作但不实际执行
+    Preview mode, shows operations to be executed but doesn't actually execute them
 
 .PARAMETER Message
-    自定义提交消息
+    Custom commit message
 
 .PARAMETER Auto
-    智能自动同步模式：
-    - 自动提交本地未提交的更改
-    - 对比本地与远程分支状态
-    - 本地领先：推送到远程
-    - 远程领先：拉取远程更改
-    - 双方都有更新：使用 rebase 合并
+    Intelligent auto-sync mode:
+    - Auto-commit local uncommitted changes
+    - Compare local and remote branch status
+    - Local ahead: push to remote
+    - Remote ahead: pull remote changes
+    - Both have updates: use rebase merge
 
 .PARAMETER BackupFirst
-    同步前创建备份
+    Create backup before syncing
+
+.PARAMETER ForceFetch
+    Force detailed fetch (with --force) for troubleshooting remote visibility issues
+
+.PARAMETER ForceWithLease
+    Use --force-with-lease when pushing (safer force push)
 
 .EXAMPLE
     .\auto-sync.ps1 -Auto
-    执行智能自动同步
+    Execute intelligent auto-sync
 
 .EXAMPLE
     .\auto-sync.ps1 -Auto -DryRun
-    预览同步操作
+    Preview sync operations
 
 .EXAMPLE
-    .\auto-sync.ps1 -Message "更新配置" -Push
-    手动提交并推送
+    .\auto-sync.ps1 -Message "Update configs" -Push
+    Manual commit and push
 
 .EXAMPLE
     .\auto-sync.ps1 -BackupFirst -Auto
-    安全同步（先备份）
+    Safe sync (backup first)
 
 .NOTES
-    建议使用 -Auto 参数进行智能同步，脚本会自动处理各种情况
+    Recommend using -Auto parameter for intelligent sync, script will handle various situations automatically
 #>
 
 [CmdletBinding()]
@@ -65,15 +71,12 @@ param(
     [Parameter(Mandatory = $false)]
     [switch]$Auto,
 
-    # 同步前创建备份
     [Parameter(Mandatory = $false)]
     [switch]$BackupFirst,
 
-    # 强制执行详细的 fetch（含 --force），用于排查远程可见性问题
     [Parameter(Mandatory = $false)]
     [switch]$ForceFetch,
 
-    # 推送时使用 --force-with-lease（更安全的强制推送）
     [Parameter(Mandatory = $false)]
     [switch]$ForceWithLease
 )
@@ -81,9 +84,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
- # Log level used for safety-push messages (e.g., after a commit but divergence shows 0/0)
- # Options: "INFO" | "WARN" | "ERROR"
- $SafetyPushLogLevel = "INFO"
+# Log level used for safety-push messages
+$SafetyPushLogLevel = "INFO"
 
 # 创建备份函数
 function New-ProjectBackup {
@@ -94,7 +96,7 @@ function New-ProjectBackup {
         $Timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
         $BackupPath = Join-Path $BackupDir "backup-$Timestamp"
 
-        Write-Log "创建项目备份: $BackupPath" -Level "INFO"
+        Write-Log "Creating project backup: $BackupPath" -Level "INFO"
 
         # 创建备份目录
         if (-not (Test-Path $BackupDir)) {
@@ -127,11 +129,11 @@ function New-ProjectBackup {
 
         $BackupInfo | ConvertTo-Json | Out-File (Join-Path $BackupPath "backup-info.json") -Encoding UTF8
 
-        Write-Log "备份创建成功: $BackupPath" -Level "INFO"
+        Write-Log "Backup created successfully: $BackupPath" -Level "INFO"
         return $true
     }
     catch {
-        Write-Log "创建备份失败: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Failed to create backup: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }
@@ -196,7 +198,7 @@ function Get-GitChanges {
         return $Changes
     }
     catch {
-        Write-Log "获取Git变更失败: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Failed to get Git changes: $($_.Exception.Message)" -Level "ERROR"
         throw
     }
 }
@@ -219,7 +221,7 @@ function Ensure-Upstream {
     $branch = Get-CurrentBranch
     if (-not $branch) { return $false }
     if (Test-BranchHasUpstream) { return $true }
-    Write-Log "未检测到上游分支，设置: origin/$branch" -Level "WARN"
+    Write-Log "No upstream branch detected, setting: origin/$branch" -Level "WARN"
     git push -u origin $branch 2>$null
     return ($LASTEXITCODE -eq 0)
 }
@@ -228,7 +230,7 @@ function Get-Divergence {
     # 返回 @{ Ahead = <int>; Behind = <int> }
     try {
         # 首先尝试 fetch 获取最新的远程状态
-        Write-Log "正在获取远程最新状态..." -Level "INFO"
+        Write-Log "Fetching latest remote status..." -Level "INFO"
 
         # 构建 fetch 参数
         $fetchArgs = @('--all', '--prune')
@@ -241,7 +243,7 @@ function Get-Divergence {
             try {
                 if ($VerbosePreference -ne 'SilentlyContinue') {
                     $fetchOutput = & git fetch @fetchArgs 2>&1
-                    if ($fetchOutput) { Write-Verbose ("fetch 输出:`n" + ($fetchOutput -join "`n")) }
+                    if ($fetchOutput) { Write-Verbose ("fetch output:`n" + ($fetchOutput -join "`n")) }
                 } else {
                     & git fetch @fetchArgs 2>$null
                 }
@@ -252,26 +254,26 @@ function Get-Divergence {
             }
 
             if (-not $success -and $i -lt $maxRetries) {
-                Write-Log "git fetch 失败，重试 $($i+1)/$maxRetries..." -Level "WARN"
+                Write-Log "git fetch failed, retry $($i+1)/$maxRetries..." -Level "WARN"
                 Start-Sleep -Seconds 1
             }
         }
 
         if (-not $success) {
-            Write-Log "git fetch 失败，使用本地缓存的远程状态" -Level "WARN"
+            Write-Log "git fetch failed, using local cached remote status" -Level "WARN"
         }
 
         # 检查是否有上游分支
         if (-not (Test-BranchHasUpstream)) {
-            Write-Log "未检测到上游分支，尝试自动设置..." -Level "WARN"
+            Write-Log "No upstream branch detected, attempting auto-setup..." -Level "WARN"
             $branch = Get-CurrentBranch
             if ($branch) {
                 # 尝试设置上游分支
                 git push -u origin $branch 2>$null
                 if ($LASTEXITCODE -eq 0) {
-                    Write-Log "已设置上游分支: origin/$branch" -Level "INFO"
+                    Write-Log "Upstream branch set: origin/$branch" -Level "INFO"
                 } else {
-                    Write-Log "无法设置上游分支，返回默认分歧状态" -Level "WARN"
+                    Write-Log "Cannot set upstream branch, returning default divergence status" -Level "WARN"
                     return @{ Ahead = 0; Behind = 0 }
                 }
             } else {
@@ -283,7 +285,7 @@ function Get-Divergence {
         try {
             $counts = git rev-list --left-right --count "HEAD...HEAD@{u}" 2>$null
             if ($VerbosePreference -ne 'SilentlyContinue') {
-                Write-Verbose ("rev-list 输出: '$counts'")
+                Write-Verbose ("rev-list output: '$counts'")
             }
         }
         catch {
@@ -291,25 +293,25 @@ function Get-Divergence {
         }
 
         if (-not $counts -or $counts.Trim() -eq '') {
-            Write-Log "无法获取分歧计数，可能分支完全同步" -Level "INFO"
+            Write-Log "Cannot get divergence count, branches may be fully synced" -Level "INFO"
             return @{ Ahead = 0; Behind = 0 }
         }
 
         # 解析分歧计数
         $parts = @($counts.Trim() -split '\s+') | Where-Object { $_ -ne '' -and $_ -match '^\d+$' }
         if ($parts.Count -lt 2) {
-            Write-Log "分歧计数格式异常: '$counts'，假设同步状态" -Level "WARN"
+            Write-Log "Divergence count format abnormal: '$counts', assuming synced state" -Level "WARN"
             return @{ Ahead = 0; Behind = 0 }
         }
 
         $ahead = [int]$parts[0]
         $behind = [int]$parts[1]
 
-        Write-Log "分歧状态：本地领先 $ahead 个提交，远程领先 $behind 个提交" -Level "INFO"
+        Write-Log "Divergence status: Local ahead $ahead commits, remote ahead $behind commits" -Level "INFO"
         return @{ Ahead = $ahead; Behind = $behind }
 
     } catch {
-        Write-Log "获取分歧信息时发生异常: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Exception occurred while getting divergence info: $($_.Exception.Message)" -Level "ERROR"
         return @{ Ahead = 0; Behind = 0 }
     }
 }
@@ -318,13 +320,13 @@ function Invoke-AutoSync {
     param(
         [switch]$DryRunMode
     )
-    Write-Host "=== 智能自动同步模式（AutoSync）===" -ForegroundColor Cyan
-    if (-not (Test-GitRepository)) { Write-Log "当前目录不是Git仓库" -Level "ERROR"; return $false }
+    Write-Host "=== Intelligent Auto-Sync Mode (AutoSync) ===" -ForegroundColor Cyan
+    if (-not (Test-GitRepository)) { Write-Log "Current directory is not a Git repository" -Level "ERROR"; return $false }
 
     $branch = Get-CurrentBranch
-    if (-not $branch) { Write-Log "无法确定当前分支" -Level "ERROR"; return $false }
+    if (-not $branch) { Write-Log "Cannot determine current branch" -Level "ERROR"; return $false }
 
-    if (-not (Ensure-Upstream)) { Write-Log "无法设置/确认上游分支" -Level "ERROR"; return $false }
+    if (-not (Ensure-Upstream)) { Write-Log "Cannot set/confirm upstream branch" -Level "ERROR"; return $false }
     $didCommit = $false
 
     # 先检查本地是否有未提交的更改
@@ -333,35 +335,35 @@ function Invoke-AutoSync {
 
     # 如果有本地更改，先提交
     if ($hasLocalChanges) {
-        Write-Log "检测到本地未提交更改，先进行本地提交..." -Level "INFO"
+        Write-Log "Detected local uncommitted changes, committing locally first..." -Level "INFO"
         if ($DryRunMode) {
-            Write-Host "[DryRun] 将先提交本地更改" -ForegroundColor Yellow
+            Write-Host "[DryRun] Will commit local changes first" -ForegroundColor Yellow
         } else {
             $commitMsg = New-CommitMessage -Changes $changes -CustomMessage $Message
             $commitSuccess = Invoke-GitCommit -Changes $changes -CommitMessage $commitMsg -PushToRemote:$false -DryRunMode:$false
             if (-not $commitSuccess) {
-                Write-Log "本地提交失败，终止同步" -Level "ERROR"
+                Write-Log "Local commit failed, terminating sync" -Level "ERROR"
                 return $false
             }
-            Write-Log "本地更改已提交" -Level "INFO"
+            Write-Log "Local changes committed" -Level "INFO"
             $didCommit = $true
         }
     }
 
     # 获取本地和远程的分歧状态
     $div = Get-Divergence
-    Write-Log "分支状态：本地领先 $($div.Ahead) 个提交，远程领先 $($div.Behind) 个提交" -Level "INFO"
+    Write-Log "Branch status: Local ahead $($div.Ahead) commits, remote ahead $($div.Behind) commits" -Level "INFO"
 
     # 边界情形处理：刚刚提交后需要重新检查分歧状态
     if (-not $DryRunMode -and $didCommit) {
-        Write-Log "刚完成本地提交，重新检查分歧状态..." -Level "INFO"
+        Write-Log "Just completed local commit, rechecking divergence status..." -Level "INFO"
         # 重新获取分歧状态
         $div = Get-Divergence
-        Write-Log "提交后分支状态：本地领先 $($div.Ahead) 个提交，远程领先 $($div.Behind) 个提交" -Level "INFO"
+        Write-Log "Post-commit branch status: Local ahead $($div.Ahead) commits, remote ahead $($div.Behind) commits" -Level "INFO"
 
         # 如果本地有领先的提交，直接推送
         if ($div.Ahead -gt 0) {
-            Write-Log "本地有新提交，正在推送..." -Level "INFO"
+            Write-Log "Local has new commits, pushing..." -Level "INFO"
             $pushArgs = @()
             if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
 
@@ -375,48 +377,48 @@ function Invoke-AutoSync {
                 }
                 $pushOk = ($LASTEXITCODE -eq 0)
                 if (-not $pushOk -and $i -lt $maxRetries) {
-                    Write-Log "推送失败，重试 $($i+1)/$maxRetries..." -Level "WARN"
+                    Write-Log "Push failed, retry $($i+1)/$maxRetries..." -Level "WARN"
                     Start-Sleep -Seconds 1
                 }
             }
 
             if (-not $pushOk) {
-                Write-Log "推送失败" -Level "ERROR"
+                Write-Log "Push failed" -Level "ERROR"
                 return $false
             }
-            Write-Log "推送成功" -Level "INFO"
+            Write-Log "Push successful" -Level "INFO"
             return $true
         }
         # 如果分歧为 0/0，可能是检测问题，尝试保障性推送
         elseif ($div.Ahead -eq 0 -and $div.Behind -eq 0) {
-            Write-Log "分歧检测为 0/0，执行保障性推送..." -Level "WARN"
+            Write-Log "Divergence detected as 0/0, performing safety push..." -Level "WARN"
             git push 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "保障性推送成功" -Level "INFO"
+                Write-Log "Safety push successful" -Level "INFO"
             } else {
-                Write-Log "保障性推送无效果（可能已同步）" -Level "INFO"
+                Write-Log "Safety push had no effect (may already be synced)" -Level "INFO"
             }
             return $true
         }
     }
 
     if ($DryRunMode) {
-        Write-Host "[DryRun] 同步策略预览：" -ForegroundColor Yellow
+        Write-Host "[DryRun] Sync strategy preview:" -ForegroundColor Yellow
         if ($div.Behind -gt 0 -and $div.Ahead -gt 0) {
-            Write-Host " - 本地和远程都有新提交，将执行 rebase 合并" -ForegroundColor Yellow
-            Write-Host " - 将执行的命令：" -ForegroundColor DarkYellow
+            Write-Host " - Both local and remote have new commits, will perform rebase merge" -ForegroundColor Yellow
+            Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
             Write-Host "    git pull --rebase --autostash" -ForegroundColor DarkYellow
             if ($ForceWithLease) { Write-Host "    git push --force-with-lease" -ForegroundColor DarkYellow } else { Write-Host "    git push" -ForegroundColor DarkYellow }
         } elseif ($div.Behind -gt 0) {
-            Write-Host " - 远程更新，将拉取远程更改" -ForegroundColor Yellow
-            Write-Host " - 将执行的命令：" -ForegroundColor DarkYellow
+            Write-Host " - Remote updates, will pull remote changes" -ForegroundColor Yellow
+            Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
             Write-Host "    git pull --rebase --autostash" -ForegroundColor DarkYellow
         } elseif ($div.Ahead -gt 0) {
-            Write-Host " - 本地更新，将推送到远程" -ForegroundColor Yellow
-            Write-Host " - 将执行的命令：" -ForegroundColor DarkYellow
+            Write-Host " - Local updates, will push to remote" -ForegroundColor Yellow
+            Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
             if ($ForceWithLease) { Write-Host "    git push --force-with-lease" -ForegroundColor DarkYellow } else { Write-Host "    git push" -ForegroundColor DarkYellow }
         } else {
-            Write-Host " - 本地和远程已同步，无需操作" -ForegroundColor Green
+            Write-Host " - Local and remote are synced, no action needed" -ForegroundColor Green
         }
         return $true
     }
@@ -424,31 +426,31 @@ function Invoke-AutoSync {
     # 执行同步策略
     if ($div.Behind -gt 0 -and $div.Ahead -gt 0) {
         # 本地和远程都有新提交，使用 rebase 保持线性历史
-        Write-Log "本地和远程都有新提交，执行 rebase 合并..." -Level "WARN"
+        Write-Log "Both local and remote have new commits, performing rebase merge..." -Level "WARN"
         # 拉取（带重试与退避）
         $maxRetries = 3; $delayMs = 500; $pullOk = $false
         for ($i = 1; $i -le $maxRetries -and -not $pullOk; $i++) {
             git pull --rebase --autostash 2>$null
             $pullOk = ($LASTEXITCODE -eq 0)
             if (-not $pullOk) {
-                Write-Log "拉取失败（重试 $i/$maxRetries）" -Level "WARN"
+                Write-Log "Pull failed (retry $i/$maxRetries)" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
         if (-not $pullOk) {
-            Write-Log "Rebase 失败，可能存在冲突，请手动解决" -Level "ERROR"
+            Write-Log "Rebase failed, conflicts may exist, please resolve manually" -Level "ERROR"
             $conflicts = git diff --name-only --diff-filter=U 2>$null
             if ($conflicts) {
-                Write-Host "以下文件存在冲突：" -ForegroundColor Yellow
+                Write-Host "Files with conflicts:" -ForegroundColor Yellow
                 $conflicts | ForEach-Object { Write-Host "  * $_" -ForegroundColor Yellow }
-                Write-Host "解决步骤：" -ForegroundColor Yellow
-                Write-Host "  1) 按文件修复冲突标记并保存" -ForegroundColor Yellow
-                Write-Host "  2) git add <文件>（全部修复后）" -ForegroundColor Yellow
-                Write-Host "  3) git rebase --continue（或 git rebase --abort 放弃）" -ForegroundColor Yellow
+                Write-Host "Resolution steps:" -ForegroundColor Yellow
+                Write-Host "  1) Fix conflict markers in files and save" -ForegroundColor Yellow
+                Write-Host "  2) git add <file> (after all fixes)" -ForegroundColor Yellow
+                Write-Host "  3) git rebase --continue (or git rebase --abort to cancel)" -ForegroundColor Yellow
             }
             return $false
         }
-        Write-Log "Rebase 成功，现在推送合并后的提交..." -Level "INFO"
+        Write-Log "Rebase successful, now pushing merged commits..." -Level "INFO"
         # 推送（可选 --force-with-lease + 重试）
         $pushArgs = @()
         if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
@@ -457,45 +459,45 @@ function Invoke-AutoSync {
             if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
             $pushOk = ($LASTEXITCODE -eq 0)
             if (-not $pushOk) {
-                Write-Log "推送失败（重试 $i/$maxRetries）" -Level "WARN"
+                Write-Log "Push failed (retry $i/$maxRetries)" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
         if (-not $pushOk) {
-            Write-Log "推送失败" -Level "ERROR"
+            Write-Log "Push failed" -Level "ERROR"
             return $false
         }
-        Write-Log "同步完成：已合并远程更改并推送本地提交" -Level "INFO"
+        Write-Log "Sync completed: merged remote changes and pushed local commits" -Level "INFO"
     } elseif ($div.Behind -gt 0) {
         # 仅远程有新提交，直接拉取
-        Write-Log "远程有新提交，正在拉取..." -Level "INFO"
+        Write-Log "Remote has new commits, pulling..." -Level "INFO"
         # 拉取（带重试与退避）
         $maxRetries = 3; $delayMs = 500; $pullOk = $false
         for ($i = 1; $i -le $maxRetries -and -not $pullOk; $i++) {
             git pull --rebase --autostash 2>$null
             $pullOk = ($LASTEXITCODE -eq 0)
             if (-not $pullOk) {
-                Write-Log "拉取失败（重试 $i/$maxRetries）" -Level "WARN"
+                Write-Log "Pull failed (retry $i/$maxRetries)" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
         if (-not $pullOk) {
-            Write-Log "拉取失败" -Level "ERROR"
+            Write-Log "Pull failed" -Level "ERROR"
             $conflicts = git diff --name-only --diff-filter=U 2>$null
             if ($conflicts) {
-                Write-Host "以下文件存在冲突：" -ForegroundColor Yellow
+                Write-Host "Files with conflicts:" -ForegroundColor Yellow
                 $conflicts | ForEach-Object { Write-Host "  * $_" -ForegroundColor Yellow }
-                Write-Host "解决步骤：" -ForegroundColor Yellow
-                Write-Host "  1) 按文件修复冲突标记并保存" -ForegroundColor Yellow
-                Write-Host "  2) git add <文件>（全部修复后）" -ForegroundColor Yellow
-                Write-Host "  3) git rebase --continue（或 git rebase --abort 放弃）" -ForegroundColor Yellow
+                Write-Host "Resolution steps:" -ForegroundColor Yellow
+                Write-Host "  1) Fix conflict markers in files and save" -ForegroundColor Yellow
+                Write-Host "  2) git add <file> (after all fixes)" -ForegroundColor Yellow
+                Write-Host "  3) git rebase --continue (or git rebase --abort to cancel)" -ForegroundColor Yellow
             }
             return $false
         }
-        Write-Log "同步完成：已拉取远程更改" -Level "INFO"
+        Write-Log "Sync completed: pulled remote changes" -Level "INFO"
     } elseif ($div.Ahead -gt 0) {
         # 仅本地有新提交，直接推送
-        Write-Log "本地有新提交，正在推送..." -Level "INFO"
+        Write-Log "Local has new commits, pushing..." -Level "INFO"
         # 推送（可选 --force-with-lease + 重试）
         $pushArgs = @()
         if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
@@ -504,18 +506,18 @@ function Invoke-AutoSync {
             if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
             $pushOk = ($LASTEXITCODE -eq 0)
             if (-not $pushOk) {
-                Write-Log "推送失败（重试 $i/$maxRetries）" -Level "WARN"
+                Write-Log "Push failed (retry $i/$maxRetries)" -Level "WARN"
                 Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
             }
         }
         if (-not $pushOk) {
-            Write-Log "推送失败" -Level "ERROR"
+            Write-Log "Push failed" -Level "ERROR"
             return $false
         }
-        Write-Log "同步完成：已推送本地提交" -Level "INFO"
+        Write-Log "Sync completed: pushed local commits" -Level "INFO"
     } else {
         # 本地和远程已同步
-        Write-Log "本地和远程已同步，无需操作" -Level "INFO"
+        Write-Log "Local and remote are synced, no action needed" -Level "INFO"
     }
 
     return $true
@@ -556,72 +558,72 @@ function Invoke-GitCommit {
 
     try {
         # 显示变更摘要
-        Write-Host "`n=== 文件变更摘要 ===" -ForegroundColor Cyan
+        Write-Host "`n=== File Changes Summary ===" -ForegroundColor Cyan
 
         if ($Changes.Added.Count -gt 0) {
-            Write-Host "新增文件 ($($Changes.Added.Count)):" -ForegroundColor Green
+            Write-Host "New files ($($Changes.Added.Count)):" -ForegroundColor Green
             $Changes.Added | ForEach-Object { Write-Host "  + $_" -ForegroundColor Green }
         }
 
         if ($Changes.Modified.Count -gt 0) {
-            Write-Host "修改文件 ($($Changes.Modified.Count)):" -ForegroundColor Yellow
+            Write-Host "Modified files ($($Changes.Modified.Count)):" -ForegroundColor Yellow
             $Changes.Modified | ForEach-Object { Write-Host "  ~ $_" -ForegroundColor Yellow }
         }
 
         if ($Changes.Deleted.Count -gt 0) {
-            Write-Host "删除文件 ($($Changes.Deleted.Count)):" -ForegroundColor Red
+            Write-Host "Deleted files ($($Changes.Deleted.Count)):" -ForegroundColor Red
             $Changes.Deleted | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
         }
 
         if ($Changes.Untracked.Count -gt 0) {
-            Write-Host "未跟踪文件 ($($Changes.Untracked.Count)):" -ForegroundColor Magenta
+            Write-Host "Untracked files ($($Changes.Untracked.Count)):" -ForegroundColor Magenta
             $Changes.Untracked | ForEach-Object { Write-Host "  ? $_" -ForegroundColor Magenta }
         }
 
-        Write-Host "`n=== 提交消息 ===" -ForegroundColor Cyan
+        Write-Host "`n=== Commit Message ===" -ForegroundColor Cyan
         Write-Host $CommitMessage -ForegroundColor White
         Write-Host ""
 
         if ($DryRunMode) {
-            Write-Host "=== 预览模式 - 不会实际执行提交 ===" -ForegroundColor Yellow
+            Write-Host "=== Preview Mode - Will not actually execute commit ===" -ForegroundColor Yellow
             return $true
         }
 
         # 添加所有变更到暂存区
-        Write-Log "添加文件到暂存区..." -Level "INFO"
+        Write-Log "Adding files to staging area..." -Level "INFO"
         git add . 2>$null
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "添加文件到暂存区失败" -Level "ERROR"
+            Write-Log "Failed to add files to staging area" -Level "ERROR"
             return $false
         }
 
         # 执行提交
-        Write-Log "执行提交..." -Level "INFO"
+        Write-Log "Executing commit..." -Level "INFO"
         git commit -m $CommitMessage 2>$null
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "提交失败" -Level "ERROR"
+            Write-Log "Commit failed" -Level "ERROR"
             return $false
         }
 
-        Write-Log "提交成功" -Level "INFO"
+        Write-Log "Commit successful" -Level "INFO"
 
         # 推送到远程（如果需要）
         if ($PushToRemote) {
             $branch = Get-CurrentBranch
-            if (-not $branch) { Write-Log "无法确定当前分支，跳过推送" -Level "ERROR"; return $false }
+            if (-not $branch) { Write-Log "Cannot determine current branch, skipping push" -Level "ERROR"; return $false }
 
             if (-not (Test-BranchHasUpstream)) {
-                Write-Log "未检测到上游分支，正在设置并推送: origin/$branch" -Level "WARN"
+                Write-Log "No upstream branch detected, setting and pushing: origin/$branch" -Level "WARN"
                 git push -u origin $branch 2>$null
             } else {
-                Write-Log "检测到上游分支，直接推送" -Level "INFO"
+                Write-Log "Upstream branch detected, pushing directly" -Level "INFO"
                 git push 2>$null
             }
 
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "推送成功" -Level "INFO"
+                Write-Log "Push successful" -Level "INFO"
             } else {
-                Write-Log "推送失败" -Level "ERROR"
+                Write-Log "Push failed" -Level "ERROR"
                 return $false
             }
         }
@@ -629,35 +631,35 @@ function Invoke-GitCommit {
         return $true
     }
     catch {
-        Write-Log "提交过程中发生错误: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Error occurred during commit process: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }
 
 function Main {
     try {
-        Write-Host "=== 智能自动提交与同步工具 ===" -ForegroundColor Cyan
+        Write-Host "=== Intelligent Auto-Commit and Sync Tool ===" -ForegroundColor Cyan
         Write-Host ""
 
         # 检查Git仓库
         if (-not (Test-GitRepository)) {
-            Write-Log "当前目录不是Git仓库" -Level "ERROR"
+            Write-Log "Current directory is not a Git repository" -Level "ERROR"
             return $false
         }
 
         # 创建备份（如果需要）
         if ($BackupFirst) {
-            Write-Log "正在创建同步前备份..." -Level "INFO"
+            Write-Log "Creating pre-sync backup..." -Level "INFO"
             $backupResult = New-ProjectBackup -BackupReason "Pre-sync backup"
             if (-not $backupResult) {
-                Write-Log "备份失败，同步已取消" -Level "ERROR"
+                Write-Log "Backup failed, sync cancelled" -Level "ERROR"
                 return $false
             }
         }
 
-        # 默认使用 Auto 模式进行智能同步，除否明确指定了其他参数
+        # 默认使用 Auto 模式进行智能同步，除非明确指定了其他参数
         if ($Auto -or (-not $Push -and -not $Message -and -not $DryRun)) {
-            Write-Log "使用智能同步模式" -Level "INFO"
+            Write-Log "Using intelligent sync mode" -Level "INFO"
             return Invoke-AutoSync -DryRunMode:$DryRun
         }
 
@@ -667,12 +669,12 @@ function Main {
         # 检查是否有变更
         $TotalChanges = $Changes.Added.Count + $Changes.Modified.Count + $Changes.Deleted.Count + $Changes.Untracked.Count
         if ($TotalChanges -eq 0) {
-            Write-Log "没有检测到本地文件变更" -Level "INFO"
+            Write-Log "No local file changes detected" -Level "INFO"
 
             # 即使没有本地变更，也检查是否有未推送的提交
             $div = Get-Divergence
             if ($div.Ahead -gt 0) {
-                Write-Log "检测到 $($div.Ahead) 个未推送的提交，正在推送..." -Level "INFO"
+                Write-Log "Detected $($div.Ahead) unpushed commits, pushing..." -Level "INFO"
                 if (-not $DryRun) {
                     $pushArgs = @()
                     if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
@@ -684,19 +686,19 @@ function Main {
                     }
 
                     if ($LASTEXITCODE -eq 0) {
-                        Write-Log "推送成功" -Level "INFO"
+                        Write-Log "Push successful" -Level "INFO"
                     } else {
-                        Write-Log "推送失败" -Level "ERROR"
+                        Write-Log "Push failed" -Level "ERROR"
                         return $false
                     }
                 }
             } else {
-                Write-Log "本地和远程已同步" -Level "INFO"
+                Write-Log "Local and remote are synced" -Level "INFO"
             }
             return $true
         }
 
-        Write-Log "检测到 $TotalChanges 个变更文件" -Level "INFO"
+        Write-Log "Detected $TotalChanges changed files" -Level "INFO"
 
         # 生成提交消息
         $CommitMessage = New-CommitMessage -Changes $Changes -CustomMessage $Message
@@ -708,16 +710,16 @@ function Main {
         $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$ShouldPush -DryRunMode:$DryRun
 
         if ($Success) {
-            Write-Host "✅ 操作完成" -ForegroundColor Green
+            Write-Host "Operation completed successfully" -ForegroundColor Green
         } else {
-            Write-Host "❌ 操作失败" -ForegroundColor Red
+            Write-Host "Operation failed" -ForegroundColor Red
             return $false
         }
 
         return $true
     }
     catch {
-        Write-Log "Main 函数执行时发生异常: $($_.Exception.Message)" -Level "ERROR"
+        Write-Log "Exception occurred in Main function: $($_.Exception.Message)" -Level "ERROR"
         return $false
     }
 }

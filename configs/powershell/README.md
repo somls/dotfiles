@@ -23,22 +23,22 @@ powershell/
 
 ### 自动安装（推荐）
 
-使用主安装脚本安装 PowerShell 配置：
+使用部署脚本安装 PowerShell 配置：
 
 ```powershell
 # 从项目根目录运行：
 
 # 安装所有配置（包括 PowerShell）
-.\dotfiles.ps1 deploy -ConfigType powershell
+.\deploy-config.ps1
 
 # 只安装 PowerShell 配置
-.\dotfiles.ps1 deploy -ConfigType powershell
+.\deploy-config.ps1 -ConfigType powershell
 
 # 预览安装效果（不实际更改）
-.\dotfiles.ps1 deploy -ConfigType powershell -DryRun
+.\deploy-config.ps1 -ConfigType powershell -DryRun
 
 # 强制覆盖现有配置
-.\dotfiles.ps1 deploy -ConfigType powershell -Force
+.\deploy-config.ps1 -ConfigType powershell -Force
 ```
 
 ### 手动安装
@@ -193,18 +193,18 @@ Install-Module z -Force  # 目录跳转增强
 ### 配置更新
 ```powershell
 # 重新安装最新配置
-.\install.ps1 -Type PowerShell -Force
+.\deploy-config.ps1 -ConfigType powershell -Force
 
 # 重新加载配置（无需重启）
 . $PROFILE
 ```
 
 ### 备份和恢复
-安装脚本会自动备份现有配置到 `.dotfiles-backup` 目录，如需恢复：
+部署脚本会自动备份现有配置到 `.dotfiles-backup` 目录，如需恢复：
 
 ```powershell
-# 使用安装脚本的回滚功能
-.\install.ps1 -Rollback
+# 手动恢复备份文件
+# 备份位置：~/.dotfiles-backup/
 ```
 
 ## 📚 相关链接
