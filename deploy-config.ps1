@@ -31,6 +31,8 @@ $ConfigMappings = @{
             @{ From = "gitconfig.local"; To = "$env:USERPROFILE\.gitconfig.local" }
             @{ From = "gitignore_global"; To = "$env:USERPROFILE\.gitignore_global" }
             @{ From = "gitmessage"; To = "$env:USERPROFILE\.gitmessage" }
+            @{ From = "gitconfig.d"; To = "$env:USERPROFILE\.config\git\gitconfig.d"; IsDir = $true }
+            @{ From = "scripts"; To = "$env:USERPROFILE\.config\git\scripts"; IsDir = $true }
         )
     }
     "starship" = @{

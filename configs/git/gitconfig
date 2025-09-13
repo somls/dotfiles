@@ -9,5 +9,23 @@
  rebase = true
 [color]
  ui = auto
-# Note: Dynamic safe directories should be configured locally
-# Use: git config --global --add safe.directory "/path/to/scoop"
+
+# 包含本地配置文件
+[include]
+ path = ~/.gitconfig.local
+
+# 包含模块化配置文件
+[include]
+ path = ~/.config/git/gitconfig.d/core.gitconfig
+[include]
+ path = ~/.config/git/gitconfig.d/aliases.gitconfig
+[include]
+ path = ~/.config/git/gitconfig.d/color.gitconfig
+[include]
+ path = ~/.config/git/gitconfig.d/diff.gitconfig
+[include]
+ path = ~/.config/git/gitconfig.d/windows.gitconfig
+
+# Note: Safe directories are configured locally per machine
+# They should not be included in the shared gitconfig to avoid path conflicts
+# Use gitconfig.local for machine-specific configurations
