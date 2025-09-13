@@ -14,13 +14,11 @@
 
 [http]
 	# HTTP 代理设置 - 根据实际情况修改
-	proxy = http://127.0.0.1:10808
 	# 或使用 SOCKS5 代理
 	# proxy = socks5://127.0.0.1:10808
 
 [https]
 	# HTTPS 代理设置 - 根据实际情况修改
-	proxy = http://127.0.0.1:10808
 	# 或使用 SOCKS5 代理
 	# proxy = socks5://127.0.0.1:10808
 
