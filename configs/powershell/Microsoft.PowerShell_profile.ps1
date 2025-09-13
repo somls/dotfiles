@@ -11,8 +11,8 @@ $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersio
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 
-# Configuration directory
-$ProfileDir = Join-Path $env:USERPROFILE ".powershell"
+# Configuration directory - 直接指向dotfiles配置目录（处理符号链接情况）
+$ProfileDir = "G:\Sync\dotfiles\configs\powershell\.powershell"
 
 # Quick initialization
 if (-not (Test-Path $ProfileDir)) {
@@ -27,10 +27,10 @@ $optionalConfigs = @("history", "keybindings", "tools", "theme", "extra")
 foreach ($config in $coreConfigs) {
     $configPath = Join-Path $ProfileDir "$config.ps1"
     if (Test-Path $configPath) {
-        try { 
-            . $configPath 
-        } catch { 
-            Write-Warning "Failed to load $config.ps1" 
+        try {
+            . $configPath
+        } catch {
+            Write-Warning "Failed to load $config.ps1"
         }
     }
 }
@@ -39,9 +39,9 @@ foreach ($config in $coreConfigs) {
 foreach ($config in $optionalConfigs) {
     $configPath = Join-Path $ProfileDir "$config.ps1"
     if (Test-Path $configPath) {
-        try { 
-            . $configPath 
-        } catch { 
+        try {
+            . $configPath
+        } catch {
             Write-Warning "Failed to load $config.ps1"
         }
     }
@@ -53,9 +53,9 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
         Invoke-Expression (&starship init powershell)
     } catch {
         # Simple fallback prompt
-        function global:prompt { 
+        function global:prompt {
             $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
-            "PS $path> " 
+            "PS $path> "
         }
     }
 } else {

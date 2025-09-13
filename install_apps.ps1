@@ -61,7 +61,7 @@ $script:LogFile = Join-Path $script:LogsDir "install-apps-$timestamp.log"
 
 # Load application definitions from packages.txt
 function Get-AppCategories {
-    $packagesFile = Join-Path $script:SourceRoot "scoop\packages.txt"
+    $packagesFile = Join-Path $script:SourceRoot "configs\scoop\packages.txt"
 
     if (-not (Test-Path $packagesFile)) {
         Write-AppLog "Packages file not found: $packagesFile" "ERROR"

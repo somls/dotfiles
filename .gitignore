@@ -61,6 +61,7 @@ build/
 
 # Git user configs
 git/gitconfig.local
+configs/git/gitconfig.local
 git/.gitconfig.local
 git/.gitconfig.work
 git/.gitconfig.private
@@ -75,6 +76,7 @@ powershell/.powershell/pshistory.txt
 
 # User-specific configuration
 scoop/config.json
+configs/scoop/config.json
 personal-settings.json
 
 # Network and proxy settings

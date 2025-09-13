@@ -9,3 +9,6 @@
  rebase = true
 [color]
  ui = auto
+[safe]
+	directory = G:/Scoop/apps/scoop/current
+	directory = G:/Scoop

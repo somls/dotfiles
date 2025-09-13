@@ -46,11 +46,12 @@ if (-not (Get-Alias -Name size -ErrorAction SilentlyContinue)) {
 if (-not (Get-Alias -Name sudo -ErrorAction SilentlyContinue)) {
     Set-Alias -Name sudo -Value Start-Elevated -Option AllScope
 }
-if ((Get-Command sys-update -ErrorAction SilentlyContinue) -and -not (Get-Alias -Name upd -ErrorAction SilentlyContinue)) {
-    Set-Alias -Name upd -Value sys-update -Option AllScope
+# 在函数加载后设置upd别名
+if (-not (Get-Alias -Name upd -ErrorAction SilentlyContinue)) {
+    function upd { sys-update }
 }
-if ((Get-Command sysinfo -ErrorAction SilentlyContinue) -and -not (Get-Alias -Name info -ErrorAction SilentlyContinue)) {
-    Set-Alias -Name info -Value sysinfo -Option AllScope
+if (-not (Get-Alias -Name info -ErrorAction SilentlyContinue)) {
+    function info { sysinfo }
 }
 
 # --- 编辑器别名（如果存在） ---
@@ -66,24 +67,5 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
 if (Get-Command rg -ErrorAction SilentlyContinue) {
     if (-not (Get-Alias -Name grep -ErrorAction SilentlyContinue)) {
         Set-Alias -Name grep -Value rg -Option AllScope
-    }
-}
-
-# 新工具别名
-if (Get-Command dust -ErrorAction SilentlyContinue) {
-    if (-not (Get-Alias -Name du -ErrorAction SilentlyContinue)) {
-        Set-Alias -Name du -Value dust -Option AllScope
-    }
-}
-
-if (Get-Command procs -ErrorAction SilentlyContinue) {
-    if (-not (Get-Alias -Name ps -ErrorAction SilentlyContinue)) {
-        Set-Alias -Name ps -Value procs -Option AllScope
-    }
-}
-
-if (Get-Command btop -ErrorAction SilentlyContinue) {
-    if (-not (Get-Alias -Name top -ErrorAction SilentlyContinue)) {
-        Set-Alias -Name top -Value btop -Option AllScope
     }
 }
