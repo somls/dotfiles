@@ -37,6 +37,9 @@
 .PARAMETER ForceWithLease
     Use --force-with-lease when pushing (safer force push)
 
+.PARAMETER RemoteNames
+    Array of remote repository names to push to (default: @("origin", "gitcode"))
+
 .EXAMPLE
     .\auto-sync.ps1 -Auto
     Execute intelligent auto-sync
@@ -52,6 +55,14 @@
 .EXAMPLE
     .\auto-sync.ps1 -BackupFirst -Auto
     Safe sync (backup first)
+
+.EXAMPLE
+    .\auto-sync.ps1 -Auto -RemoteNames @("origin", "gitcode", "backup")
+    Sync to specific remotes
+
+.EXAMPLE
+    .\auto-sync.ps1 -Auto -RemoteNames @("origin")
+    Sync to GitHub only
 
 .NOTES
     Recommend using -Auto parameter for intelligent sync, script will handle various situations automatically
@@ -78,7 +89,10 @@ param(
     [switch]$ForceFetch,
 
     [Parameter(Mandatory = $false)]
-    [switch]$ForceWithLease
+    [switch]$ForceWithLease,
+
+    [Parameter(Mandatory = $false)]
+    [string[]]$RemoteNames = @("origin", "gitcode")
 )
 
 Set-StrictMode -Version Latest
@@ -210,6 +224,87 @@ function Get-CurrentBranch {
     } catch { return $null }
 }
 
+function Test-RemoteExists {
+    param([string]$RemoteName)
+    try {
+        git remote get-url $RemoteName 2>$null | Out-Null
+        return ($LASTEXITCODE -eq 0)
+    } catch { return $false }
+}
+
+function Invoke-MultiRemotePush {
+    param(
+        [string[]]$Remotes,
+        [string[]]$PushArgs = @(),
+        [int]$MaxRetries = 3,
+        [switch]$DryRunMode
+    )
+
+    if ($DryRunMode) {
+        Write-Host "[DryRun] Multi-remote push preview:" -ForegroundColor Yellow
+        foreach ($remote in $Remotes) {
+            if (Test-RemoteExists $remote) {
+                $pushCmd = "git push $remote $($PushArgs -join ' ')".Trim()
+                Write-Host "  - $pushCmd" -ForegroundColor DarkYellow
+            } else {
+                Write-Host "  - Skip '$remote' (remote not configured)" -ForegroundColor DarkGray
+            }
+        }
+        return $true
+    }
+
+    $allSucceeded = $true
+    $validRemotes = @()
+
+    # 验证所有远程仓库
+    foreach ($remote in $Remotes) {
+        if (Test-RemoteExists $remote) {
+            $validRemotes += $remote
+            Write-Log "Remote '$remote' verified" -Level "INFO"
+        } else {
+            Write-Log "Remote '$remote' not configured, skipping" -Level "WARN"
+        }
+    }
+
+    if ($validRemotes.Count -eq 0) {
+        Write-Log "No valid remotes found for pushing" -Level "ERROR"
+        return $false
+    }
+
+    # 推送到每个有效的远程仓库
+    foreach ($remote in $validRemotes) {
+        Write-Log "Pushing to remote: $remote" -Level "INFO"
+
+        $pushSuccess = $false
+        for ($i = 1; $i -le $MaxRetries -and -not $pushSuccess; $i++) {
+            try {
+                if ($PushArgs.Count -gt 0) {
+                    & git push $remote @PushArgs 2>$null
+                } else {
+                    & git push $remote 2>$null
+                }
+                $pushSuccess = ($LASTEXITCODE -eq 0)
+            } catch {
+                $pushSuccess = $false
+            }
+
+            if (-not $pushSuccess -and $i -lt $MaxRetries) {
+                Write-Log "Push to '$remote' failed (retry $($i+1)/$MaxRetries)" -Level "WARN"
+                Start-Sleep -Seconds 1
+            }
+        }
+
+        if ($pushSuccess) {
+            Write-Log "Push to '$remote' successful" -Level "INFO"
+        } else {
+            Write-Log "Push to '$remote' failed after $MaxRetries attempts" -Level "ERROR"
+            $allSucceeded = $false
+        }
+    }
+
+    return $allSucceeded
+}
+
 function Test-BranchHasUpstream {
     try {
         git rev-parse --abbrev-ref --symbolic-full-name 'HEAD@{u}' 2>$null | Out-Null
@@ -245,7 +340,7 @@ function Get-Divergence {
                     $fetchOutput = & git fetch @fetchArgs 2>&1
                     if ($fetchOutput) { Write-Verbose ("fetch output:`n" + ($fetchOutput -join "`n")) }
                 } else {
-                    & git fetch @fetchArgs 2>$null
+                    & git fetch @fetchArgs >$null 2>&1
                 }
                 $success = ($LASTEXITCODE -eq 0)
             }
@@ -340,7 +435,7 @@ function Invoke-AutoSync {
             Write-Host "[DryRun] Will commit local changes first" -ForegroundColor Yellow
         } else {
             $commitMsg = New-CommitMessage -Changes $changes -CustomMessage $Message
-            $commitSuccess = Invoke-GitCommit -Changes $changes -CommitMessage $commitMsg -PushToRemote:$false -DryRunMode:$false
+            $commitSuccess = Invoke-GitCommit -Changes $changes -CommitMessage $commitMsg -PushToRemote:$false -DryRunMode:$false -RemoteNames $RemoteNames
             if (-not $commitSuccess) {
                 Write-Log "Local commit failed, terminating sync" -Level "ERROR"
                 return $false
@@ -361,39 +456,25 @@ function Invoke-AutoSync {
         $div = Get-Divergence
         Write-Log "Post-commit branch status: Local ahead $($div.Ahead) commits, remote ahead $($div.Behind) commits" -Level "INFO"
 
-        # 如果本地有领先的提交，直接推送
+        # 如果本地有领先的提交，推送到所有远程仓库
         if ($div.Ahead -gt 0) {
-            Write-Log "Local has new commits, pushing..." -Level "INFO"
+            Write-Log "Local has new commits, pushing to all remotes..." -Level "INFO"
             $pushArgs = @()
             if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
 
-            $maxRetries = 3
-            $pushOk = $false
-            for ($i = 1; $i -le $maxRetries -and -not $pushOk; $i++) {
-                if ($pushArgs.Count -gt 0) {
-                    git push @pushArgs 2>$null
-                } else {
-                    git push 2>$null
-                }
-                $pushOk = ($LASTEXITCODE -eq 0)
-                if (-not $pushOk -and $i -lt $maxRetries) {
-                    Write-Log "Push failed, retry $($i+1)/$maxRetries..." -Level "WARN"
-                    Start-Sleep -Seconds 1
-                }
-            }
-
-            if (-not $pushOk) {
-                Write-Log "Push failed" -Level "ERROR"
+            $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -MaxRetries 3 -DryRunMode:$false
+            if (-not $pushResult) {
+                Write-Log "Multi-remote push failed" -Level "ERROR"
                 return $false
             }
-            Write-Log "Push successful" -Level "INFO"
+            Write-Log "Multi-remote push successful" -Level "INFO"
             return $true
         }
         # 如果分歧为 0/0，可能是检测问题，尝试保障性推送
         elseif ($div.Ahead -eq 0 -and $div.Behind -eq 0) {
-            Write-Log "Divergence detected as 0/0, performing safety push..." -Level "WARN"
-            git push 2>$null
-            if ($LASTEXITCODE -eq 0) {
+            Write-Log "Divergence detected as 0/0, performing safety push to all remotes..." -Level "WARN"
+            $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs @() -MaxRetries 1 -DryRunMode:$false
+            if ($pushResult) {
                 Write-Log "Safety push successful" -Level "INFO"
             } else {
                 Write-Log "Safety push had no effect (may already be synced)" -Level "INFO"
@@ -408,15 +489,19 @@ function Invoke-AutoSync {
             Write-Host " - Both local and remote have new commits, will perform rebase merge" -ForegroundColor Yellow
             Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
             Write-Host "    git pull --rebase --autostash" -ForegroundColor DarkYellow
-            if ($ForceWithLease) { Write-Host "    git push --force-with-lease" -ForegroundColor DarkYellow } else { Write-Host "    git push" -ForegroundColor DarkYellow }
+            $pushArgs = @()
+            if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
+            $result = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -DryRunMode:$true
         } elseif ($div.Behind -gt 0) {
             Write-Host " - Remote updates, will pull remote changes" -ForegroundColor Yellow
             Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
             Write-Host "    git pull --rebase --autostash" -ForegroundColor DarkYellow
         } elseif ($div.Ahead -gt 0) {
-            Write-Host " - Local updates, will push to remote" -ForegroundColor Yellow
+            Write-Host " - Local updates, will push to all remotes" -ForegroundColor Yellow
             Write-Host " - Commands to execute:" -ForegroundColor DarkYellow
-            if ($ForceWithLease) { Write-Host "    git push --force-with-lease" -ForegroundColor DarkYellow } else { Write-Host "    git push" -ForegroundColor DarkYellow }
+            $pushArgs = @()
+            if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
+            $result = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -DryRunMode:$true
         } else {
             Write-Host " - Local and remote are synced, no action needed" -ForegroundColor Green
         }
@@ -450,24 +535,17 @@ function Invoke-AutoSync {
             }
             return $false
         }
-        Write-Log "Rebase successful, now pushing merged commits..." -Level "INFO"
-        # 推送（可选 --force-with-lease + 重试）
+        Write-Log "Rebase successful, now pushing merged commits to all remotes..." -Level "INFO"
+        # 推送到所有远程仓库
         $pushArgs = @()
         if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
-        $maxRetries = 3; $delayMs = 500; $pushOk = $false
-        for ($i = 1; $i -le $maxRetries -and -not $pushOk; $i++) {
-            if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
-            $pushOk = ($LASTEXITCODE -eq 0)
-            if (-not $pushOk) {
-                Write-Log "Push failed (retry $i/$maxRetries)" -Level "WARN"
-                Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
-            }
-        }
-        if (-not $pushOk) {
-            Write-Log "Push failed" -Level "ERROR"
+
+        $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -MaxRetries 3 -DryRunMode:$false
+        if (-not $pushResult) {
+            Write-Log "Multi-remote push failed" -Level "ERROR"
             return $false
         }
-        Write-Log "Sync completed: merged remote changes and pushed local commits" -Level "INFO"
+        Write-Log "Sync completed: merged remote changes and pushed local commits to all remotes" -Level "INFO"
     } elseif ($div.Behind -gt 0) {
         # 仅远程有新提交，直接拉取
         Write-Log "Remote has new commits, pulling..." -Level "INFO"
@@ -496,25 +574,17 @@ function Invoke-AutoSync {
         }
         Write-Log "Sync completed: pulled remote changes" -Level "INFO"
     } elseif ($div.Ahead -gt 0) {
-        # 仅本地有新提交，直接推送
-        Write-Log "Local has new commits, pushing..." -Level "INFO"
-        # 推送（可选 --force-with-lease + 重试）
+        # 仅本地有新提交，推送到所有远程仓库
+        Write-Log "Local has new commits, pushing to all remotes..." -Level "INFO"
         $pushArgs = @()
         if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
-        $maxRetries = 3; $delayMs = 500; $pushOk = $false
-        for ($i = 1; $i -le $maxRetries -and -not $pushOk; $i++) {
-            if ($pushArgs.Count -gt 0) { git push @pushArgs 2>$null } else { git push 2>$null }
-            $pushOk = ($LASTEXITCODE -eq 0)
-            if (-not $pushOk) {
-                Write-Log "Push failed (retry $i/$maxRetries)" -Level "WARN"
-                Start-Sleep -Milliseconds $delayMs; $delayMs = [Math]::Min($delayMs * 2, 4000)
-            }
-        }
-        if (-not $pushOk) {
-            Write-Log "Push failed" -Level "ERROR"
+
+        $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -MaxRetries 3 -DryRunMode:$false
+        if (-not $pushResult) {
+            Write-Log "Multi-remote push failed" -Level "ERROR"
             return $false
         }
-        Write-Log "Sync completed: pushed local commits" -Level "INFO"
+        Write-Log "Sync completed: pushed local commits to all remotes" -Level "INFO"
     } else {
         # 本地和远程已同步
         Write-Log "Local and remote are synced, no action needed" -Level "INFO"
@@ -553,7 +623,8 @@ function Invoke-GitCommit {
         [hashtable]$Changes,
         [string]$CommitMessage,
         [switch]$PushToRemote,
-        [switch]$DryRunMode
+        [switch]$DryRunMode,
+        [string[]]$RemoteNames = @("origin", "gitcode")
     )
 
     try {
@@ -591,10 +662,21 @@ function Invoke-GitCommit {
 
         # 添加所有变更到暂存区
         Write-Log "Adding files to staging area..." -Level "INFO"
-        git add . 2>$null
+        $addOutput = git add . 2>&1
+        # Git warnings about CRLF/LF are not errors, only fail on actual errors
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "Failed to add files to staging area" -Level "ERROR"
-            return $false
+            # Check if it's just warnings
+            $isOnlyWarnings = $true
+            foreach ($line in $addOutput) {
+                if ($line -notmatch "^warning:" -and $line.Trim() -ne "") {
+                    $isOnlyWarnings = $false
+                    break
+                }
+            }
+            if (-not $isOnlyWarnings) {
+                Write-Log "Failed to add files to staging area: $($addOutput -join "`n")" -Level "ERROR"
+                return $false
+            }
         }
 
         # 执行提交
@@ -607,7 +689,7 @@ function Invoke-GitCommit {
 
         Write-Log "Commit successful" -Level "INFO"
 
-        # 推送到远程（如果需要）
+        # 推送到远程仓库（如果需要）
         if ($PushToRemote) {
             $branch = Get-CurrentBranch
             if (-not $branch) { Write-Log "Cannot determine current branch, skipping push" -Level "ERROR"; return $false }
@@ -615,17 +697,19 @@ function Invoke-GitCommit {
             if (-not (Test-BranchHasUpstream)) {
                 Write-Log "No upstream branch detected, setting and pushing: origin/$branch" -Level "WARN"
                 git push -u origin $branch 2>$null
-            } else {
-                Write-Log "Upstream branch detected, pushing directly" -Level "INFO"
-                git push 2>$null
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Log "Failed to set upstream branch" -Level "ERROR"
+                    return $false
+                }
             }
 
-            if ($LASTEXITCODE -eq 0) {
-                Write-Log "Push successful" -Level "INFO"
-            } else {
-                Write-Log "Push failed" -Level "ERROR"
+            Write-Log "Pushing to all configured remotes..." -Level "INFO"
+            $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs @() -MaxRetries 3 -DryRunMode:$false
+            if (-not $pushResult) {
+                Write-Log "Multi-remote push failed" -Level "ERROR"
                 return $false
             }
+            Write-Log "Multi-remote push successful" -Level "INFO"
         }
 
         return $true
@@ -674,23 +758,17 @@ function Main {
             # 即使没有本地变更，也检查是否有未推送的提交
             $div = Get-Divergence
             if ($div.Ahead -gt 0) {
-                Write-Log "Detected $($div.Ahead) unpushed commits, pushing..." -Level "INFO"
+                Write-Log "Detected $($div.Ahead) unpushed commits, pushing to all remotes..." -Level "INFO"
                 if (-not $DryRun) {
                     $pushArgs = @()
                     if ($ForceWithLease) { $pushArgs += '--force-with-lease' }
 
-                    if ($pushArgs.Count -gt 0) {
-                        git push @pushArgs 2>$null
-                    } else {
-                        git push 2>$null
-                    }
-
-                    if ($LASTEXITCODE -eq 0) {
-                        Write-Log "Push successful" -Level "INFO"
-                    } else {
-                        Write-Log "Push failed" -Level "ERROR"
+                    $pushResult = Invoke-MultiRemotePush -Remotes $RemoteNames -PushArgs $pushArgs -MaxRetries 3 -DryRunMode:$false
+                    if (-not $pushResult) {
+                        Write-Log "Multi-remote push failed" -Level "ERROR"
                         return $false
                     }
+                    Write-Log "Multi-remote push successful" -Level "INFO"
                 }
             } else {
                 Write-Log "Local and remote are synced" -Level "INFO"
@@ -707,7 +785,7 @@ function Main {
         $ShouldPush = $Push -or (-not $PSBoundParameters.ContainsKey('Push'))
 
         # 执行提交
-        $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$ShouldPush -DryRunMode:$DryRun
+        $Success = Invoke-GitCommit -Changes $Changes -CommitMessage $CommitMessage -PushToRemote:$ShouldPush -DryRunMode:$DryRun -RemoteNames $RemoteNames
 
         if ($Success) {
             Write-Host "Operation completed successfully" -ForegroundColor Green

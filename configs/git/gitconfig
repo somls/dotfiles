@@ -29,3 +29,5 @@
 # Note: Safe directories are configured locally per machine
 # They should not be included in the shared gitconfig to avoid path conflicts
 # Use gitconfig.local for machine-specific configurations
+[credential "https://gitcode.com"]
+	provider = generic
