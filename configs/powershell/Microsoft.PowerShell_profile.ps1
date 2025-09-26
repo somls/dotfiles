@@ -5,6 +5,20 @@
 # Runtime environment
 $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6)
 
+# Import essential modules for Windows PowerShell 5.1
+if ($IsWinPS) {
+    Import-Module Microsoft.PowerShell.Management -Force -ErrorAction SilentlyContinue
+    Import-Module Microsoft.PowerShell.Utility -Force -ErrorAction SilentlyContinue
+    Import-Module Microsoft.PowerShell.Security -Force -ErrorAction SilentlyContinue
+}
+
+# Import essential modules for PowerShell 7+ (Core)
+if (-not $IsWinPS) {
+    Import-Module Microsoft.PowerShell.Management -Force -ErrorAction SilentlyContinue
+    Import-Module Microsoft.PowerShell.Utility -Force -ErrorAction SilentlyContinue
+    Import-Module Microsoft.PowerShell.Security -Force -ErrorAction SilentlyContinue
+}
+
 # Basic settings
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['*:Encoding'] = 'utf8'
