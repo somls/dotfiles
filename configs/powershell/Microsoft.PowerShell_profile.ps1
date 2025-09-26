@@ -5,18 +5,34 @@
 # Runtime environment
 $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6)
 
-# Import essential modules for Windows PowerShell 5.1
-if ($IsWinPS) {
-    Import-Module Microsoft.PowerShell.Management -Force -ErrorAction SilentlyContinue
-    Import-Module Microsoft.PowerShell.Utility -Force -ErrorAction SilentlyContinue
-    Import-Module Microsoft.PowerShell.Security -Force -ErrorAction SilentlyContinue
+# Import essential modules with better error handling
+function Import-ModuleSafely {
+    param([string]$ModuleName)
+
+    try {
+        # Check if module is already loaded to avoid duplicate warnings
+        if (-not (Get-Module -Name $ModuleName -ErrorAction SilentlyContinue)) {
+            Import-Module $ModuleName -Force -ErrorAction Stop -WarningAction SilentlyContinue
+        }
+    } catch {
+        # Silently continue if module import fails - most built-in modules are auto-loaded
+        Write-Verbose "Module $ModuleName not imported: $($_.Exception.Message)"
+    }
 }
 
-# Import essential modules for PowerShell 7+ (Core)
-if (-not $IsWinPS) {
-    Import-Module Microsoft.PowerShell.Management -Force -ErrorAction SilentlyContinue
-    Import-Module Microsoft.PowerShell.Utility -Force -ErrorAction SilentlyContinue
-    Import-Module Microsoft.PowerShell.Security -Force -ErrorAction SilentlyContinue
+# Import essential modules based on PowerShell version
+$essentialModules = @(
+    'Microsoft.PowerShell.Management'
+    'Microsoft.PowerShell.Utility'
+)
+
+# Only import Security module if needed and available
+if ($IsWinPS -and (Get-Module -ListAvailable Microsoft.PowerShell.Security -ErrorAction SilentlyContinue)) {
+    $essentialModules += 'Microsoft.PowerShell.Security'
+}
+
+foreach ($module in $essentialModules) {
+    Import-ModuleSafely -ModuleName $module
 }
 
 # Basic settings

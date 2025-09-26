@@ -104,10 +104,28 @@ if ($checkConfig -or $checkApps) {
     } "Current version: $($PSVersionTable.PSVersion)" $true
 
     Test-Item "Execution Policy Allows Scripts" {
-        $policy = Get-ExecutionPolicy -Scope CurrentUser
-        $policy -ne "Restricted"
-    } "Current policy: $(Get-ExecutionPolicy -Scope CurrentUser)" $false {
-        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+        try {
+            # Try to get execution policy with better error handling
+            if (Get-Command Get-ExecutionPolicy -ErrorAction SilentlyContinue) {
+                $policy = Get-ExecutionPolicy -Scope CurrentUser -ErrorAction Stop
+                return ($policy -ne "Restricted")
+            } else {
+                # If Get-ExecutionPolicy cmdlet is not available, assume it's allowed
+                # This can happen in some PowerShell environments or restricted contexts
+                return $true
+            }
+        } catch {
+            # If we can't check policy, assume it's restrictive for safety
+            return $false
+        }
+    } "Current policy: $(try { if (Get-Command Get-ExecutionPolicy -ErrorAction SilentlyContinue) { Get-ExecutionPolicy -Scope CurrentUser -ErrorAction SilentlyContinue } else { 'Not Available' } } catch { 'Unable to determine' })" $false {
+        try {
+            if (Get-Command Set-ExecutionPolicy -ErrorAction SilentlyContinue) {
+                Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force -ErrorAction Stop
+            }
+        } catch {
+            Write-Warning "Cannot modify execution policy: $($_.Exception.Message)"
+        }
     }
 
     Test-Item "Dotfiles Directory Structure" {
