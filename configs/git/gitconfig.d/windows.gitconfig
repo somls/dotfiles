@@ -45,6 +45,15 @@
     # 提高 NTFS 文件系统的兼容性
     manyFiles = true
 
+# Windows NTFS 和 Unicode 支持
+[core]
+    # NTFS 文件系统特殊字符处理（允许中文、日文特殊字符）
+    protectNTFS = false
+    protectHFS = false
+
+    # 文件系统检查优化（提高性能，减少Unicode文件名检查开销）
+    checkStat = minimal
+
 # Windows 命令别名
 [alias]
     # 在 Windows 上打开 Explorer
@@ -83,7 +92,17 @@
     # 设置 Windows 临时目录
     tempdir = C:/Windows/Temp
 
-# 中文路径和文件名支持
+# 中文、日文路径和文件名完整支持
 [i18n]
+    # 提交信息编码
     commitEncoding = utf-8
+    # 日志输出编码
     logOutputEncoding = utf-8
+    # 输入编码（支持中日文输入）
+    inputEncoding = utf-8
+
+# Unicode 文件名处理增强
+[core]
+    # 已在主配置中设置：quotepath = false（正确显示Unicode文件名）
+    # 已在主配置中设置：precomposeunicode = true（Unicode文件名规范化）
+    # 这些设置确保中文、日文、韩文文件名在Windows上正确显示和处理

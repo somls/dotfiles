@@ -3,6 +3,8 @@
  email = user@example.com
 [core]
  editor = code --wait
+	quotepath = false
+	precomposeunicode = true
 [init]
  defaultBranch = main
 [pull]
@@ -31,3 +33,10 @@
 # Use gitconfig.local for machine-specific configurations
 [credential "https://gitcode.com"]
 	provider = generic
+[credential "helperselector"]
+	selected = manager
+[gui]
+	encoding = utf-8
+[i18n]
+	commitencoding = utf-8
+	logoutputencoding = utf-8
