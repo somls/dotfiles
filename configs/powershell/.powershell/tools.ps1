@@ -37,9 +37,17 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
 }
 
 # --- Terminal Icons ---
-if (Get-Module -ListAvailable -Name Terminal-Icons) {
-    Import-Module -Name Terminal-Icons -ErrorAction SilentlyContinue
+function Import-TerminalIcons {
+    if (Get-Module -ListAvailable -Name Terminal-Icons) {
+        try {
+            Import-Module -Name Terminal-Icons -ErrorAction Stop
+            Write-Verbose "Terminal-Icons module loaded successfully"
+        } catch {
+            Write-Warning "Failed to import Terminal-Icons: $($_.Exception.Message)"
+        }
+    }
 }
+Import-TerminalIcons
 
 # --- Tool status check ---
 function Show-ToolsStatus {

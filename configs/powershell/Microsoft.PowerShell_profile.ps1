@@ -61,7 +61,7 @@ if (-not (Test-Path $ProfileDir)) {
 
 # Load configurations
 $coreConfigs = if ($IsWinPS) { @("functions.winps", "aliases") } else { @("functions", "aliases") }
-$optionalConfigs = @("history", "keybindings", "tools", "theme", "extra")
+$optionalConfigs = @("modules", "history", "keybindings", "tools", "theme", "extra")
 
 # Load core configurations
 foreach ($config in $coreConfigs) {
@@ -109,3 +109,5 @@ $ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
 if (Test-Path($ChocolateyProfile)) {
     Import-Module "$ChocolateyProfile"
 }
+
+if ($env:TERM_PROGRAM -eq "kiro") { . "$(kiro --locate-shell-integration-path pwsh)" }

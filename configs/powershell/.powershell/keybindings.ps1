@@ -2,6 +2,24 @@
 #
 # 此文件负责所有 PSReadLine 的快捷键绑定。
 
+# --- PSReadLine 模块导入和基本配置 ---
+if (Get-Module -ListAvailable -Name PSReadLine) {
+    try {
+        Import-Module PSReadLine -ErrorAction Stop
+
+        # 基本配置
+        Set-PSReadLineOption -PredictionSource History
+        Set-PSReadLineOption -HistorySearchCursorMovesToEnd
+        Set-PSReadLineOption -Colors @{
+            Command = 'Yellow'
+            Parameter = 'Green'
+            String = 'DarkCyan'
+        }
+    } catch {
+        Write-Warning "Failed to configure PSReadLine: $($_.Exception.Message)"
+    }
+}
+
 # --- 平台判断（可扩展）---
 if ($IsWindows) {
     # Windows 下的快捷键
