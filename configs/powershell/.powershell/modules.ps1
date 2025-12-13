@@ -1,4 +1,4 @@
-# ~/.powershell/modules.ps1
+﻿# ~/.powershell/modules.ps1
 #
 # 此文件负责所有额外 PowerShell 模块的导入和配置。
 
