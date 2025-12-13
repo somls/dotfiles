@@ -14,7 +14,10 @@
       "Bash(cat:*)",
       "Bash(echo:*)",
       "Bash(dir \"$env:USERPROFILE\\Documents\\WindowsPowerShell\")",
-      "mcp__codex__codex"
+      "mcp__codex__codex",
+      "Bash(scoop list:*)",
+      "Bash(scoop bucket:*)",
+      "Bash(scoop install:*)"
     ],
     "deny": [],
     "ask": []

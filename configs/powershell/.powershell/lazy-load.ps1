@@ -195,3 +195,33 @@ Set-Alias -Name lazy-status -Value Get-LazyLoadStatus -Option AllScope
 Set-Alias -Name lazy-clear -Value Clear-LazyLoadCache -Option AllScope
 
 Write-Verbose "Lazy load system initialized with $($global:__LazyLoadCommands.Count) commands"
+
+# --- Terminal-Icons 延迟加载 ---
+# Terminal-Icons 是一个重量级模块，延迟加载可以显著提升启动速度
+if (Get-Module -ListAvailable -Name Terminal-Icons) {
+    # 注册延迟加载（当调用 ls/dir/Get-ChildItem 时自动加载）
+    $global:__TerminalIconsLoaded = $false
+    
+    # 包装 Get-ChildItem 以在首次调用时加载 Terminal-Icons
+    $originalGetChildItem = Get-Command Get-ChildItem -CommandType Cmdlet
+    
+    function global:Get-ChildItem {
+        # 首次调用时加载 Terminal-Icons
+        if (-not $global:__TerminalIconsLoaded) {
+            try {
+                Import-Module Terminal-Icons -ErrorAction Stop
+                $global:__TerminalIconsLoaded = $true
+                Write-Verbose "Terminal-Icons loaded on first use"
+            } catch {
+                Write-Verbose "Failed to load Terminal-Icons: $($_.Exception.Message)"
+            }
+        }
+        
+        # 调用原始的 Get-ChildItem
+        & $originalGetChildItem @args
+    }
+    
+    Write-Verbose "Terminal-Icons configured for lazy loading"
+}
+
+Write-Verbose "Enhanced lazy load system initialized"

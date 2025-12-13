@@ -1,6 +1,28 @@
 # Git 差异比较配置文件
 # 定义各种文件类型的差异比较和合并设置
 
+# Delta - 增强的 Git diff 查看器
+[core]
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    light = false
+    line-numbers = true
+    side-by-side = true
+    syntax-theme = Dracula
+    features = decorations
+    whitespace-error-style = 22 reverse
+
+[delta "decorations"]
+    commit-decoration-style = bold yellow box ul
+    file-style = bold yellow ul
+    file-decoration-style = none
+    hunk-header-decoration-style = yellow box
+
 [diff]
     # 使用更好的差异算法
     algorithm = histogram

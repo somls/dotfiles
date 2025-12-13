@@ -97,3 +97,30 @@ Set-Alias -Name "update-modules" -Value "Update-InstalledModules" -Option AllSco
 Set-Alias -Name "modules" -Value "Show-InstalledModules" -Option AllScope
 
 Write-Verbose "PowerShell modules configuration loaded"
+# --- PSFzf 模块配置 ---
+if (Get-Module -ListAvailable -Name PSFzf) {
+    try {
+        Import-Module PSFzf -ErrorAction Stop
+        
+        # PSFzf 配置 - 设置快捷键
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t'
+        Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'
+        
+        # 自定义FZF选项（Dracula主题）
+        $env:FZF_DEFAULT_OPTS = "--height 40% --layout=reverse --border --color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4"
+        
+        Write-Verbose "PSFzf module configured"
+    } catch {
+        Write-Verbose "Failed to configure PSFzf: $($_.Exception.Message)"
+    }
+}
+
+# --- CompletionPredictor 配置 ---
+if (Get-Module -ListAvailable -Name CompletionPredictor) {
+    try {
+        Import-Module CompletionPredictor -ErrorAction Stop
+        Write-Verbose "CompletionPredictor loaded"
+    } catch {
+        Write-Verbose "CompletionPredictor not available"
+    }
+}

@@ -8,7 +8,16 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 
         # 基本选项配置
         Set-PSReadLineOption -EditMode Windows
-        Set-PSReadLineOption -PredictionSource History
+
+        # 启用高级预测（历史+插件）
+        try {
+            Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+        } catch {
+            # 如果不支持插件预测，回退到历史预测
+            Set-PSReadLineOption -PredictionSource History
+            Write-Verbose "HistoryAndPlugin prediction not supported, using History only"
+        }
+
         Set-PSReadLineOption -HistorySearchCursorMovesToEnd
 
         # 预测视图样式（兼容性检查）
@@ -20,6 +29,17 @@ if (Get-Module -ListAvailable -Name PSReadLine) {
 
         # 历史记录配置
         Set-PSReadLineOption -MaximumHistoryCount 4096
+
+        # 静音模式（避免beep声）
+        Set-PSReadLineOption -BellStyle None
+
+        # 增强补全体验
+        try {
+            Set-PSReadLineOption -ShowToolTips
+            Set-PSReadLineOption -CompletionQueryItems 50
+        } catch {
+            Write-Verbose "Some PSReadLine options not supported in this version"
+        }
 
         # 智能历史过滤器
         Set-PSReadLineOption -AddToHistoryHandler {
@@ -69,6 +89,19 @@ if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
 
     # Ctrl+W 删除前一个单词
     Set-PSReadLineKeyHandler -Key Ctrl+w -Function BackwardKillWord
+
+    # F2 切换预测视图（InlineView <-> ListView）
+    Set-PSReadLineKeyHandler -Key F2 `
+        -BriefDescription "SwitchPredictionView" `
+        -LongDescription "Switch between InlineView and ListView" `
+        -ScriptBlock {
+            $current = (Get-PSReadLineOption).PredictionViewStyle
+            if ($current -eq 'InlineView') {
+                Set-PSReadLineOption -PredictionViewStyle ListView
+            } else {
+                Set-PSReadLineOption -PredictionViewStyle InlineView
+            }
+        }
 }
 
 # --- 平台特定快捷键 ---

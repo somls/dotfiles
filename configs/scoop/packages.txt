@@ -24,3 +24,18 @@ python
 
 [GitEnhanced]
 lazygit
+
+[ModernCLI]
+delta
+eza
+dust
+procs
+tokei
+glow
+hyperfine
+duf
+gsudo
+btop
+
+[PowerShellTools]
+psfzf

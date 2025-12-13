@@ -205,3 +205,276 @@ function Start-Elevated {
         Start-Process $Command -ArgumentList $argumentList -Verb RunAs
     }
 }
+
+# ============================================================================
+# 增强的Git工作流函数
+# ============================================================================
+
+# 改进的ngc函数 - 带确认和状态检查
+function ngc-enhanced {
+    param(
+        [string]$msg = "update",
+        [switch]$NoPush
+    )
+    
+    # 检查是否有未跟踪或修改的文件
+    $status = git status --short 2>$null
+    if (-not $status) {
+        Write-Host "没有可提交的更改" -ForegroundColor Yellow
+        return
+    }
+    
+    # 显示将要提交的文件
+    Write-Host "`n将提交以下文件：" -ForegroundColor Cyan
+    git status --short
+    
+    # 添加所有更改
+    git add .
+    
+    # 提交
+    git commit -m $msg
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "提交失败"
+        return
+    }
+    
+    Write-Host "✓ 提交成功" -ForegroundColor Green
+    
+    # 推送（除非指定 -NoPush）
+    if (-not $NoPush) {
+        git push
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✓ 成功推送到远程仓库" -ForegroundColor Green
+        } else {
+            Write-Error "推送失败"
+        }
+    }
+}
+
+# 新增实用Git函数
+function gaa { git add --all }
+function gcm { param($msg) git commit -m $msg }
+function gp { git push }
+function gpl { git pull }
+function gco { param($branch) git checkout $branch }
+function gcb { param($branch) git checkout -b $branch }
+function gd { git diff }
+function gds { git diff --staged }
+function gbr { git branch }
+function gbd { param($branch) git branch -d $branch }
+
+# ============================================================================
+# 实用工具函数
+# ============================================================================
+
+# 快速基准测试
+function bench {
+    <#
+    .SYNOPSIS
+    对命令或脚本块进行性能基准测试
+    
+    .PARAMETER Command
+    要测试的脚本块
+    
+    .PARAMETER Count
+    运行次数（默认10次）
+    
+    .EXAMPLE
+    bench { Get-ChildItem -Recurse } -Count 5
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [scriptblock]$Command, 
+        [int]$Count = 10
+    )
+    
+    if (Get-Command hyperfine -ErrorAction SilentlyContinue) {
+        $cmd = $Command.ToString()
+        hyperfine --warmup 3 --runs $Count "pwsh -NoProfile -Command `"$cmd`""
+    } else {
+        Write-Host "运行基准测试..." -ForegroundColor Cyan
+        $times = @()
+        for ($i = 1; $i -le $Count; $i++) {
+            $result = Measure-Command { & $Command }
+            $times += $result.TotalMilliseconds
+            Write-Host "运行 $i/$Count`: $([math]::Round($result.TotalMilliseconds, 2))ms" -ForegroundColor Gray
+        }
+        
+        $avg = ($times | Measure-Object -Average).Average
+        $min = ($times | Measure-Object -Minimum).Minimum
+        $max = ($times | Measure-Object -Maximum).Maximum
+        
+        Write-Host "`n结果:" -ForegroundColor Yellow
+        Write-Host "  平均: $([math]::Round($avg, 2))ms" -ForegroundColor Green
+        Write-Host "  最小: $([math]::Round($min, 2))ms" -ForegroundColor Cyan
+        Write-Host "  最大: $([math]::Round($max, 2))ms" -ForegroundColor Cyan
+    }
+}
+
+# 查找大文件
+function find-large {
+    <#
+    .SYNOPSIS
+    查找大于指定大小的文件
+    
+    .PARAMETER SizeMB
+    文件大小阈值（MB，默认100MB）
+    
+    .PARAMETER Path
+    搜索路径（默认当前目录）
+    
+    .EXAMPLE
+    find-large -SizeMB 50
+    find-large -SizeMB 200 -Path "C:\Users"
+    #>
+    param(
+        [int]$SizeMB = 100,
+        [string]$Path = "."
+    )
+    
+    $size = $SizeMB * 1MB
+    Write-Host "正在搜索大于 ${SizeMB}MB 的文件..." -ForegroundColor Cyan
+    
+    Get-ChildItem -Path $Path -Recurse -File -ErrorAction SilentlyContinue | 
+        Where-Object { $_.Length -gt $size } | 
+        Sort-Object Length -Descending |
+        Select-Object @{N='大小(MB)';E={[math]::Round($_.Length/1MB,2)}}, FullName |
+        Format-Table -AutoSize
+}
+
+# 快速HTTP服务器
+function serve {
+    <#
+    .SYNOPSIS
+    在当前目录启动HTTP服务器
+    
+    .PARAMETER Port
+    端口号（默认8000）
+    
+    .EXAMPLE
+    serve
+    serve -Port 3000
+    #>
+    param([int]$Port = 8000)
+    
+    if (Get-Command python -ErrorAction SilentlyContinue) {
+        Write-Host "启动HTTP服务器: http://localhost:$Port" -ForegroundColor Green
+        Write-Host "按 Ctrl+C 停止服务器" -ForegroundColor Yellow
+        python -m http.server $Port
+    } else {
+        Write-Error "Python未安装，无法启动HTTP服务器"
+    }
+}
+
+# 快速查看JSON文件
+function json {
+    <#
+    .SYNOPSIS
+    格式化显示JSON文件或字符串
+    
+    .PARAMETER InputObject
+    JSON文件路径或JSON字符串
+    
+    .EXAMPLE
+    json config.json
+    json '{"name":"test"}'
+    #>
+    param(
+        [Parameter(Mandatory, ValueFromPipeline)]
+        $InputObject
+    )
+    
+    if (Test-Path $InputObject -ErrorAction SilentlyContinue) {
+        # 输入是文件路径
+        $content = Get-Content $InputObject -Raw
+    } else {
+        # 输入是JSON字符串
+        $content = $InputObject
+    }
+    
+    try {
+        $content | ConvertFrom-Json | ConvertTo-Json -Depth 10 | 
+            ForEach-Object { 
+                if (Get-Command bat -ErrorAction SilentlyContinue) {
+                    $_ | bat -l json
+                } else {
+                    $_
+                }
+            }
+    } catch {
+        Write-Error "无效的JSON格式: $($_.Exception.Message)"
+    }
+}
+
+# 快速搜索文件内容
+function search {
+    <#
+    .SYNOPSIS
+    使用ripgrep搜索文件内容
+    
+    .PARAMETER Pattern
+    搜索模式
+    
+    .PARAMETER Path
+    搜索路径（默认当前目录）
+    
+    .EXAMPLE
+    search "TODO"
+    search "function.*test" -Path "src/"
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string]$Pattern,
+        [string]$Path = "."
+    )
+    
+    if (Get-Command rg -ErrorAction SilentlyContinue) {
+        rg --color=always --heading --line-number $Pattern $Path
+    } else {
+        Write-Warning "ripgrep (rg) 未安装，使用Select-String"
+        Get-ChildItem -Path $Path -Recurse -File | 
+            Select-String -Pattern $Pattern |
+            Format-Table -AutoSize
+    }
+}
+
+# 清理系统临时文件
+function cleanup-temp {
+    <#
+    .SYNOPSIS
+    清理Windows临时文件和缓存
+    
+    .PARAMETER Force
+    跳过确认提示
+    
+    .EXAMPLE
+    cleanup-temp
+    cleanup-temp -Force
+    #>
+    param([switch]$Force)
+    
+    if (-not $Force) {
+        $confirm = Read-Host "确认清理临时文件? (y/N)"
+        if ($confirm -ne 'y') {
+            Write-Host "已取消" -ForegroundColor Yellow
+            return
+        }
+    }
+    
+    $paths = @(
+        "$env:TEMP\*",
+        "$env:USERPROFILE\AppData\Local\Temp\*"
+    )
+    
+    foreach ($path in $paths) {
+        Write-Host "清理: $path" -ForegroundColor Cyan
+        try {
+            Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue
+        } catch {
+            Write-Warning "无法删除某些文件: $($_.Exception.Message)"
+        }
+    }
+    
+    Write-Host "✓ 临时文件清理完成" -ForegroundColor Green
+}

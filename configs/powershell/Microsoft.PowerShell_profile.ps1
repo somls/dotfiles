@@ -5,6 +5,28 @@
 # Runtime environment
 $IsWinPS = ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6)
 
+# 快速模式检测（用于性能敏感场景）
+if ($env:PWSH_FAST_MODE -eq "1") {
+    # 最小化配置
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $PSDefaultParameterValues['*:Encoding'] = 'utf8'
+    
+    # 仅加载核心别名
+    function .. { Set-Location .. }
+    function ... { Set-Location ..\.. }
+    function ll { Get-ChildItem -Force @args }
+    function gst { git status --short }
+    
+    # 简单提示符
+    function prompt {
+        $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
+        return "PS $path> "
+    }
+    
+    Write-Host 'Fast mode enabled' -ForegroundColor Cyan
+    return  # 跳过后续所有配置加载
+}
+
 # Import essential modules with better error handling
 function Import-ModuleSafely {
     param([string]$ModuleName)
@@ -15,8 +37,7 @@ function Import-ModuleSafely {
             Import-Module $ModuleName -Force -ErrorAction Stop -WarningAction SilentlyContinue
         }
     } catch {
-        # Silently continue if module import fails - most built-in modules are auto-loaded
-        Write-Verbose "Module $ModuleName not imported: $($_.Exception.Message)"
+        # Silently continue if module import fails
     }
 }
 
@@ -43,15 +64,15 @@ $PSDefaultParameterValues['*:Encoding'] = 'utf8'
 $ProfileDir = $null
 
 if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
-    $ProfileDir = Join-Path (Split-Path $PSCommandPath -Parent) ".powershell"
-} elseif (Test-Path (Join-Path (Split-Path $PROFILE -Parent) ".powershell")) {
-    $ProfileDir = Join-Path (Split-Path $PROFILE -Parent) ".powershell"
-} elseif (Test-Path ".\configs\powershell\.powershell") {
-    $ProfileDir = Resolve-Path ".\configs\powershell\.powershell"
-} elseif ($env:DOTFILES_DIR -and (Test-Path (Join-Path $env:DOTFILES_DIR "configs\powershell\.powershell"))) {
-    $ProfileDir = Join-Path $env:DOTFILES_DIR "configs\powershell\.powershell"
+    $ProfileDir = Join-Path (Split-Path $PSCommandPath -Parent) '.powershell'
+} elseif (Test-Path (Join-Path (Split-Path $PROFILE -Parent) '.powershell')) {
+    $ProfileDir = Join-Path (Split-Path $PROFILE -Parent) '.powershell'
+} elseif (Test-Path '.\configs\powershell\.powershell') {
+    $ProfileDir = Resolve-Path '.\configs\powershell\.powershell'
+} elseif ($env:DOTFILES_DIR -and (Test-Path (Join-Path $env:DOTFILES_DIR 'configs\powershell\.powershell'))) {
+    $ProfileDir = Join-Path $env:DOTFILES_DIR 'configs\powershell\.powershell'
 } else {
-    $ProfileDir = Join-Path (Split-Path $PROFILE -Parent) ".powershell"
+    $ProfileDir = Join-Path (Split-Path $PROFILE -Parent) '.powershell'
 }
 
 # Initialize profile directory
@@ -60,33 +81,33 @@ if (-not (Test-Path $ProfileDir)) {
 }
 
 # Load configurations
-$coreConfigs = if ($IsWinPS) { @("functions.winps", "aliases") } else { @("functions", "aliases") }
+$coreConfigs = if ($IsWinPS) { @('functions.winps', 'aliases') } else { @('functions', 'aliases') }
 $optionalConfigs = if ($IsWinPS) {
-    @("keybindings.winps", "history", "modules", "tools", "lazy-load.winps", "theme", "extra")
+    @('keybindings.winps', 'history', 'modules', 'tools', 'lazy-load.winps', 'theme', 'extra')
 } else {
-    @("keybindings", "history", "modules", "tools", "lazy-load", "theme", "extra")
+    @('keybindings', 'history', 'modules', 'tools', 'lazy-load', 'theme', 'extra')
 }
 
 # Load core configurations
 foreach ($config in $coreConfigs) {
-    $configPath = Join-Path $ProfileDir "$config.ps1"
+    $configPath = Join-Path $ProfileDir ($config + '.ps1')
     if (Test-Path $configPath) {
         try {
             . $configPath
         } catch {
-            Write-Warning "Failed to load $config.ps1"
+            Write-Warning ('Failed to load ' + $config + '.ps1')
         }
     }
 }
 
 # Load optional configurations
 foreach ($config in $optionalConfigs) {
-    $configPath = Join-Path $ProfileDir "$config.ps1"
+    $configPath = Join-Path $ProfileDir ($config + '.ps1')
     if (Test-Path $configPath) {
         try {
             . $configPath
         } catch {
-            Write-Warning "Failed to load $config.ps1"
+            Write-Warning ('Failed to load ' + $config + '.ps1')
         }
     }
 }
@@ -98,20 +119,32 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
     } catch {
         function global:prompt {
             $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
-            "PS $path> "
+            return "PS $path> "
         }
     }
 } else {
     function global:prompt {
         $path = (Get-Location).Path.Replace($env:USERPROFILE, '~')
-        "PS $path> "
+        return "PS $path> "
     }
 }
 
 # Chocolatey Profile
-$ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-if (Test-Path($ChocolateyProfile)) {
-    Import-Module "$ChocolateyProfile"
+if ($env:ChocolateyInstall) {
+    $ChocolateyProfile = Join-Path $env:ChocolateyInstall 'helpers\chocolateyProfile.psm1'
+    if (Test-Path $ChocolateyProfile) {
+        Import-Module $ChocolateyProfile
+    }
 }
 
-if ($env:TERM_PROGRAM -eq "kiro") { . "$(kiro --locate-shell-integration-path pwsh)" }
+# Kiro terminal integration
+if ($env:TERM_PROGRAM -eq 'kiro') {
+    try {
+        $kiroPath = kiro --locate-shell-integration-path pwsh
+        if ($kiroPath -and (Test-Path $kiroPath)) {
+            . $kiroPath
+        }
+    } catch {
+        # Silently ignore if kiro integration fails
+    }
+}
