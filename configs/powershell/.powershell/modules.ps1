@@ -21,7 +21,8 @@ if (Get-Module -ListAvailable -Name PowerShellGet) {
 
         Write-Verbose "PowerShellGet module loaded and configured"
     } catch {
-        Write-Warning "Failed to configure PowerShellGet: $($_.Exception.Message)"
+        # PowerShellGet 配置失败时静默继续（通常是版本兼容性问题）
+        Write-Verbose "Failed to configure PowerShellGet: $($_.Exception.Message)"
     }
 }
 

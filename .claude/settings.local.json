@@ -11,7 +11,10 @@
       "Bash(powershell.exe:*)",
       "Bash(git config:*)",
       "Bash(git --version:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(echo:*)",
+      "Bash(dir \"$env:USERPROFILE\\Documents\\WindowsPowerShell\")",
+      "mcp__codex__codex"
     ],
     "deny": [],
     "ask": []

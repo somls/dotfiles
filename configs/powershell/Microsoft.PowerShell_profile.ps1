@@ -61,7 +61,11 @@ if (-not (Test-Path $ProfileDir)) {
 
 # Load configurations
 $coreConfigs = if ($IsWinPS) { @("functions.winps", "aliases") } else { @("functions", "aliases") }
-$optionalConfigs = @("modules", "history", "keybindings", "tools", "theme", "extra")
+$optionalConfigs = if ($IsWinPS) {
+    @("keybindings.winps", "history", "modules", "tools", "lazy-load.winps", "theme", "extra")
+} else {
+    @("keybindings", "history", "modules", "tools", "lazy-load", "theme", "extra")
+}
 
 # Load core configurations
 foreach ($config in $coreConfigs) {
